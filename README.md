@@ -28,6 +28,15 @@ Phase 3:
 - Activate and deactivate ticket types
 - Server-side validation, ownership checks, and RLS-protected mutations
 
+Phase 4:
+
+- Buyer-facing event pages at `/e/[event-slug]`
+- Public event, venue, organizer, admission-policy, and support information
+- Active ticket options with pricing, validity dates, descriptions, and quantity controls
+- Buyer contact form with order total calculation
+- Director publishing controls that require at least one active ticket
+- Honest pre-checkout state until Stripe Checkout is connected in Phase 5
+
 ## Setup
 
 1. Install dependencies:

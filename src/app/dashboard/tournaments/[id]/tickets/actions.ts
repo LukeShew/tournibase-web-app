@@ -81,6 +81,7 @@ export const initialTicketTypeFormState: TicketTypeFormState = {
 
 type OwnedTournament = {
   id: number;
+  public_slug: string;
   start_date: string;
   end_date: string;
 };
@@ -139,7 +140,7 @@ export async function createTicketType(
     };
   }
 
-  revalidateTicketPaths(tournamentId);
+  revalidateTicketPaths(tournamentId, tournament.public_slug);
 
   return {
     errors: {},
@@ -231,7 +232,7 @@ export async function updateTicketType(
     };
   }
 
-  revalidateTicketPaths(tournamentId);
+  revalidateTicketPaths(tournamentId, tournament.public_slug);
 
   return {
     errors: {},
@@ -282,7 +283,7 @@ export async function setTicketTypeStatus(
     throw new Error("The ticket status could not be updated.");
   }
 
-  revalidateTicketPaths(tournamentId);
+  revalidateTicketPaths(tournamentId, tournament.public_slug);
 }
 
 function parseTicketTypeForm(formData: FormData):
@@ -354,7 +355,7 @@ async function getOwnedTournament(
 
   const { data: tournament, error: tournamentError } = await supabase
     .from("tournaments")
-    .select("id, start_date, end_date")
+    .select("id, public_slug, start_date, end_date")
     .eq("id", tournamentId)
     .in("organization_id", organizationIds)
     .maybeSingle();
@@ -412,7 +413,8 @@ function endOfDate(date: string) {
   return `${date}T23:59:59.999Z`;
 }
 
-function revalidateTicketPaths(tournamentId: number) {
+function revalidateTicketPaths(tournamentId: number, publicSlug: string) {
   revalidatePath(`/dashboard/tournaments/${tournamentId}`);
   revalidatePath(`/dashboard/tournaments/${tournamentId}/tickets`);
+  revalidatePath(`/e/${publicSlug}`);
 }

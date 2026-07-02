@@ -70,6 +70,25 @@ Completed:
 The `sold_out` status remains available in the database for a later automated
 inventory flow. Directors currently manage `active` and `inactive` states.
 
+## Phase 4 status
+
+Completed:
+
+- Public buyer route at `/e/[event-slug]`
+- Published-event lookup by public slug
+- Active-ticket filtering enforced by explicit application filters and RLS
+- Event dates, venue, address, organizer, description, and contact information
+- Ticket pricing, validity, descriptions, quantity controls, and running order total
+- Buyer first name, last name, email, phone, and optional team fields
+- Admission and organizer support information
+- Director publish and return-to-draft controls
+- Publishing blocked until at least one active ticket exists
+- Public metadata and no-index metadata for missing events
+
+The form deliberately does not create orders or collect payment yet. Until
+Phase 5 connects Stripe Checkout, submission shows a clear message confirming
+that no order was created and no charge occurred.
+
 ## Security model
 
 - The publishable Supabase key is used by the web app.
@@ -82,6 +101,6 @@ inventory flow. Directors currently manage `active` and `inactive` states.
 
 ## Next phase
 
-Phase 4 adds the buyer-facing `/e/[event-slug]` public ticket page with event
-details, admission options, pricing, quantity selection, buyer information, and
-the handoff to Stripe Checkout.
+Phase 5 connects the buyer form to Stripe Checkout, stores a pending order,
+handles the payment webhook, creates secure individual passes after payment,
+and adds the order success page.

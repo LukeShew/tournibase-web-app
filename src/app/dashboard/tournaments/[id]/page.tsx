@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CopyLinkButton } from "@/components/copy-link-button";
+import { EventPublicationControl } from "@/components/event-publication-control";
 import { requireDirector } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { formatEventDateRange } from "@/lib/tournaments";
@@ -76,12 +77,18 @@ export default async function TournamentOverviewPage({
   const tournament = tournamentRow as Tournament;
   const [
     { count: ticketTypeCount, error: ticketTypeError },
+    { count: activeTicketCount, error: activeTicketError },
     { count: scannerCount, error: scannerError },
   ] = await Promise.all([
     supabase
       .from("ticket_types")
       .select("id", { count: "exact", head: true })
       .eq("tournament_id", tournamentId),
+    supabase
+      .from("ticket_types")
+      .select("id", { count: "exact", head: true })
+      .eq("tournament_id", tournamentId)
+      .eq("status", "active"),
     supabase
       .from("scanner_sessions")
       .select("id", { count: "exact", head: true })
@@ -90,6 +97,10 @@ export default async function TournamentOverviewPage({
 
   if (ticketTypeError) {
     throw ticketTypeError;
+  }
+
+  if (activeTicketError) {
+    throw activeTicketError;
   }
 
   if (scannerError) {
@@ -137,14 +148,14 @@ export default async function TournamentOverviewPage({
           value={tournament.status === "published" ? "Live" : "Draft"}
           detail={
             tournament.status === "published"
-              ? "Public sales are available."
+              ? "Public page is visible to buyers."
               : "Not visible to buyers yet."
           }
         />
         <StatusCard
           label="Sales setup"
           value={ticketTypeCount ? "Tickets added" : "Not configured"}
-          detail={`${ticketTypeCount ?? 0} ticket type${ticketTypeCount === 1 ? "" : "s"}`}
+          detail={`${activeTicketCount ?? 0} active of ${ticketTypeCount ?? 0} total`}
         />
         <StatusCard
           label="Scanner links"
@@ -201,11 +212,19 @@ export default async function TournamentOverviewPage({
             {publicPath}
           </p>
           <p className="mt-3 text-sm leading-6 text-slate-500">
-            You can share this link after the public ticket page and ticket
-            types are ready.
+            Share this link only after the page is published. Buyers can view
+            event details and choose admission passes.
           </p>
           <div className="mt-5">
             <CopyLinkButton path={publicPath} />
+          </div>
+          <div className="mt-5 border-t border-border pt-5">
+            <EventPublicationControl
+              activeTicketCount={activeTicketCount ?? 0}
+              publicPath={publicPath}
+              status={tournament.status}
+              tournamentId={tournamentId}
+            />
           </div>
         </section>
       </div>
@@ -223,11 +242,19 @@ export default async function TournamentOverviewPage({
             title="Edit tickets"
             description="Create pricing and admission options."
           />
-          <FutureTool
-            title="View public page"
-            description="Preview the buyer-facing ticket page."
-            phase="Phase 4"
-          />
+          {tournament.status === "published" ? (
+            <ActiveTool
+              href={publicPath}
+              title="View public page"
+              description="Open the buyer-facing event and ticket page."
+            />
+          ) : (
+            <FutureTool
+              title="View public page"
+              description="Publish the ticket page before opening it publicly."
+              phase="Publish first"
+            />
+          )}
           <FutureTool
             title="Create scanner link"
             description="Authorize gate staff and specific entrances."
