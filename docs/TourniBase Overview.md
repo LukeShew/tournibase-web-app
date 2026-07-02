@@ -35,6 +35,24 @@ Database tables:
 - `check_ins`
 - `manual_sales`
 
+## Phase 2 status
+
+Completed:
+
+- Protected `/dashboard/tournaments/new` event creation route
+- Server-validated tournament, date, venue, organizer, contact, description, and public-slug fields
+- Youth basketball default enforced in both the app and database
+- Automatic internal organization setup for a director's first event
+- Collision-safe public slug generation
+- Draft tournament creation through the signed-in director's RLS-protected Supabase session
+- Redirect to `/dashboard/tournaments/[id]` after creation
+- Tournament overview with dates, venue, public link, ticket-page status, sales setup status, and scanner-link count
+- Working copy-ticket-link action
+- Dashboard event links and empty-state creation flow
+
+New tournaments stay in `draft` status. The public ticket page is not live until
+the ticket-management and publishing phases are complete.
+
 ## Security model
 
 - The publishable Supabase key is used by the web app.
@@ -47,4 +65,6 @@ Database tables:
 
 ## Next phase
 
-Phase 2 adds director organization onboarding and `/dashboard/tournaments/new`, including tournament details, dates, venue, public slug, ticket types, and publish controls.
+Phase 3 adds `/dashboard/tournaments/[id]/tickets`, where directors can create,
+edit, activate, and deactivate admission ticket types with prices, validity
+dates, descriptions, and optional quantity limits.

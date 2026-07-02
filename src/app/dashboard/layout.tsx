@@ -41,19 +41,20 @@ export default async function DashboardLayout({
           <nav aria-label="Dashboard navigation" className="space-y-1">
             <Link
               href="/dashboard"
-              aria-current="page"
               className="flex items-center gap-3 rounded-xl bg-brand-soft px-3 py-2.5 text-sm font-medium text-blue-200"
             >
               <span className="h-2 w-2 rounded-full bg-brand" />
-              Overview
+              Events
             </Link>
-            <span className="flex cursor-not-allowed items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-slate-600">
-              <span className="h-2 w-2 rounded-full bg-slate-700" />
-              Tournaments
-              <span className="ml-auto text-[10px] uppercase tracking-wider">
-                Next
+            <Link
+              href="/dashboard/tournaments/new"
+              className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-slate-400 transition hover:bg-white/5 hover:text-white"
+            >
+              <span className="grid h-5 w-5 place-items-center rounded-md border border-border text-xs">
+                +
               </span>
-            </span>
+              New event
+            </Link>
           </nav>
         </aside>
         <main>{children}</main>

@@ -2,13 +2,24 @@
 
 Separate web-first application for TourniBase tournament admission. This repository does not deploy or modify the existing waitlist website.
 
-## Phase 1
+## Completed phases
+
+Phase 1:
 
 - Next.js App Router with TypeScript and Tailwind CSS
 - Supabase password authentication with cookie-backed server sessions
 - Server-side director authorization on every dashboard request
 - Protected `/dashboard` route
 - Complete MVP database schema with explicit grants, RLS policies, constraints, and indexes
+
+Phase 2:
+
+- Protected admission-event creation at `/dashboard/tournaments/new`
+- Server-side validation and RLS-protected Supabase inserts
+- Automatic organization setup for a director's first event
+- Draft event overview at `/dashboard/tournaments/[id]`
+- Public ticket-link reservation and copy action
+- Event status, venue, sales-setup, and scanner-link summaries
 
 ## Setup
 
