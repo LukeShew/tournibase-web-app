@@ -1,4 +1,4 @@
-import type { TicketTypeFormState } from "@/app/dashboard/tournaments/[id]/tickets/actions";
+import type { TicketTypeFormState } from "@/lib/form-states";
 
 export type TicketTypeDefaults = {
   description?: string;

@@ -1,11 +1,9 @@
 "use client";
 
 import { useActionState, useEffect, useRef } from "react";
-import {
-  createTicketType,
-  initialTicketTypeFormState,
-} from "@/app/dashboard/tournaments/[id]/tickets/actions";
+import { createTicketType } from "@/app/dashboard/tournaments/[id]/tickets/actions";
 import { TicketTypeFields } from "@/components/ticket-type-fields";
+import { initialTicketTypeFormState } from "@/lib/form-states";
 
 type CreateTicketTypeFormProps = {
   eventEndDate: string;
@@ -20,10 +18,11 @@ export function CreateTicketTypeForm({
 }: CreateTicketTypeFormProps) {
   const formRef = useRef<HTMLFormElement>(null);
   const createForTournament = createTicketType.bind(null, tournamentId);
-  const [state, action, pending] = useActionState(
+  const [actionState, action, pending] = useActionState(
     createForTournament,
     initialTicketTypeFormState,
   );
+  const state = actionState ?? initialTicketTypeFormState;
 
   useEffect(() => {
     if (state.successId) {

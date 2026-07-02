@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireDirector } from "@/lib/auth";
+import type { TicketTypeFormState } from "@/lib/form-states";
 import { createClient } from "@/lib/supabase/server";
 
 const isoDate = z
@@ -65,19 +66,6 @@ const ticketTypeSchema = z
   });
 
 type TicketTypeField = keyof z.input<typeof ticketTypeSchema>;
-
-export type TicketTypeFormState = {
-  errors: Partial<Record<TicketTypeField, string>>;
-  message: string;
-  success: boolean;
-  successId?: string;
-};
-
-export const initialTicketTypeFormState: TicketTypeFormState = {
-  errors: {},
-  message: "",
-  success: false,
-};
 
 type OwnedTournament = {
   id: number;

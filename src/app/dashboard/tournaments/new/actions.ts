@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { requireDirector } from "@/lib/auth";
+import type { CreateTournamentState } from "@/lib/form-states";
 import { createClient } from "@/lib/supabase/server";
 import { slugifyTournamentName } from "@/lib/tournaments";
 
@@ -70,16 +71,6 @@ const tournamentSchema = z
   });
 
 type TournamentField = keyof z.infer<typeof tournamentSchema>;
-
-export type CreateTournamentState = {
-  message: string;
-  errors: Partial<Record<TournamentField, string>>;
-};
-
-export const initialCreateTournamentState: CreateTournamentState = {
-  message: "",
-  errors: {},
-};
 
 export async function createTournament(
   _previousState: CreateTournamentState,

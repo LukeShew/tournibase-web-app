@@ -2,10 +2,8 @@
 
 import Link from "next/link";
 import { useActionState } from "react";
-import {
-  initialPublicationState,
-  setTournamentPublication,
-} from "@/app/dashboard/tournaments/[id]/actions";
+import { setTournamentPublication } from "@/app/dashboard/tournaments/[id]/actions";
+import { initialPublicationState } from "@/lib/form-states";
 
 type TournamentStatus = "draft" | "published" | "closed" | "archived";
 
@@ -26,10 +24,11 @@ export function EventPublicationControl({
     tournamentId,
     nextStatus,
   );
-  const [state, action, pending] = useActionState(
+  const [actionState, action, pending] = useActionState(
     updateThisEvent,
     initialPublicationState,
   );
+  const state = actionState ?? initialPublicationState;
   const canPublish =
     status === "published" || (status === "draft" && activeTicketCount > 0);
 

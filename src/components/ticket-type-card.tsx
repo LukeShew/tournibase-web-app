@@ -3,11 +3,11 @@
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 import {
-  initialTicketTypeFormState,
   setTicketTypeStatus,
   updateTicketType,
 } from "@/app/dashboard/tournaments/[id]/tickets/actions";
 import { TicketTypeFields } from "@/components/ticket-type-fields";
+import { initialTicketTypeFormState } from "@/lib/form-states";
 import { formatEventDateRange } from "@/lib/tournaments";
 
 export type TicketTypeRecord = {
@@ -24,10 +24,11 @@ export type TicketTypeRecord = {
 
 export function TicketTypeCard({ ticketType }: { ticketType: TicketTypeRecord }) {
   const updateThisTicket = updateTicketType.bind(null, ticketType.id);
-  const [state, action, pending] = useActionState(
+  const [actionState, action, pending] = useActionState(
     updateThisTicket,
     initialTicketTypeFormState,
   );
+  const state = actionState ?? initialTicketTypeFormState;
   const nextStatus = ticketType.status === "active" ? "inactive" : "active";
   const setStatusForTicket = setTicketTypeStatus.bind(
     null,

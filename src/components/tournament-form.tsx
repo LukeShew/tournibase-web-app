@@ -1,10 +1,8 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import {
-  createTournament,
-  initialCreateTournamentState,
-} from "@/app/dashboard/tournaments/new/actions";
+import { createTournament } from "@/app/dashboard/tournaments/new/actions";
+import { initialCreateTournamentState } from "@/lib/form-states";
 import { slugifyTournamentName } from "@/lib/tournaments";
 
 type TournamentFormProps = {
@@ -19,10 +17,11 @@ export function TournamentForm({
   defaultContactEmail,
   defaultOrganizerName,
 }: TournamentFormProps) {
-  const [state, action, pending] = useActionState(
+  const [actionState, action, pending] = useActionState(
     createTournament,
     initialCreateTournamentState,
   );
+  const state = actionState ?? initialCreateTournamentState;
   const [tournamentName, setTournamentName] = useState("");
   const [publicSlug, setPublicSlug] = useState("");
   const [slugWasEdited, setSlugWasEdited] = useState(false);

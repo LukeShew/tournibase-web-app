@@ -2,17 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { requireDirector } from "@/lib/auth";
+import type { PublicationState } from "@/lib/form-states";
 import { createClient } from "@/lib/supabase/server";
-
-export type PublicationState = {
-  message: string;
-  success: boolean;
-};
-
-export const initialPublicationState: PublicationState = {
-  message: "",
-  success: false,
-};
 
 export async function setTournamentPublication(
   tournamentId: number,
