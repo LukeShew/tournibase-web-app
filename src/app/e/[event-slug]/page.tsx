@@ -12,6 +12,7 @@ export const dynamic = "force-dynamic";
 
 type EventPageProps = {
   params: Promise<{ "event-slug": string }>;
+  searchParams: Promise<{ checkout?: string }>;
 };
 
 export async function generateMetadata({
@@ -35,8 +36,12 @@ export async function generateMetadata({
   };
 }
 
-export default async function PublicEventPage({ params }: EventPageProps) {
+export default async function PublicEventPage({
+  params,
+  searchParams,
+}: EventPageProps) {
   const { "event-slug": eventSlug } = await params;
+  const { checkout } = await searchParams;
 
   if (!isValidEventSlug(eventSlug)) {
     notFound();
@@ -108,9 +113,19 @@ export default async function PublicEventPage({ params }: EventPageProps) {
           </aside>
 
           <div>
+            {checkout === "cancelled" ? (
+              <div
+                role="status"
+                className="mb-5 rounded-2xl border border-amber-400/20 bg-amber-400/[0.07] px-5 py-4 text-sm leading-6 text-amber-100"
+              >
+                Checkout was cancelled. No payment was taken, and your ticket
+                selection is still available below.
+              </div>
+            ) : null}
             {ticketOptions.length > 0 ? (
               <PublicTicketForm
                 eventName={event.name}
+                eventSlug={event.public_slug}
                 tickets={ticketOptions}
               />
             ) : (

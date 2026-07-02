@@ -9,11 +9,13 @@ type TournamentStatus = "draft" | "published" | "closed" | "archived";
 
 export function EventPublicationControl({
   activeTicketCount,
+  checkoutConfigured,
   publicPath,
   status,
   tournamentId,
 }: {
   activeTicketCount: number;
+  checkoutConfigured: boolean;
   publicPath: string;
   status: TournamentStatus;
   tournamentId: number;
@@ -89,9 +91,14 @@ export function EventPublicationControl({
             Publishing makes the event and active ticket types publicly
             visible.
           </p>
+        ) : checkoutConfigured ? (
+          <p className="text-sm text-emerald-300">
+            Stripe Checkout is connected and ready for buyers.
+          </p>
         ) : (
           <p className="text-sm text-amber-300">
-            The page is public, but Stripe checkout is not connected yet.
+            The page is public, but payment environment variables are still
+            missing.
           </p>
         )}
       </div>

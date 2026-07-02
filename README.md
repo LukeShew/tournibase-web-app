@@ -35,7 +35,15 @@ Phase 4:
 - Active ticket options with pricing, validity dates, descriptions, and quantity controls
 - Buyer contact form with order total calculation
 - Director publishing controls that require at least one active ticket
-- Honest pre-checkout state until Stripe Checkout is connected in Phase 5
+
+Phase 5:
+
+- Stripe-hosted Checkout Sessions created from server-validated ticket prices and quantities
+- Pending orders and immutable order-item snapshots before payment
+- Signed Stripe webhook handling at `/api/stripe/webhook`
+- Idempotent creation of one secure pass per paid ticket
+- Payment confirmation and generated pass links at `/order/success`
+- Clear configuration errors when required Stripe or Supabase server keys are missing
 
 ## Setup
 
@@ -51,15 +59,48 @@ Phase 4:
    cp .env.example .env.local
    ```
 
-3. Add the separate web-app Supabase URL and publishable key.
+3. Add the separate web-app Supabase URL, publishable key, and server-only
+   secret key.
 
-4. Start the app:
+4. Add Stripe test keys and the webhook signing secret shown in
+   `.env.example`.
+
+5. Apply the Supabase migrations.
+
+6. Start the app:
 
    ```bash
    npm run dev
    ```
 
-5. Open [http://localhost:3000](http://localhost:3000).
+7. Open [http://localhost:3000](http://localhost:3000).
+
+## Stripe setup
+
+Create a Stripe webhook endpoint for:
+
+```text
+https://tournibase-web-app.vercel.app/api/stripe/webhook
+```
+
+Subscribe it to:
+
+- `checkout.session.completed`
+- `checkout.session.async_payment_succeeded`
+- `checkout.session.async_payment_failed`
+- `checkout.session.expired`
+
+For local webhook testing:
+
+```bash
+stripe listen --forward-to localhost:3000/api/stripe/webhook
+```
+
+Use Stripe test card `4242 4242 4242 4242`, any future expiration date,
+any three-digit CVC, and any postal code.
+
+Production confirmation email delivery is intentionally left as a TODO until
+transactional email infrastructure is configured.
 
 ## First director account
 

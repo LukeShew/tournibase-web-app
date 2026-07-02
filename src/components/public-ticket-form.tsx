@@ -15,13 +15,16 @@ export type PublicTicketOption = {
 
 export function PublicTicketForm({
   eventName,
+  eventSlug,
   tickets,
 }: {
   eventName: string;
+  eventSlug: string;
   tickets: PublicTicketOption[];
 }) {
   const [quantities, setQuantities] = useState<Record<number, number>>({});
   const [message, setMessage] = useState("");
+  const [pending, setPending] = useState(false);
   const selectedCount = Object.values(quantities).reduce(
     (total, quantity) => total + quantity,
     0,
@@ -51,7 +54,7 @@ export function PublicTicketForm({
     setMessage("");
   }
 
-  function beginCheckout(event: FormEvent<HTMLFormElement>) {
+  async function beginCheckout(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     if (selectedCount === 0) {
@@ -59,9 +62,50 @@ export function PublicTicketForm({
       return;
     }
 
-    setMessage(
-      "Online checkout is not available yet. No order was created and you have not been charged.",
-    );
+    const formData = new FormData(event.currentTarget);
+    setPending(true);
+    setMessage("");
+
+    try {
+      const response = await fetch("/api/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          eventSlug,
+          firstName: formData.get("firstName"),
+          lastName: formData.get("lastName"),
+          email: formData.get("email"),
+          phone: formData.get("phone"),
+          teamName: formData.get("teamName"),
+          items: tickets
+            .map((ticket) => ({
+              ticketTypeId: ticket.id,
+              quantity: quantities[ticket.id] ?? 0,
+            }))
+            .filter((item) => item.quantity > 0),
+        }),
+      });
+      const responseBody = (await response.json().catch(() => null)) as {
+        error?: string;
+        url?: string;
+      } | null;
+
+      if (!response.ok || !responseBody?.url) {
+        setMessage(
+          responseBody?.error ??
+            "Secure checkout could not be started. Try again.",
+        );
+        return;
+      }
+
+      window.location.assign(responseBody.url);
+    } catch {
+      setMessage(
+        "Secure checkout could not be reached. Check your connection and try again.",
+      );
+    } finally {
+      setPending(false);
+    }
   }
 
   return (
@@ -114,7 +158,7 @@ export function PublicTicketForm({
                     <button
                       type="button"
                       onClick={() => changeQuantity(ticket, -1)}
-                      disabled={quantity === 0}
+                      disabled={pending || quantity === 0}
                       aria-label={`Remove one ${ticket.name}`}
                       className="grid h-10 w-10 place-items-center rounded-lg text-lg text-slate-200 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-35"
                     >
@@ -129,7 +173,7 @@ export function PublicTicketForm({
                     <button
                       type="button"
                       onClick={() => changeQuantity(ticket, 1)}
-                      disabled={quantity >= maximum}
+                      disabled={pending || quantity >= maximum}
                       aria-label={`Add one ${ticket.name}`}
                       className="grid h-10 w-10 place-items-center rounded-lg text-lg text-slate-200 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-35"
                     >
@@ -159,6 +203,7 @@ export function PublicTicketForm({
               autoComplete="given-name"
               required
               maxLength={80}
+              disabled={pending}
               className={inputClassName}
             />
           </BuyerField>
@@ -169,6 +214,7 @@ export function PublicTicketForm({
               autoComplete="family-name"
               required
               maxLength={80}
+              disabled={pending}
               className={inputClassName}
             />
           </BuyerField>
@@ -180,6 +226,7 @@ export function PublicTicketForm({
               autoComplete="email"
               required
               maxLength={254}
+              disabled={pending}
               className={inputClassName}
             />
           </BuyerField>
@@ -190,6 +237,7 @@ export function PublicTicketForm({
               type="tel"
               autoComplete="tel"
               maxLength={40}
+              disabled={pending}
               className={inputClassName}
             />
           </BuyerField>
@@ -203,6 +251,7 @@ export function PublicTicketForm({
               name="teamName"
               autoComplete="organization"
               maxLength={120}
+              disabled={pending}
               className={inputClassName}
             />
           </BuyerField>
@@ -229,25 +278,19 @@ export function PublicTicketForm({
 
         <button
           type="submit"
-          disabled={selectedCount === 0}
+          disabled={pending || selectedCount === 0}
           className="mt-5 inline-flex min-h-12 w-full items-center justify-center rounded-xl bg-brand-strong px-5 text-sm font-semibold text-white transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          Buy Digital Pass
+          {pending ? "Opening secure checkout…" : "Buy Digital Pass"}
         </button>
         <p className="mt-3 text-center text-xs leading-5 text-slate-500">
           {selectedCount === 0
             ? "Choose at least one pass above to continue."
-            : "Payment is not collected until secure checkout is connected."}
+            : "You will continue to secure Stripe Checkout."}
         </p>
         <div aria-live="polite" className="min-h-6">
           {message ? (
-            <p
-              className={`mt-3 rounded-xl px-4 py-3 text-sm leading-6 ${
-                selectedCount === 0
-                  ? "bg-red-400/10 text-red-200"
-                  : "bg-amber-400/10 text-amber-200"
-              }`}
-            >
+            <p className="mt-3 rounded-xl bg-red-400/10 px-4 py-3 text-sm leading-6 text-red-200">
               {message}
             </p>
           ) : null}
@@ -258,7 +301,7 @@ export function PublicTicketForm({
 }
 
 const inputClassName =
-  "mt-2 h-11 w-full rounded-xl border border-border bg-black/20 px-3 text-sm text-white placeholder:text-slate-600 focus:border-brand focus:outline-none focus:ring-4 focus:ring-brand/10";
+  "mt-2 h-11 w-full rounded-xl border border-border bg-black/20 px-3 text-sm text-white placeholder:text-slate-600 focus:border-brand focus:outline-none focus:ring-4 focus:ring-brand/10 disabled:cursor-wait disabled:opacity-60";
 
 function BuyerField({
   children,

@@ -4,6 +4,8 @@ import { notFound } from "next/navigation";
 import { CopyLinkButton } from "@/components/copy-link-button";
 import { EventPublicationControl } from "@/components/event-publication-control";
 import { requireDirector } from "@/lib/auth";
+import { getStripeConfigurationIssues } from "@/lib/stripe";
+import { getSupabaseAdminConfigurationIssues } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { formatEventDateRange } from "@/lib/tournaments";
 
@@ -108,6 +110,11 @@ export default async function TournamentOverviewPage({
   }
 
   const publicPath = `/e/${tournament.public_slug}`;
+  const checkoutConfigured =
+    getStripeConfigurationIssues({
+      includePublishableKey: true,
+      includeWebhookSecret: true,
+    }).length === 0 && getSupabaseAdminConfigurationIssues().length === 0;
 
   return (
     <div className="pb-12">
@@ -221,6 +228,7 @@ export default async function TournamentOverviewPage({
           <div className="mt-5 border-t border-border pt-5">
             <EventPublicationControl
               activeTicketCount={activeTicketCount ?? 0}
+              checkoutConfigured={checkoutConfigured}
               publicPath={publicPath}
               status={tournament.status}
               tournamentId={tournamentId}
