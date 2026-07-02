@@ -53,6 +53,23 @@ Completed:
 New tournaments stay in `draft` status. The public ticket page is not live until
 the ticket-management and publishing phases are complete.
 
+## Phase 3 status
+
+Completed:
+
+- Protected `/dashboard/tournaments/[id]/tickets` route
+- Ticket type creation with name, price, date range, description, optional quantity limit, and status
+- Ticket date validation against the tournament's own date range
+- Prices normalized to two decimal places for future Stripe use
+- Inline ticket editing
+- One-click ticket activation and deactivation
+- Ticket type counts and clear empty states
+- App-level ownership checks plus existing RLS enforcement on every ticket mutation
+- Event overview link to ticket management
+
+The `sold_out` status remains available in the database for a later automated
+inventory flow. Directors currently manage `active` and `inactive` states.
+
 ## Security model
 
 - The publishable Supabase key is used by the web app.
@@ -65,6 +82,6 @@ the ticket-management and publishing phases are complete.
 
 ## Next phase
 
-Phase 3 adds `/dashboard/tournaments/[id]/tickets`, where directors can create,
-edit, activate, and deactivate admission ticket types with prices, validity
-dates, descriptions, and optional quantity limits.
+Phase 4 adds the buyer-facing `/e/[event-slug]` public ticket page with event
+details, admission options, pricing, quantity selection, buyer information, and
+the handoff to Stripe Checkout.

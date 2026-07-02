@@ -21,6 +21,13 @@ Phase 2:
 - Public ticket-link reservation and copy action
 - Event status, venue, sales-setup, and scanner-link summaries
 
+Phase 3:
+
+- Ticket type management at `/dashboard/tournaments/[id]/tickets`
+- Create and edit ticket names, prices, validity dates, descriptions, and quantity limits
+- Activate and deactivate ticket types
+- Server-side validation, ownership checks, and RLS-protected mutations
+
 ## Setup
 
 1. Install dependencies:

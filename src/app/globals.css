@@ -40,6 +40,7 @@ body {
 button,
 a,
 input,
+select,
 textarea {
   outline-color: var(--brand);
 }

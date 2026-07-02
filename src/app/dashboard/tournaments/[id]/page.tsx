@@ -218,10 +218,10 @@ export default async function TournamentOverviewPage({
           </p>
         </div>
         <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-          <FutureTool
+          <ActiveTool
+            href={`/dashboard/tournaments/${tournamentId}/tickets`}
             title="Edit tickets"
             description="Create pricing and admission options."
-            phase="Phase 3"
           />
           <FutureTool
             title="View public page"
@@ -275,6 +275,31 @@ function DetailItem({ label, value }: { label: string; value: string }) {
       </dt>
       <dd className="mt-2 text-sm leading-6 text-slate-200">{value}</dd>
     </div>
+  );
+}
+
+function ActiveTool({
+  description,
+  href,
+  title,
+}: {
+  description: string;
+  href: string;
+  title: string;
+}) {
+  return (
+    <Link
+      href={href}
+      className="rounded-2xl border border-brand/25 bg-brand-soft p-5 transition hover:border-brand/45 hover:bg-blue-500/20"
+    >
+      <div className="flex items-start justify-between gap-3">
+        <p className="font-medium text-blue-100">{title}</p>
+        <span className="shrink-0 rounded-full bg-blue-400/10 px-2 py-1 text-[10px] font-medium uppercase tracking-wider text-blue-300">
+          Ready
+        </span>
+      </div>
+      <p className="mt-2 text-sm leading-6 text-blue-200/70">{description}</p>
+    </Link>
   );
 }
 
