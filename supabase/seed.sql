@@ -1,0 +1,1 @@
+-- Seed data is intentionally empty. Create director accounts through Supabase Auth.
