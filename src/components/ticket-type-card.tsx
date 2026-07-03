@@ -7,6 +7,7 @@ import {
   updateTicketType,
 } from "@/app/dashboard/tournaments/[id]/tickets/actions";
 import { TicketTypeFields } from "@/components/ticket-type-fields";
+import { eventDateFromTimestamp } from "@/lib/event-time";
 import { initialTicketTypeFormState } from "@/lib/form-states";
 import { formatEventDateRange } from "@/lib/tournaments";
 
@@ -22,7 +23,13 @@ export type TicketTypeRecord = {
   valid_until: string;
 };
 
-export function TicketTypeCard({ ticketType }: { ticketType: TicketTypeRecord }) {
+export function TicketTypeCard({
+  eventTimeZone,
+  ticketType,
+}: {
+  eventTimeZone: string;
+  ticketType: TicketTypeRecord;
+}) {
   const updateThisTicket = updateTicketType.bind(null, ticketType.id);
   const [actionState, action, pending] = useActionState(
     updateThisTicket,
@@ -49,8 +56,14 @@ export function TicketTypeCard({ ticketType }: { ticketType: TicketTypeRecord })
           </p>
           <p className="mt-2 text-sm text-slate-500">
             {formatEventDateRange(
-              ticketType.valid_from.slice(0, 10),
-              ticketType.valid_until.slice(0, 10),
+              eventDateFromTimestamp(
+                ticketType.valid_from,
+                eventTimeZone,
+              ),
+              eventDateFromTimestamp(
+                ticketType.valid_until,
+                eventTimeZone,
+              ),
             )}
           </p>
           {ticketType.description ? (
@@ -84,8 +97,14 @@ export function TicketTypeCard({ ticketType }: { ticketType: TicketTypeRecord })
             defaults={{
               name: ticketType.name,
               price: Number(ticketType.price).toFixed(2),
-              validFrom: ticketType.valid_from.slice(0, 10),
-              validUntil: ticketType.valid_until.slice(0, 10),
+              validFrom: eventDateFromTimestamp(
+                ticketType.valid_from,
+                eventTimeZone,
+              ),
+              validUntil: eventDateFromTimestamp(
+                ticketType.valid_until,
+                eventTimeZone,
+              ),
               description: ticketType.description ?? "",
               quantityLimit: ticketType.quantity_limit?.toString() ?? "",
               status: ticketType.status === "active" ? "active" : "inactive",

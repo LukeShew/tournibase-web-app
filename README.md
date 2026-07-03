@@ -95,6 +95,20 @@ Phase 10:
 - Manual check-in of eligible passes through the same validation engine as QR scans
 - Server-only pass-token handling and service-role-only lookup access
 
+Phase 11:
+
+- Persisted recent scanner activity at `/scan/[scanner-token]/recent`
+- Time, result, ticket type, buyer, gate, source, override, and undo details
+- Activity restricted to the active scanner session and its permissions
+- Mobile refresh and empty states
+- Service-role-only recent-scan function
+
+Time-zone handling:
+
+- Tournament dates are anchored to the tournament's IANA time zone
+- New events currently default to `America/New_York`
+- Admission windows and gate timestamps do not change with device location or VPN use
+
 ## Setup
 
 1. Install dependencies:

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import { eventDateFromTimestamp } from "@/lib/event-time";
 import { formatEventDateRange } from "@/lib/tournaments";
 
 export type PublicTicketOption = {
@@ -16,10 +17,12 @@ export type PublicTicketOption = {
 export function PublicTicketForm({
   eventName,
   eventSlug,
+  eventTimeZone,
   tickets,
 }: {
   eventName: string;
   eventSlug: string;
+  eventTimeZone: string;
   tickets: PublicTicketOption[];
 }) {
   const [quantities, setQuantities] = useState<Record<number, number>>({});
@@ -143,8 +146,14 @@ export function PublicTicketForm({
                     <p className="mt-2 text-sm text-slate-400">
                       Valid{" "}
                       {formatEventDateRange(
-                        ticket.validFrom.slice(0, 10),
-                        ticket.validUntil.slice(0, 10),
+                        eventDateFromTimestamp(
+                          ticket.validFrom,
+                          eventTimeZone,
+                        ),
+                        eventDateFromTimestamp(
+                          ticket.validUntil,
+                          eventTimeZone,
+                        ),
                       )}
                     </p>
                     {ticket.description ? (

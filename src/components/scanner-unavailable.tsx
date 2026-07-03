@@ -26,10 +26,10 @@ export function ScannerUnavailable({
         "This link is invalid or does not match an active TourniBase scanner session.",
     },
     permission: {
-      eyebrow: "Lookup unavailable",
-      title: "This link does not include lookup access",
+      eyebrow: "Gate tool unavailable",
+      title: "This link does not include this access",
       description:
-        "Ask the tournament director for a standard or full gate link to search buyers and orders.",
+        "Ask the tournament director for a standard or full gate link to use this tool.",
     },
     revoked: {
       eyebrow: "Scanner access revoked",

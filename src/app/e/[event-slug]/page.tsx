@@ -126,6 +126,7 @@ export default async function PublicEventPage({
               <PublicTicketForm
                 eventName={event.name}
                 eventSlug={event.public_slug}
+                eventTimeZone={event.time_zone}
                 tickets={ticketOptions}
               />
             ) : (

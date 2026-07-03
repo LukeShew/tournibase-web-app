@@ -21,6 +21,7 @@ type TournamentRecord = {
   name: string;
   start_date: string;
   status: "draft" | "published" | "closed" | "archived";
+  time_zone: string;
   venue_name: string;
 };
 
@@ -28,6 +29,7 @@ export type ActiveScannerSession = {
   eventEndDate: string;
   eventName: string;
   eventStartDate: string;
+  eventTimeZone: string;
   expiresAt: string;
   gateName: string;
   id: number;
@@ -83,7 +85,7 @@ export async function getScannerSessionByToken(
 
   const { data: tournamentRow, error: tournamentError } = await supabase
     .from("tournaments")
-    .select("name, start_date, end_date, venue_name, status")
+    .select("name, start_date, end_date, venue_name, status, time_zone")
     .eq("id", scanner.tournament_id)
     .maybeSingle();
 
@@ -129,6 +131,7 @@ export async function getScannerSessionByToken(
       eventEndDate: tournament.end_date,
       eventName: tournament.name,
       eventStartDate: tournament.start_date,
+      eventTimeZone: tournament.time_zone,
       expiresAt: scanner.expires_at,
       gateName: scanner.gate_name,
       id: scanner.id,

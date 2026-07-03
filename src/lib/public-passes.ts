@@ -31,6 +31,7 @@ type TournamentRecord = {
   contact_email: string;
   name: string;
   organizer_name: string;
+  time_zone: string;
   venue_address: string;
   venue_name: string;
 };
@@ -43,6 +44,7 @@ export type PublicPass = {
   buyerName: string;
   contactEmail: string;
   eventName: string;
+  eventTimeZone: string;
   id: number;
   orderNumber: string;
   organizerName: string;
@@ -92,7 +94,9 @@ export async function getPublicPass(
       .maybeSingle(),
     supabase
       .from("tournaments")
-      .select("name, venue_name, venue_address, organizer_name, contact_email")
+      .select(
+        "name, venue_name, venue_address, organizer_name, contact_email, time_zone",
+      )
       .eq("id", pass.tournament_id)
       .maybeSingle(),
     supabase
@@ -131,6 +135,7 @@ export async function getPublicPass(
     buyerName: order.buyer_name,
     contactEmail: tournament.contact_email,
     eventName: tournament.name,
+    eventTimeZone: tournament.time_zone,
     id: pass.id,
     orderNumber: `TB-${order.id.toString().padStart(6, "0")}`,
     organizerName: tournament.organizer_name,

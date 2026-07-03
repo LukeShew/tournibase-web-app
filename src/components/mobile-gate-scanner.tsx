@@ -16,6 +16,7 @@ import type {
   UndoCheckInResult,
   ValidatePassInput,
 } from "@/lib/pass-validation-types";
+import { formatEventValidity } from "@/lib/event-time";
 
 type ScannerView =
   | { mode: "idle" }
@@ -41,15 +42,9 @@ type ScannerView =
       tone: "green" | "red";
     };
 
-type RecentScan = {
-  id: string;
-  label: string;
-  scannedAt: string;
-  status: PassValidationResult["status"];
-};
-
 export function MobileGateScanner({
   eventName,
+  eventTimeZone,
   expiresAt,
   gateName,
   overridePass,
@@ -60,6 +55,7 @@ export function MobileGateScanner({
   venueName,
 }: {
   eventName: string;
+  eventTimeZone: string;
   expiresAt: string;
   gateName: string;
   overridePass: (input: OverridePassInput) => Promise<PassValidationResult>;
@@ -75,8 +71,6 @@ export function MobileGateScanner({
   const scanLockedRef = useRef(false);
   const mountedRef = useRef(true);
   const [view, setView] = useState<ScannerView>({ mode: "idle" });
-  const [recentScans, setRecentScans] = useState<RecentScan[]>([]);
-  const [showRecent, setShowRecent] = useState(false);
   const [showResultDetails, setShowResultDetails] = useState(false);
   const [showOverrideForm, setShowOverrideForm] = useState(false);
   const [overrideReason, setOverrideReason] = useState("");
@@ -121,7 +115,6 @@ export function MobileGateScanner({
 
     stopCamera();
     scanLockedRef.current = false;
-    setShowRecent(false);
     setShowOverrideForm(false);
     setShowResultDetails(false);
     setOverrideReason("");
@@ -189,7 +182,6 @@ export function MobileGateScanner({
     stopCamera();
     const candidate = value.trim();
 
-    setShowRecent(false);
     setShowOverrideForm(false);
     setShowResultDetails(false);
     setOverrideReason("");
@@ -213,7 +205,6 @@ export function MobileGateScanner({
       return;
     }
 
-    addRecentScan(result);
     setView({ candidate, mode: "result", result, source });
   }
 
@@ -293,7 +284,6 @@ export function MobileGateScanner({
     setResultActionPending(false);
 
     if (result.status === "valid") {
-      addRecentScan(result);
       setShowOverrideForm(false);
       setOverrideReason("");
       setView({ candidate, mode: "result", result, source });
@@ -303,22 +293,7 @@ export function MobileGateScanner({
     setResultActionNotice(result.message);
   }
 
-  function addRecentScan(result: PassValidationResult) {
-    setRecentScans((currentScans) =>
-      [
-        {
-          id: crypto.randomUUID(),
-          label: getRecentScanLabel(result),
-          scannedAt: new Date().toISOString(),
-          status: result.status,
-        },
-        ...currentScans,
-      ].slice(0, 5),
-    );
-  }
-
   function openManualLookup() {
-    setShowRecent(false);
     setToolNotice(null);
     window.location.assign(
       `${window.location.pathname.replace(/\/+$/, "")}/lookup`,
@@ -327,11 +302,12 @@ export function MobileGateScanner({
 
   function openRecentScans() {
     setToolNotice(null);
-    setShowRecent((isVisible) => !isVisible);
+    window.location.assign(
+      `${window.location.pathname.replace(/\/+$/, "")}/recent`,
+    );
   }
 
   function showGateSaleNotice() {
-    setShowRecent(false);
     setToolNotice(
       "Gate sale recording is not enabled on this scanner yet.",
     );
@@ -380,7 +356,7 @@ export function MobileGateScanner({
               Staff: {staffLabel}
             </span>
             <span className="rounded-full bg-white/5 px-3 py-1.5">
-              Expires {formatShortDateTime(expiresAt)}
+              Expires {formatShortDateTime(expiresAt, eventTimeZone)}
             </span>
           </div>
         </section>
@@ -409,6 +385,7 @@ export function MobileGateScanner({
               actionPending={resultActionPending}
               canLookup={canLookup}
               canSell={canRecordSale}
+              eventTimeZone={eventTimeZone}
               onManualLookup={openManualLookup}
               onOverride={() =>
                 handleOverride(
@@ -527,9 +504,7 @@ export function MobileGateScanner({
             />
           </div>
 
-          {showRecent ? (
-            <RecentScans scans={recentScans} />
-          ) : toolNotice ? (
+          {toolNotice ? (
             <p
               aria-live="polite"
               className="mt-4 rounded-xl border border-amber-300/15 bg-amber-300/[0.05] p-3 text-sm leading-6 text-amber-100"
@@ -638,6 +613,7 @@ function ValidationResultPanel({
   actionPending,
   canLookup,
   canSell,
+  eventTimeZone,
   onManualLookup,
   onOverride,
   onScanNext,
@@ -655,6 +631,7 @@ function ValidationResultPanel({
   actionPending: boolean;
   canLookup: boolean;
   canSell: boolean;
+  eventTimeZone: string;
   onManualLookup: () => void;
   onOverride: () => void;
   onScanNext: () => void;
@@ -684,9 +661,17 @@ function ValidationResultPanel({
         {presentation.description}
       </p>
 
-      <ValidationSummary result={result} />
+      <ValidationSummary
+        eventTimeZone={eventTimeZone}
+        result={result}
+      />
 
-      {showDetails ? <ValidationDetails result={result} /> : null}
+      {showDetails ? (
+        <ValidationDetails
+          eventTimeZone={eventTimeZone}
+          result={result}
+        />
+      ) : null}
 
       {actionNotice ? (
         <p className="mx-auto mt-4 max-w-md rounded-xl border border-amber-300/20 bg-amber-300/[0.06] p-3 text-sm leading-6 text-amber-100">
@@ -792,7 +777,13 @@ function ValidationResultPanel({
   );
 }
 
-function ValidationSummary({ result }: { result: PassValidationResult }) {
+function ValidationSummary({
+  eventTimeZone,
+  result,
+}: {
+  eventTimeZone: string;
+  result: PassValidationResult;
+}) {
   if (result.status === "valid") {
     return (
       <div className="mx-auto mt-5 grid max-w-md grid-cols-2 gap-2">
@@ -813,7 +804,10 @@ function ValidationSummary({ result }: { result: PassValidationResult }) {
           label="First scan"
           value={
             result.firstScannedAt
-              ? formatShortDateTime(result.firstScannedAt)
+              ? formatShortDateTime(
+                  result.firstScannedAt,
+                  eventTimeZone,
+                )
               : "Recorded previously"
           }
         />
@@ -826,7 +820,11 @@ function ValidationSummary({ result }: { result: PassValidationResult }) {
       <div className="mx-auto mt-5 max-w-md">
         <ResultMetric
           label="Valid period"
-          value={formatValidity(result.validFrom, result.validUntil)}
+          value={formatEventValidity(
+            result.validFrom,
+            result.validUntil,
+            eventTimeZone,
+          )}
         />
       </div>
     );
@@ -843,7 +841,13 @@ function ValidationSummary({ result }: { result: PassValidationResult }) {
   return null;
 }
 
-function ValidationDetails({ result }: { result: PassValidationResult }) {
+function ValidationDetails({
+  eventTimeZone,
+  result,
+}: {
+  eventTimeZone: string;
+  result: PassValidationResult;
+}) {
   if (result.status === "valid") {
     return (
       <dl className="mx-auto mt-4 max-w-md divide-y divide-border rounded-2xl border border-border bg-black/15 px-4 text-left">
@@ -851,7 +855,10 @@ function ValidationDetails({ result }: { result: PassValidationResult }) {
         <ResultDetail label="Gate" value={result.gateName} />
         <ResultDetail
           label="Check-in time"
-          value={formatShortDateTime(result.checkInTime)}
+          value={formatShortDateTime(
+            result.checkInTime,
+            eventTimeZone,
+          )}
         />
         <ResultDetail
           label="Entry type"
@@ -1103,46 +1110,6 @@ function GateToolButton({
   );
 }
 
-function RecentScans({ scans }: { scans: RecentScan[] }) {
-  return (
-    <div className="mt-4 rounded-xl border border-border bg-black/10 p-4">
-      <p className="text-sm font-semibold text-white">
-        Recent results on this device
-      </p>
-      {scans.length === 0 ? (
-        <p className="mt-2 text-sm leading-6 text-slate-500">
-          No passes have been validated in this browser session.
-        </p>
-      ) : (
-        <ul className="mt-3 divide-y divide-border">
-          {scans.map((scan) => (
-            <li
-              key={scan.id}
-              className="flex items-center justify-between gap-3 py-2.5 text-xs"
-            >
-              <span
-                className={`font-semibold ${getRecentScanTone(scan.status)}`}
-              >
-                {scan.label}
-              </span>
-              <span className="text-slate-600">
-                {new Intl.DateTimeFormat("en-US", {
-                  hour: "numeric",
-                  minute: "2-digit",
-                  second: "2-digit",
-                }).format(new Date(scan.scannedAt))}
-              </span>
-            </li>
-          ))}
-        </ul>
-      )}
-      <p className="mt-3 text-xs leading-5 text-slate-600">
-        This short list is stored only in the current browser session.
-      </p>
-    </div>
-  );
-}
-
 function getCameraErrorMessage(error: unknown) {
   if (error instanceof DOMException) {
     if (error.name === "NotAllowedError") {
@@ -1161,62 +1128,13 @@ function getCameraErrorMessage(error: unknown) {
   return "The camera could not start. Try again or use manual pass entry below.";
 }
 
-function getRecentScanLabel(result: PassValidationResult) {
-  if (result.status === "valid") {
-    return result.wasOverride ? "VALID · OVERRIDE" : "VALID";
-  }
-
-  if (result.status === "already_used") {
-    return "ALREADY SCANNED";
-  }
-
-  if (result.status === "wrong_day") {
-    return "NOT VALID TODAY";
-  }
-
-  if (result.status === "not_active") {
-    return "PASS NOT ACTIVE";
-  }
-
-  if (result.status === "invalid") {
-    return "INVALID PASS";
-  }
-
-  return "VALIDATION ERROR";
-}
-
-function getRecentScanTone(status: PassValidationResult["status"]) {
-  if (status === "valid") {
-    return "text-emerald-300";
-  }
-
-  if (status === "wrong_day" || status === "service_error") {
-    return "text-amber-300";
-  }
-
-  return "text-red-300";
-}
-
-function formatValidity(validFrom: string, validUntil: string) {
-  const dateFormatter = new Intl.DateTimeFormat("en-US", {
-    day: "numeric",
-    month: "short",
-    timeZone: "UTC",
-    year: "numeric",
-  });
-  const start = dateFormatter.format(new Date(validFrom));
-  const end = dateFormatter.format(new Date(validUntil));
-
-  return start === end ? start : `${start} – ${end}`;
-}
-
-function formatShortDateTime(value: string) {
+function formatShortDateTime(value: string, timeZone: string) {
   return new Intl.DateTimeFormat("en-US", {
     day: "numeric",
     hour: "numeric",
     minute: "2-digit",
     month: "short",
-    timeZone: "UTC",
+    timeZone,
     timeZoneName: "short",
   }).format(new Date(value));
 }

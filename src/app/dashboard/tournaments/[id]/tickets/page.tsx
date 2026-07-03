@@ -20,6 +20,7 @@ type Tournament = {
   name: string;
   start_date: string;
   status: "draft" | "published" | "closed" | "archived";
+  time_zone: string;
 };
 
 export default async function TicketTypesPage({
@@ -55,7 +56,7 @@ export default async function TicketTypesPage({
 
   const { data: tournamentRow, error: tournamentError } = await supabase
     .from("tournaments")
-    .select("id, name, start_date, end_date, status")
+    .select("id, name, start_date, end_date, status, time_zone")
     .eq("id", tournamentId)
     .in("organization_id", organizationIds)
     .maybeSingle();
@@ -167,6 +168,7 @@ export default async function TicketTypesPage({
               {ticketTypes.map((ticketType) => (
                 <TicketTypeCard
                   key={ticketType.id}
+                  eventTimeZone={tournament.time_zone}
                   ticketType={ticketType}
                 />
               ))}

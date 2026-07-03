@@ -7,14 +7,17 @@ import type {
   ManualLookupOrder,
   ManualLookupResult,
 } from "@/lib/manual-lookup-types";
+import { formatEventValidity } from "@/lib/event-time";
 
 export function ManualGateLookup({
   checkInPass,
+  eventTimeZone,
   lookupOrders,
 }: {
   checkInPass: (
     input: ManualLookupCheckInInput,
   ) => Promise<ManualLookupCheckInResult>;
+  eventTimeZone: string;
   lookupOrders: (query: string) => Promise<ManualLookupResult>;
 }) {
   const [query, setQuery] = useState("");
@@ -159,6 +162,7 @@ export function ManualGateLookup({
             <OrderResult
               key={order.orderId}
               checkInPendingId={checkInPendingId}
+              eventTimeZone={eventTimeZone}
               onCheckIn={checkInPassById}
               order={order}
             />
@@ -171,10 +175,12 @@ export function ManualGateLookup({
 
 function OrderResult({
   checkInPendingId,
+  eventTimeZone,
   onCheckIn,
   order,
 }: {
   checkInPendingId: number | null;
+  eventTimeZone: string;
   onCheckIn: (passId: number) => void;
   order: ManualLookupOrder;
 }) {
@@ -220,7 +226,11 @@ function OrderResult({
                     {pass.ticketName}
                   </p>
                   <p className="mt-1 text-xs text-slate-500">
-                    {formatValidity(pass.validFrom, pass.validUntil)}
+                    {formatEventValidity(
+                      pass.validFrom,
+                      pass.validUntil,
+                      eventTimeZone,
+                    )}
                   </p>
                 </div>
                 <PassStatus status={pass.status} />
@@ -342,19 +352,6 @@ function getCheckInPresentation(result: ManualLookupCheckInResult) {
     title:
       result.status === "not_active" ? "PASS NOT ACTIVE" : "CHECK-IN FAILED",
   };
-}
-
-function formatValidity(validFrom: string, validUntil: string) {
-  const formatter = new Intl.DateTimeFormat("en-US", {
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-    month: "short",
-  });
-
-  return `${formatter.format(new Date(validFrom))} – ${formatter.format(
-    new Date(validUntil),
-  )}`;
 }
 
 function formatPaymentStatus(

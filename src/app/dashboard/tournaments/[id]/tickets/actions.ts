@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireDirector } from "@/lib/auth";
+import { eventDayEnd, eventDayStart } from "@/lib/event-time";
 import type { TicketTypeFormState } from "@/lib/form-states";
 import { createClient } from "@/lib/supabase/server";
 
@@ -68,10 +69,11 @@ const ticketTypeSchema = z
 type TicketTypeField = keyof z.input<typeof ticketTypeSchema>;
 
 type OwnedTournament = {
+  end_date: string;
   id: number;
   public_slug: string;
   start_date: string;
-  end_date: string;
+  time_zone: string;
 };
 
 export async function createTicketType(
@@ -111,8 +113,14 @@ export async function createTicketType(
     tournament_id: tournamentId,
     name: parsed.data.name,
     price: centsToDatabasePrice(dollarsToCents(parsed.data.price)),
-    valid_from: startOfDate(parsed.data.validFrom),
-    valid_until: endOfDate(parsed.data.validUntil),
+    valid_from: eventDayStart(
+      parsed.data.validFrom,
+      tournament.time_zone,
+    ),
+    valid_until: eventDayEnd(
+      parsed.data.validUntil,
+      tournament.time_zone,
+    ),
     description: parsed.data.description || null,
     quantity_limit: parsed.data.quantityLimit
       ? Number(parsed.data.quantityLimit)
@@ -199,8 +207,14 @@ export async function updateTicketType(
     .update({
       name: parsed.data.name,
       price: centsToDatabasePrice(dollarsToCents(parsed.data.price)),
-      valid_from: startOfDate(parsed.data.validFrom),
-      valid_until: endOfDate(parsed.data.validUntil),
+      valid_from: eventDayStart(
+        parsed.data.validFrom,
+        tournament.time_zone,
+      ),
+      valid_until: eventDayEnd(
+        parsed.data.validUntil,
+        tournament.time_zone,
+      ),
       description: parsed.data.description || null,
       quantity_limit: parsed.data.quantityLimit
         ? Number(parsed.data.quantityLimit)
@@ -343,7 +357,7 @@ async function getOwnedTournament(
 
   const { data: tournament, error: tournamentError } = await supabase
     .from("tournaments")
-    .select("id, public_slug, start_date, end_date")
+    .select("id, public_slug, start_date, end_date, time_zone")
     .eq("id", tournamentId)
     .in("organization_id", organizationIds)
     .maybeSingle();
@@ -391,14 +405,6 @@ function dollarsToCents(value: string) {
 
 function centsToDatabasePrice(cents: number) {
   return (cents / 100).toFixed(2);
-}
-
-function startOfDate(date: string) {
-  return `${date}T00:00:00.000Z`;
-}
-
-function endOfDate(date: string) {
-  return `${date}T23:59:59.999Z`;
 }
 
 function revalidateTicketPaths(tournamentId: number, publicSlug: string) {

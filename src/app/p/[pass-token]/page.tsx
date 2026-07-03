@@ -3,9 +3,11 @@ import Image from "next/image";
 import { notFound } from "next/navigation";
 import QRCode from "qrcode";
 import { Brand } from "@/components/brand";
+import { eventDateFromTimestamp } from "@/lib/event-time";
 import { isValidPassToken } from "@/lib/pass-tokens";
 import { getPublicPass, type PublicPass } from "@/lib/public-passes";
 import { getSupabaseAdminConfigurationIssues } from "@/lib/supabase/admin";
+import { formatEventDateRange } from "@/lib/tournaments";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -146,7 +148,11 @@ export default async function PassPage({
               <PassDetail label="Ticket type" value={pass.ticketName} />
               <PassDetail
                 label="Valid date"
-                value={formatValidity(pass.validFrom, pass.validUntil)}
+                value={formatValidity(
+                  pass.validFrom,
+                  pass.validUntil,
+                  pass.eventTimeZone,
+                )}
               />
               <PassDetail label="Guest" value={pass.buyerName} />
               <PassDetail label="Order" value={pass.orderNumber} mono />
@@ -271,7 +277,11 @@ function getPassState(pass: PublicPass): PassState {
 
   if (now < validFrom) {
     return {
-      description: `This pass becomes active ${formatValidity(pass.validFrom, pass.validUntil)}.`,
+      description: `This pass becomes active ${formatValidity(
+        pass.validFrom,
+        pass.validUntil,
+        pass.eventTimeZone,
+      )}.`,
       label: "Upcoming",
       tone: "blue",
     };
@@ -292,20 +302,13 @@ function getPassState(pass: PublicPass): PassState {
   };
 }
 
-function formatValidity(validFrom: string, validUntil: string) {
-  const start = new Date(validFrom);
-  const end = new Date(validUntil);
-  const formatter = new Intl.DateTimeFormat("en-US", {
-    day: "numeric",
-    month: "short",
-    timeZone: "UTC",
-    weekday: "short",
-    year: "numeric",
-  });
-  const startLabel = formatter.format(start);
-  const endLabel = formatter.format(end);
-
-  return startLabel === endLabel
-    ? startLabel
-    : `${startLabel} – ${endLabel}`;
+function formatValidity(
+  validFrom: string,
+  validUntil: string,
+  timeZone: string,
+) {
+  return formatEventDateRange(
+    eventDateFromTimestamp(validFrom, timeZone),
+    eventDateFromTimestamp(validUntil, timeZone),
+  );
 }

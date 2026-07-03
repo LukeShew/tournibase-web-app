@@ -15,17 +15,17 @@ The web app is separate from the existing TourniBase waitlist website:
 
 Last updated: July 3, 2026
 
-- Current progress: Phases 1–10 of 19 are complete.
+- Current progress: Phases 1–11 of 19 are complete.
 - Available now: director authentication, event creation, ticket management,
   public event pages, Stripe test checkout, paid-order fulfillment, and secure
   individual mobile passes with QR codes, plus secure scanner-link creation and
   revocation for gate staff, a mobile camera scanner, authoritative admission
   decisions, duplicate blocking, overrides, check-in undo, and permission-gated
-  buyer and order lookup with manual pass check-in.
-- Next planned phase: persisted recent scan history.
-- Remaining launch work: persisted recent scan history, gate sales, dashboard
-  metrics, sharing, final copy and documentation, demo data, quality checks,
-  and release preparation.
+  buyer and order lookup with manual pass check-in, plus persisted recent scan
+  history for each scanner session.
+- Next planned phase: gate sale tracking.
+- Remaining launch work: gate sales, dashboard metrics, sharing, final copy and
+  documentation, demo data, quality checks, and release preparation.
 - Payment mode: Stripe test mode. Live keys should be enabled only when the
   complete purchase and gate-entry flow is ready for real customers.
 - Known launch dependency: production pass-link email delivery still needs a
@@ -223,6 +223,33 @@ Completed:
 - Private pass tokens resolved only on the server and never returned in lookup results
 - Service-role-only lookup function with anonymous and authenticated execution revoked
 
+## Time-zone handling
+
+- Every tournament has a fixed IANA time zone.
+- New tournaments currently default to `America/New_York`.
+- Ticket validity is converted from the tournament's calendar dates to exact
+  UTC instants using the tournament time zone.
+- Buyer, director, pass, lookup, scanner, and recent-scan screens display event
+  times in the tournament time zone rather than the viewer's device time zone.
+- Device location and VPN usage cannot change a pass's admission window.
+- Existing test-event tickets, order snapshots, and passes were re-anchored to
+  full Eastern calendar days.
+
+## Phase 11 status
+
+Completed:
+
+- Permission-gated `/scan/[scanner-token]/recent` route
+- Persisted database history instead of browser-only recent results
+- Activity restricted to the active scanner session represented by the link
+- Time, validation result, ticket type, buyer, and gate details
+- Manual-source, override, override-reason, and undone indicators
+- Empty, error, and refresh states designed for mobile gate staff
+- Tournament-time-zone display for every recorded scan
+- Composite scanner-session and scan-time index for recent activity queries
+- Security-invoker lookup function executable only by the server-side service role
+- Anonymous and authenticated browser roles cannot execute the recent-scan function
+
 ## Security model
 
 - The publishable Supabase key is used by the web app.
@@ -233,9 +260,10 @@ Completed:
 - User roles are database-protected; a director can update only their own name.
 - Published tournaments and active ticket types are the only records currently readable by anonymous users.
 - Passes, orders, scanner sessions, check-ins, and manual sales are not anonymously readable.
-- Validation, override, undo, and gate-lookup functions are security-invoker
-  functions executable only by the server-side service role.
+- Validation, override, undo, gate-lookup, and recent-scan functions are
+  security-invoker functions executable only by the server-side service role.
 
 ## Next phase
 
-Phase 11 adds persisted recent scan history for gate staff.
+Phase 12 adds gate sale tracking for cash, Venmo, external card, and comp
+transactions.

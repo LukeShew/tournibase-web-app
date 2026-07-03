@@ -21,6 +21,8 @@ import type {
   UndoCheckInResult,
   ValidatePassInput,
 } from "@/lib/pass-validation-types";
+import { getRecentScannerActivity } from "@/lib/recent-scans";
+import type { RecentScansResult } from "@/lib/recent-scans-types";
 
 export async function validatePassForScanner(
   scannerToken: string,
@@ -55,4 +57,10 @@ export async function checkInLookupPassForScanner(
   input: ManualLookupCheckInInput,
 ): Promise<ManualLookupCheckInResult> {
   return checkInManualLookupPass(scannerToken, input);
+}
+
+export async function recentScansForScanner(
+  scannerToken: string,
+): Promise<RecentScansResult> {
+  return getRecentScannerActivity(scannerToken);
 }

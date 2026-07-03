@@ -21,6 +21,7 @@ export type PublicEvent = {
   public_slug: string;
   start_date: string;
   ticketTypes: PublicTicketType[];
+  time_zone: string;
   venue_address: string | null;
   venue_name: string;
 };
@@ -31,7 +32,7 @@ export const getPublicEvent = cache(
     const { data: tournamentRow, error: tournamentError } = await supabase
       .from("tournaments")
       .select(
-        "id, name, start_date, end_date, venue_name, venue_address, organizer_name, contact_email, description, public_slug",
+        "id, name, start_date, end_date, venue_name, venue_address, organizer_name, contact_email, description, public_slug, time_zone",
       )
       .eq("public_slug", eventSlug)
       .eq("status", "published")

@@ -1,11 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import {
-  checkInLookupPassForScanner,
-  lookupOrdersForScanner,
-} from "@/app/scan/[scanner-token]/actions";
-import { ManualGateLookup } from "@/components/manual-gate-lookup";
+import { recentScansForScanner } from "@/app/scan/[scanner-token]/actions";
+import { RecentGateScans } from "@/components/recent-gate-scans";
 import { ScannerUnavailable } from "@/components/scanner-unavailable";
+import { getRecentScannerActivity } from "@/lib/recent-scans";
 import { getScannerSessionByToken } from "@/lib/scanner-sessions";
 import { getSupabaseAdminConfigurationIssues } from "@/lib/supabase/admin";
 
@@ -13,7 +11,7 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export const metadata: Metadata = {
-  title: "Manual gate lookup",
+  title: "Recent gate scans",
   referrer: "no-referrer",
   robots: {
     follow: false,
@@ -22,7 +20,7 @@ export const metadata: Metadata = {
   },
 };
 
-export default async function ManualLookupPage({
+export default async function RecentScansPage({
   params,
 }: {
   params: Promise<{ "scanner-token": string }>;
@@ -38,7 +36,7 @@ export default async function ManualLookupPage({
   try {
     lookup = await getScannerSessionByToken(scannerToken);
   } catch (error) {
-    console.error("[manual-lookup] session lookup failed", {
+    console.error("[recent-scans] session lookup failed", {
       message: error instanceof Error ? error.message : "Unknown error",
     });
 
@@ -49,12 +47,12 @@ export default async function ManualLookupPage({
     return <ScannerUnavailable status={lookup.status} />;
   }
 
-  if (!lookup.session.permissions.includes("lookup")) {
+  if (!lookup.session.permissions.includes("recent")) {
     return <ScannerUnavailable status="permission" />;
   }
 
-  const checkInPass = checkInLookupPassForScanner.bind(null, scannerToken);
-  const lookupOrders = lookupOrdersForScanner.bind(null, scannerToken);
+  const initialResult = await getRecentScannerActivity(scannerToken);
+  const refreshScans = recentScansForScanner.bind(null, scannerToken);
 
   return (
     <main className="app-grid min-h-screen bg-background pb-8">
@@ -81,10 +79,9 @@ export default async function ManualLookupPage({
             {lookup.session.eventName}
           </p>
         </div>
-        <ManualGateLookup
-          checkInPass={checkInPass}
-          eventTimeZone={lookup.session.eventTimeZone}
-          lookupOrders={lookupOrders}
+        <RecentGateScans
+          initialResult={initialResult}
+          refreshScans={refreshScans}
         />
       </div>
     </main>

@@ -56,6 +56,7 @@ export default async function ScannerPage({
   return (
     <MobileGateScanner
       eventName={lookup.session.eventName}
+      eventTimeZone={lookup.session.eventTimeZone}
       expiresAt={lookup.session.expiresAt}
       gateName={lookup.session.gateName}
       permissions={lookup.session.permissions}
