@@ -63,8 +63,7 @@ export default async function PassPage({
     notFound();
   }
 
-  const passUrl = createPassUrl(pass.publicToken);
-  const qrCodeDataUrl = await QRCode.toDataURL(passUrl, {
+  const qrCodeDataUrl = await QRCode.toDataURL(pass.publicToken, {
     color: {
       dark: "#07101D",
       light: "#FFFFFF",
@@ -114,7 +113,7 @@ export default async function PassPage({
               />
               <div
                 aria-hidden="true"
-                className="pointer-events-none absolute left-1/2 top-1/2 grid h-[19%] w-[19%] -translate-x-1/2 -translate-y-1/2 place-items-center rounded-2xl bg-white p-1 shadow-sm"
+                className="pointer-events-none absolute left-1/2 top-1/2 grid h-[22%] w-[22%] -translate-x-1/2 -translate-y-1/2 place-items-center rounded-2xl bg-white p-1 shadow-sm"
               >
                 <Image
                   src="/tournibase-app-icon.svg"
@@ -164,8 +163,8 @@ export default async function PassPage({
             being used twice.
           </p>
           <p className="mt-3 text-xs leading-5 text-slate-500">
-            The QR code contains a secure validation link, not buyer or ticket
-            details.
+            The QR code contains a secure validation token, not buyer or
+            ticket details.
           </p>
         </section>
 
@@ -231,16 +230,6 @@ function PassUnavailable() {
       </div>
     </main>
   );
-}
-
-function createPassUrl(token: string) {
-  const configuredUrl = process.env.NEXT_PUBLIC_SITE_URL?.trim();
-  const vercelUrl = process.env.VERCEL_URL?.trim();
-  const baseUrl =
-    configuredUrl ||
-    (vercelUrl ? `https://${vercelUrl}` : "http://localhost:3000");
-
-  return `${baseUrl.replace(/\/+$/, "")}/p/${token}`;
 }
 
 function getPassState(pass: PublicPass): PassState {
