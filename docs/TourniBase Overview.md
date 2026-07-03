@@ -11,6 +11,26 @@ The web app is separate from the existing TourniBase waitlist website:
 - Separate Supabase project
 - Separate local checkout
 
+## Web app MVP status
+
+Last updated: July 3, 2026
+
+- Current progress: Phases 1–6 of 19 are complete.
+- Available now: director authentication, event creation, ticket management,
+  public event pages, Stripe test checkout, paid-order fulfillment, and secure
+  individual mobile passes with QR codes.
+- Next planned phase: director-only scanner link creation and revocation.
+- Remaining launch work: gate scanning and validation, manual lookup, recent
+  scan history, gate sales, dashboard metrics, sharing, final copy and
+  documentation, demo data, quality checks, and release preparation.
+- Payment mode: Stripe test mode. Live keys should be enabled only when the
+  complete purchase and gate-entry flow is ready for real customers.
+- Known launch dependency: production pass-link email delivery still needs a
+  transactional email provider.
+
+Keep this section updated whenever a phase is completed, scope changes, or a
+launch dependency is added or resolved.
+
 ## Phase 1 status
 
 Completed:

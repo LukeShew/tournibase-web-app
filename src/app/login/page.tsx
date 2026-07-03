@@ -29,7 +29,7 @@ export default async function LoginPage() {
           </p>
           <LoginForm />
           <p className="mt-6 text-center text-sm leading-6 text-slate-500">
-            Director accounts are created by invitation during the MVP.
+            Director accounts are provisioned by invitation.
           </p>
         </div>
       </section>

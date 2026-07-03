@@ -26,7 +26,7 @@ export default async function Home() {
         <div>
           <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-brand/25 bg-brand-soft px-3 py-1.5 text-sm font-medium text-blue-200">
             <span className="h-2 w-2 rounded-full bg-brand" />
-            Web app foundation
+            Tournament admission platform
           </div>
           <h1 className="max-w-3xl text-5xl font-semibold tracking-[-0.045em] text-white sm:text-6xl">
             Sell admission. Move the gate. Stop duplicate tickets.
@@ -43,7 +43,7 @@ export default async function Home() {
               Open director dashboard
             </Link>
             <span className="inline-flex min-h-12 items-center justify-center px-4 text-sm text-slate-400">
-              Director accounts are invite-only during the MVP.
+              Director access is available by invitation.
             </span>
           </div>
         </div>
@@ -71,7 +71,7 @@ export default async function Home() {
             </div>
           </div>
           <div className="rounded-2xl border border-dashed border-white/15 px-4 py-5 text-center text-sm leading-6 text-slate-400">
-            Your first tournament will appear here after event setup is added.
+            Create or select a tournament to view live admission activity.
           </div>
         </div>
       </section>
