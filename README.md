@@ -45,6 +45,15 @@ Phase 5:
 - Payment confirmation and generated pass links at `/order/success`
 - Clear configuration errors when required Stripe or Supabase server keys are missing
 
+Phase 6:
+
+- Mobile-first individual passes at `/p/[pass-token]`
+- Server-only lookup by secure UUID with no anonymous order or pass access
+- QR codes containing only a secure validation URL
+- Event, ticket, validity, guest, order, venue, and organizer support details
+- Clear active, upcoming, used, refunded, voided, and expired pass states
+- Direct mobile-pass buttons on the order confirmation page
+
 ## Setup
 
 1. Install dependencies:

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { Brand } from "@/components/brand";
 import { getOrderConfirmation } from "@/lib/orders";
 import { getStripeConfigurationIssues } from "@/lib/stripe";
@@ -123,8 +124,7 @@ export default async function OrderSuccessPage({
             Individual pass links
           </h2>
           <p className="mt-2 text-sm leading-6 text-slate-400">
-            Each guest receives a unique pass. The full mobile pass display
-            will be activated shortly.
+            Each guest receives a unique mobile pass and QR code for entry.
           </p>
         </div>
 
@@ -143,9 +143,12 @@ export default async function OrderSuccessPage({
                     {pass.status}
                   </p>
                 </div>
-                <code className="max-w-full overflow-x-auto rounded-lg bg-black/25 px-3 py-2 font-mono text-xs text-blue-300">
-                  /p/{pass.publicToken}
-                </code>
+                <Link
+                  href={`/p/${pass.publicToken}`}
+                  className="inline-flex min-h-11 items-center justify-center rounded-xl bg-brand px-4 text-sm font-semibold text-white transition hover:bg-brand-strong"
+                >
+                  Open mobile pass
+                </Link>
               </div>
             </article>
           ))}

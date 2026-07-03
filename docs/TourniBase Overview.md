@@ -110,6 +110,21 @@ pass creation remains safe when Stripe retries or redirects quickly.
 Production pass-link email delivery remains a documented TODO until
 transactional email infrastructure is configured.
 
+## Phase 6 status
+
+Completed:
+
+- Mobile-first `/p/[pass-token]` route for each individually issued pass
+- Secure server-only lookup by UUID token
+- Paid-order verification before any pass details are returned
+- No anonymous database access to orders or passes
+- QR codes containing only a secure validation URL
+- Tournament, ticket type, validity day, buyer, order, venue, and support details
+- Active, upcoming, checked-in, refunded, voided, and expired display states
+- No-index metadata on all pass pages
+- Direct mobile-pass buttons from the payment confirmation page
+- Fraud-protection guidance for buyers and gate staff
+
 ## Security model
 
 - The publishable Supabase key is used by the web app.
@@ -123,5 +138,5 @@ transactional email infrastructure is configured.
 
 ## Next phase
 
-Phase 6 builds the mobile-first `/p/[pass-token]` page and renders each issued
-pass as a QR code containing only its secure token or validation URL.
+Phase 7 builds director-only scanner-link creation and revocation for each
+tournament.
