@@ -15,11 +15,12 @@ The web app is separate from the existing TourniBase waitlist website:
 
 Last updated: July 3, 2026
 
-- Current progress: Phases 1–6 of 19 are complete.
+- Current progress: Phases 1–7 of 19 are complete.
 - Available now: director authentication, event creation, ticket management,
   public event pages, Stripe test checkout, paid-order fulfillment, and secure
-  individual mobile passes with QR codes.
-- Next planned phase: director-only scanner link creation and revocation.
+  individual mobile passes with QR codes, plus secure scanner-link creation and
+  revocation for gate staff.
+- Next planned phase: the mobile web scanner used by gate staff.
 - Remaining launch work: gate scanning and validation, manual lookup, recent
   scan history, gate sales, dashboard metrics, sharing, final copy and
   documentation, demo data, quality checks, and release preparation.
@@ -145,6 +146,22 @@ Completed:
 - Direct mobile-pass buttons from the payment confirmation page
 - Fraud-protection guidance for buyers and gate staff
 
+## Phase 7 status
+
+Completed:
+
+- Protected `/dashboard/tournaments/[id]/gate` route
+- Event-specific gate name and staff assignments
+- Scan-only, standard-gate, and full-gate permission levels
+- Four-hour, eight-hour, twelve-hour, twenty-four-hour, and three-day expiration choices
+- Cryptographically random 256-bit scanner tokens
+- SHA-256 token hashing before database storage
+- One-time display and copy flow for raw scanner links
+- Active, expired, and revoked scanner-session history
+- Immediate link revocation
+- Database constraints for token hashes, expiration, revocation, labels, and permissions
+- Existing director ownership checks and RLS enforcement on every scanner-session mutation
+
 ## Security model
 
 - The publishable Supabase key is used by the web app.
@@ -158,5 +175,5 @@ Completed:
 
 ## Next phase
 
-Phase 7 builds director-only scanner-link creation and revocation for each
-tournament.
+Phase 8 builds the mobile `/scan/[scanner-token]` experience for gate staff,
+including camera access, pass scanning, and clear validation results.

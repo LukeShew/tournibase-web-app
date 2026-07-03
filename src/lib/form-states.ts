@@ -54,3 +54,32 @@ export const initialPublicationState: PublicationState = {
   message: "",
   success: false,
 };
+
+export type ScannerSessionFormState = {
+  errors: Partial<
+    Record<
+      "gateName" | "staffLabel" | "permissionLevel" | "expirationHours",
+      string
+    >
+  >;
+  message: string;
+  scannerUrl?: string;
+  success: boolean;
+  successId?: string;
+};
+
+export const initialScannerSessionFormState: ScannerSessionFormState = {
+  errors: {},
+  message: "",
+  success: false,
+};
+
+export type RevokeScannerSessionState = {
+  message: string;
+  success: boolean;
+};
+
+export const initialRevokeScannerSessionState: RevokeScannerSessionState = {
+  message: "",
+  success: false,
+};

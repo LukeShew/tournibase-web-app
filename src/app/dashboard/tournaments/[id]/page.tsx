@@ -167,7 +167,7 @@ export default async function TournamentOverviewPage({
         <StatusCard
           label="Scanner links"
           value={`${scannerCount ?? 0}`}
-          detail="Secure gate links will be added in Phase 7."
+          detail="Create and manage secure access for gate staff."
         />
       </section>
 
@@ -263,10 +263,10 @@ export default async function TournamentOverviewPage({
               phase="Publish first"
             />
           )}
-          <FutureTool
+          <ActiveTool
+            href={`/dashboard/tournaments/${tournamentId}/gate`}
             title="Create scanner link"
             description="Authorize gate staff and specific entrances."
-            phase="Phase 7"
           />
           <FutureTool
             title="Open gate dashboard"

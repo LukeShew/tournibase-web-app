@@ -54,6 +54,16 @@ Phase 6:
 - Clear active, upcoming, used, refunded, voided, and expired pass states
 - Direct mobile-pass buttons on the order confirmation page
 
+Phase 7:
+
+- Director-only scanner access management at `/dashboard/tournaments/[id]/gate`
+- Cryptographically random scanner tokens with only SHA-256 hashes stored
+- Scan-only, standard-gate, and full-gate permission levels
+- Automatic expiration choices from four hours to three days
+- One-time scanner-link display and copy flow
+- Active, expired, and revoked scanner-session history
+- Immediate scanner-link revocation
+
 ## Setup
 
 1. Install dependencies:
