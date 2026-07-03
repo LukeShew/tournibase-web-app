@@ -15,15 +15,16 @@ The web app is separate from the existing TourniBase waitlist website:
 
 Last updated: July 3, 2026
 
-- Current progress: Phases 1–8 of 19 are complete.
+- Current progress: Phases 1–9 of 19 are complete.
 - Available now: director authentication, event creation, ticket management,
   public event pages, Stripe test checkout, paid-order fulfillment, and secure
   individual mobile passes with QR codes, plus secure scanner-link creation and
-  revocation for gate staff and a mobile camera scanner.
-- Next planned phase: server-side pass validation and check-in recording.
-- Remaining launch work: validation decisions, manual lookup, persisted recent
-  scan history, gate sales, dashboard metrics, sharing, final copy and
-  documentation, demo data, quality checks, and release preparation.
+  revocation for gate staff, a mobile camera scanner, authoritative admission
+  decisions, duplicate blocking, overrides, and check-in undo.
+- Next planned phase: buyer and order manual lookup.
+- Remaining launch work: manual lookup, persisted recent scan history, gate
+  sales, dashboard metrics, sharing, final copy and documentation, demo data,
+  quality checks, and release preparation.
 - Payment mode: Stripe test mode. Live keys should be enabled only when the
   complete purchase and gate-entry flow is ready for real customers.
 - Known launch dependency: production pass-link email delivery still needs a
@@ -139,7 +140,7 @@ Completed:
 - Secure server-only lookup by UUID token
 - Paid-order verification before any pass details are returned
 - No anonymous database access to orders or passes
-- QR codes containing only a secure validation URL
+- QR codes containing only a secure validation token
 - Tournament, ticket type, validity day, buyer, order, venue, and support details
 - Active, upcoming, checked-in, refunded, voided, and expired display states
 - No-index metadata on all pass pages
@@ -181,8 +182,30 @@ Completed:
 - Recent pass-code captures held only in the current browser session
 - No raw scanner token or Supabase secret key is sent as component data
 
-Phase 8 captures and parses pass codes but does not approve admission. Phase 9
-adds the authoritative backend validation result and records scan attempts.
+## Phase 9 status
+
+Completed:
+
+- Bound Server Actions connect each active scanner link to pass validation
+- Atomic Postgres validation prevents concurrent duplicate admissions
+- Scanner authorization, tournament ownership, payment, pass status, valid
+  date, and prior-admission checks
+- Large `VALID`, `ALREADY SCANNED`, `NOT VALID TODAY`, `INVALID PASS`, and
+  `PASS NOT ACTIVE` gate results
+- Ticket, tournament, gate, admit-count, and check-in-time details
+- Every attempted scan recorded in `check_ins`
+- Invalid attempts recorded with a nullable `pass_id` and SHA-256 attempt hash
+  so raw scanned tokens are never stored
+- Manual token entry recorded distinctly from camera scans
+- Duplicate overrides require and store a reason
+- Successful admissions can be undone from the scanner that created them
+- Undo recalculates admissions and restores an eligible pass to active status
+- Validation functions use atomic row locks and service-role-only execution
+- Anonymous and authenticated browser roles cannot execute validation functions
+
+The `check_ins.pass_id` column is nullable only for invalid scans where no pass
+exists or where a pass belongs to another tournament. A database constraint
+allows a missing pass only when the recorded result is `invalid`.
 
 ## Security model
 
@@ -194,9 +217,10 @@ adds the authoritative backend validation result and records scan attempts.
 - User roles are database-protected; a director can update only their own name.
 - Published tournaments and active ticket types are the only records currently readable by anonymous users.
 - Passes, orders, scanner sessions, check-ins, and manual sales are not anonymously readable.
+- Validation, override, and undo functions are security-invoker functions
+  executable only by the server-side service role.
 
 ## Next phase
 
-Phase 9 builds the server-side validation engine, records every scan attempt,
-and returns authoritative valid, duplicate, wrong-day, invalid, refunded, or
-voided results.
+Phase 10 adds manual buyer and order lookup for resolving gate issues without a
+working QR code.

@@ -1,4 +1,9 @@
 import type { Metadata } from "next";
+import {
+  overridePassForScanner,
+  undoCheckInForScanner,
+  validatePassForScanner,
+} from "@/app/scan/[scanner-token]/actions";
 import { Brand } from "@/components/brand";
 import { MobileGateScanner } from "@/components/mobile-gate-scanner";
 import { getScannerSessionByToken } from "@/lib/scanner-sessions";
@@ -44,6 +49,10 @@ export default async function ScannerPage({
     return <ScannerUnavailable status={lookup.status} />;
   }
 
+  const overridePass = overridePassForScanner.bind(null, scannerToken);
+  const undoCheckIn = undoCheckInForScanner.bind(null, scannerToken);
+  const validatePass = validatePassForScanner.bind(null, scannerToken);
+
   return (
     <MobileGateScanner
       eventName={lookup.session.eventName}
@@ -51,6 +60,9 @@ export default async function ScannerPage({
       gateName={lookup.session.gateName}
       permissions={lookup.session.permissions}
       staffLabel={lookup.session.staffLabel}
+      overridePass={overridePass}
+      undoCheckIn={undoCheckIn}
+      validatePass={validatePass}
       venueName={lookup.session.venueName}
     />
   );

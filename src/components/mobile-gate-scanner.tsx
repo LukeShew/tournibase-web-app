@@ -8,41 +8,65 @@ import {
   useState,
 } from "react";
 import type { IScannerControls } from "@zxing/browser";
-import { extractPassToken } from "@/lib/pass-tokens";
+import type {
+  OverridePassInput,
+  PassValidationResult,
+  ScanSource,
+  UndoCheckInInput,
+  UndoCheckInResult,
+  ValidatePassInput,
+} from "@/lib/pass-validation-types";
 
 type ScannerView =
   | { mode: "idle" }
   | { mode: "starting" }
   | { mode: "scanning" }
   | {
-      mode: "captured";
-      passToken: string;
-      source: "camera" | "manual";
+      mode: "validating";
+    }
+  | {
+      candidate: string;
+      mode: "result";
+      result: PassValidationResult;
+      source: ScanSource;
     }
   | {
       message: string;
-      mode: "camera_error" | "invalid";
+      mode: "camera_error";
+    }
+  | {
+      message: string;
+      mode: "notice";
+      title: string;
+      tone: "green" | "red";
     };
 
-type RecentCapture = {
-  capturedAt: string;
+type RecentScan = {
   id: string;
-  passToken: string;
+  label: string;
+  scannedAt: string;
+  status: PassValidationResult["status"];
 };
 
 export function MobileGateScanner({
   eventName,
   expiresAt,
   gateName,
+  overridePass,
   permissions,
   staffLabel,
+  undoCheckIn,
+  validatePass,
   venueName,
 }: {
   eventName: string;
   expiresAt: string;
   gateName: string;
+  overridePass: (input: OverridePassInput) => Promise<PassValidationResult>;
   permissions: string[];
   staffLabel: string;
+  undoCheckIn: (input: UndoCheckInInput) => Promise<UndoCheckInResult>;
+  validatePass: (input: ValidatePassInput) => Promise<PassValidationResult>;
   venueName: string;
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -51,8 +75,15 @@ export function MobileGateScanner({
   const scanLockedRef = useRef(false);
   const mountedRef = useRef(true);
   const [view, setView] = useState<ScannerView>({ mode: "idle" });
-  const [recentCaptures, setRecentCaptures] = useState<RecentCapture[]>([]);
+  const [recentScans, setRecentScans] = useState<RecentScan[]>([]);
   const [showRecent, setShowRecent] = useState(false);
+  const [showResultDetails, setShowResultDetails] = useState(false);
+  const [showOverrideForm, setShowOverrideForm] = useState(false);
+  const [overrideReason, setOverrideReason] = useState("");
+  const [resultActionNotice, setResultActionNotice] = useState<string | null>(
+    null,
+  );
+  const [resultActionPending, setResultActionPending] = useState(false);
   const [toolNotice, setToolNotice] = useState<string | null>(null);
 
   const stopCamera = useCallback(() => {
@@ -91,6 +122,10 @@ export function MobileGateScanner({
     stopCamera();
     scanLockedRef.current = false;
     setShowRecent(false);
+    setShowOverrideForm(false);
+    setShowResultDetails(false);
+    setOverrideReason("");
+    setResultActionNotice(null);
     setToolNotice(null);
     setView({ mode: "starting" });
 
@@ -125,7 +160,7 @@ export function MobileGateScanner({
 
           scanLockedRef.current = true;
           activeControls.stop();
-          captureCandidate(result.getText(), "camera");
+          void validateCandidate(result.getText(), "camera");
         },
       );
 
@@ -150,28 +185,36 @@ export function MobileGateScanner({
     }
   }
 
-  function captureCandidate(value: string, source: "camera" | "manual") {
+  async function validateCandidate(value: string, source: ScanSource) {
     stopCamera();
-    const passToken = extractPassToken(value);
+    const candidate = value.trim();
 
-    if (!passToken) {
-      setView({
+    setShowRecent(false);
+    setShowOverrideForm(false);
+    setShowResultDetails(false);
+    setOverrideReason("");
+    setResultActionNotice(null);
+    setToolNotice(null);
+    setView({ mode: "validating" });
+
+    let result: PassValidationResult;
+
+    try {
+      result = await validatePass({ candidate, source });
+    } catch {
+      result = {
         message:
-          "This QR code does not contain a TourniBase mobile pass link or pass token.",
-        mode: "invalid",
-      });
+          "TourniBase could not validate this pass. Check the connection and try again.",
+        status: "service_error",
+      };
+    }
+
+    if (!mountedRef.current) {
       return;
     }
 
-    setRecentCaptures((currentCaptures) => [
-      {
-        capturedAt: new Date().toISOString(),
-        id: crypto.randomUUID(),
-        passToken,
-      },
-      ...currentCaptures,
-    ].slice(0, 5));
-    setView({ mode: "captured", passToken, source });
+    addRecentScan(result);
+    setView({ candidate, mode: "result", result, source });
   }
 
   function submitManualPass(event: FormEvent<HTMLFormElement>) {
@@ -179,7 +222,99 @@ export function MobileGateScanner({
     const formData = new FormData(event.currentTarget);
     const value = formData.get("passValue");
 
-    captureCandidate(typeof value === "string" ? value : "", "manual");
+    void validateCandidate(
+      typeof value === "string" ? value : "",
+      "manual",
+    );
+  }
+
+  async function handleUndo(checkInId: number) {
+    setResultActionPending(true);
+    setResultActionNotice(null);
+    let result: UndoCheckInResult;
+
+    try {
+      result = await undoCheckIn({ checkInId });
+    } catch {
+      result = {
+        message:
+          "TourniBase could not undo this check-in. Check the connection and try again.",
+        status: "service_error",
+      };
+    }
+
+    if (!mountedRef.current) {
+      return;
+    }
+
+    setResultActionPending(false);
+
+    if (result.status === "undone") {
+      setView({
+        message: `${result.ticketName} is available to scan again.`,
+        mode: "notice",
+        title: "CHECK-IN UNDONE",
+        tone: "green",
+      });
+      return;
+    }
+
+    setResultActionNotice(result.message);
+  }
+
+  async function handleOverride(
+    candidate: string,
+    passId: number,
+    source: ScanSource,
+  ) {
+    setResultActionPending(true);
+    setResultActionNotice(null);
+    let result: PassValidationResult;
+
+    try {
+      result = await overridePass({
+        candidate,
+        passId,
+        reason: overrideReason,
+        source,
+      });
+    } catch {
+      result = {
+        message:
+          "TourniBase could not record the override. Check the connection and try again.",
+        status: "service_error",
+      };
+    }
+
+    if (!mountedRef.current) {
+      return;
+    }
+
+    setResultActionPending(false);
+
+    if (result.status === "valid") {
+      addRecentScan(result);
+      setShowOverrideForm(false);
+      setOverrideReason("");
+      setView({ candidate, mode: "result", result, source });
+      return;
+    }
+
+    setResultActionNotice(result.message);
+  }
+
+  function addRecentScan(result: PassValidationResult) {
+    setRecentScans((currentScans) =>
+      [
+        {
+          id: crypto.randomUUID(),
+          label: getRecentScanLabel(result),
+          scannedAt: new Date().toISOString(),
+          status: result.status,
+        },
+        ...currentScans,
+      ].slice(0, 5),
+    );
   }
 
   function openManualLookup() {
@@ -192,7 +327,7 @@ export function MobileGateScanner({
     manualInputRef.current?.focus();
   }
 
-  function openRecentCaptures() {
+  function openRecentScans() {
     setToolNotice(null);
     setShowRecent((isVisible) => !isVisible);
   }
@@ -212,6 +347,8 @@ export function MobileGateScanner({
       ? "Starting camera"
       : view.mode === "scanning"
         ? "Camera active"
+        : view.mode === "validating"
+          ? "Validating pass"
         : "Ready to scan";
 
   return (
@@ -266,23 +403,47 @@ export function MobileGateScanner({
                 : "opacity-0"
             }`}
           />
-          {view.mode === "captured" ? (
-            <ResultPanel
-              eyebrow="Pass detected"
-              title="CODE CAPTURED"
-              description="The pass code was read successfully. Do not admit the guest until TourniBase displays a secure validation result."
-              tone="blue"
-              detail={`Pass ending ${view.passToken.slice(-8)} · ${view.source === "camera" ? "Camera" : "Manual entry"}`}
-              actionLabel="Scan next pass"
-              onAction={startCamera}
+          {view.mode === "validating" ? (
+            <ValidationPendingPanel />
+          ) : view.mode === "result" ? (
+            <ValidationResultPanel
+              actionNotice={resultActionNotice}
+              actionPending={resultActionPending}
+              canLookup={canLookup}
+              canSell={canRecordSale}
+              onManualLookup={openManualLookup}
+              onOverride={() =>
+                handleOverride(
+                  view.candidate,
+                  view.result.status === "already_used"
+                    ? view.result.passId
+                    : 0,
+                  view.source,
+                )
+              }
+              onScanNext={startCamera}
+              onSellCorrectPass={showGateSaleNotice}
+              onToggleDetails={() =>
+                setShowResultDetails((isVisible) => !isVisible)
+              }
+              onToggleOverride={() => {
+                setResultActionNotice(null);
+                setShowOverrideForm((isVisible) => !isVisible);
+              }}
+              onUndo={(checkInId) => handleUndo(checkInId)}
+              overrideReason={overrideReason}
+              result={view.result}
+              setOverrideReason={setOverrideReason}
+              showDetails={showResultDetails}
+              showOverrideForm={showOverrideForm}
             />
-          ) : view.mode === "invalid" ? (
+          ) : view.mode === "notice" ? (
             <ResultPanel
-              eyebrow="Not recognized"
-              title="INVALID QR"
+              eyebrow="Admission updated"
+              title={view.title}
               description={view.message}
-              tone="red"
-              actionLabel="Try another pass"
+              tone={view.tone}
+              actionLabel="Scan next pass"
               onAction={startCamera}
             />
           ) : view.mode === "camera_error" ? (
@@ -338,9 +499,12 @@ export function MobileGateScanner({
             />
             <button
               type="submit"
-              className="mt-3 inline-flex h-11 w-full items-center justify-center rounded-xl bg-brand-strong px-4 text-sm font-semibold text-white transition hover:bg-blue-500"
+              disabled={view.mode === "validating"}
+              className="mt-3 inline-flex h-11 w-full items-center justify-center rounded-xl bg-brand-strong px-4 text-sm font-semibold text-white transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              Read pass code
+              {view.mode === "validating"
+                ? "Validating…"
+                : "Validate pass"}
             </button>
           </form>
         </section>
@@ -356,7 +520,7 @@ export function MobileGateScanner({
             <GateToolButton
               label="Recent scans"
               enabled={canViewRecent}
-              onClick={openRecentCaptures}
+              onClick={openRecentScans}
             />
             <GateToolButton
               label="Gate sale"
@@ -366,7 +530,7 @@ export function MobileGateScanner({
           </div>
 
           {showRecent ? (
-            <RecentCaptures captures={recentCaptures} />
+            <RecentScans scans={recentScans} />
           ) : toolNotice ? (
             <p
               aria-live="polite"
@@ -378,8 +542,8 @@ export function MobileGateScanner({
         </section>
 
         <p className="mt-5 px-2 text-center text-xs leading-5 text-slate-600">
-          Capturing a QR code does not admit a guest. Every pass must receive a
-          server validation result.
+          Every scan is checked against the paid order, pass status, event,
+          valid date, and prior admissions before entry is approved.
         </p>
       </div>
     </main>
@@ -452,6 +616,403 @@ function CameraPanel({
   );
 }
 
+function ValidationPendingPanel() {
+  return (
+    <div className="grid min-h-[26rem] place-items-center bg-blue-400/[0.06] p-6 text-center">
+      <div>
+        <div className="mx-auto h-12 w-12 animate-spin rounded-full border-4 border-blue-300/20 border-t-blue-300" />
+        <p className="mt-6 text-sm font-semibold text-blue-200">
+          Secure validation
+        </p>
+        <h2 className="mt-2 text-3xl font-black tracking-[-0.04em] text-white">
+          CHECKING PASS
+        </h2>
+        <p className="mx-auto mt-3 max-w-sm leading-7 text-slate-400">
+          Confirming payment, pass status, valid date, and prior admissions.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function ValidationResultPanel({
+  actionNotice,
+  actionPending,
+  canLookup,
+  canSell,
+  onManualLookup,
+  onOverride,
+  onScanNext,
+  onSellCorrectPass,
+  onToggleDetails,
+  onToggleOverride,
+  onUndo,
+  overrideReason,
+  result,
+  setOverrideReason,
+  showDetails,
+  showOverrideForm,
+}: {
+  actionNotice: string | null;
+  actionPending: boolean;
+  canLookup: boolean;
+  canSell: boolean;
+  onManualLookup: () => void;
+  onOverride: () => void;
+  onScanNext: () => void;
+  onSellCorrectPass: () => void;
+  onToggleDetails: () => void;
+  onToggleOverride: () => void;
+  onUndo: (checkInId: number) => void;
+  overrideReason: string;
+  result: PassValidationResult;
+  setOverrideReason: (value: string) => void;
+  showDetails: boolean;
+  showOverrideForm: boolean;
+}) {
+  const presentation = getValidationPresentation(result);
+
+  return (
+    <div
+      className={`min-h-[26rem] p-6 text-center sm:p-8 ${presentation.background}`}
+    >
+      <p className={`text-sm font-semibold ${presentation.text}`}>
+        {presentation.eyebrow}
+      </p>
+      <h2 className="mt-3 text-4xl font-black tracking-[-0.04em] text-white sm:text-5xl">
+        {presentation.title}
+      </h2>
+      <p className="mx-auto mt-4 max-w-md leading-7 text-slate-300">
+        {presentation.description}
+      </p>
+
+      <ValidationSummary result={result} />
+
+      {showDetails ? <ValidationDetails result={result} /> : null}
+
+      {actionNotice ? (
+        <p className="mx-auto mt-4 max-w-md rounded-xl border border-amber-300/20 bg-amber-300/[0.06] p-3 text-sm leading-6 text-amber-100">
+          {actionNotice}
+        </p>
+      ) : null}
+
+      {showOverrideForm && result.status === "already_used" ? (
+        <div className="mx-auto mt-5 max-w-md rounded-2xl border border-red-300/20 bg-black/15 p-4 text-left">
+          <label
+            htmlFor="override-reason"
+            className="text-sm font-semibold text-white"
+          >
+            Override reason
+          </label>
+          <p className="mt-1 text-xs leading-5 text-slate-400">
+            Explain why another admission should be allowed. This is saved in
+            the gate record.
+          </p>
+          <textarea
+            id="override-reason"
+            value={overrideReason}
+            onChange={(event) => setOverrideReason(event.target.value)}
+            minLength={3}
+            maxLength={500}
+            rows={3}
+            placeholder="Example: Director approved re-entry"
+            className="mt-3 w-full resize-none rounded-xl border border-border bg-black/25 px-3 py-2.5 text-sm text-white outline-none transition placeholder:text-slate-600 focus:border-red-300/40 focus:ring-4 focus:ring-red-300/10"
+          />
+          <button
+            type="button"
+            disabled={actionPending || overrideReason.trim().length < 3}
+            onClick={onOverride}
+            className="mt-3 inline-flex h-11 w-full items-center justify-center rounded-xl bg-red-300 px-4 text-sm font-semibold text-red-950 transition hover:bg-red-200 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {actionPending ? "Recording override…" : "Admit with override"}
+          </button>
+        </div>
+      ) : null}
+
+      <div className="mx-auto mt-7 grid max-w-md gap-2 sm:grid-cols-2">
+        <ResultActionButton
+          disabled={actionPending}
+          label="Scan next"
+          onClick={onScanNext}
+          variant="primary"
+        />
+
+        {result.status === "valid" ? (
+          <>
+            <ResultActionButton
+              disabled={actionPending}
+              label={actionPending ? "Undoing…" : "Undo check-in"}
+              onClick={() => onUndo(result.checkInId)}
+              variant="secondary"
+            />
+            <ResultActionButton
+              label={showDetails ? "Hide details" : "View details"}
+              onClick={onToggleDetails}
+              variant="secondary"
+            />
+          </>
+        ) : result.status === "already_used" ? (
+          <>
+            <ResultActionButton
+              label={showDetails ? "Hide details" : "View details"}
+              onClick={onToggleDetails}
+              variant="secondary"
+            />
+            <ResultActionButton
+              disabled={!canLookup}
+              label={showOverrideForm ? "Cancel override" : "Override"}
+              onClick={onToggleOverride}
+              variant="danger"
+            />
+          </>
+        ) : result.status === "wrong_day" ? (
+          <>
+            <ResultActionButton
+              disabled={!canLookup}
+              label="Manual lookup"
+              onClick={onManualLookup}
+              variant="secondary"
+            />
+            <ResultActionButton
+              disabled={!canSell}
+              label="Sell correct pass"
+              onClick={onSellCorrectPass}
+              variant="secondary"
+            />
+          </>
+        ) : result.status === "invalid" ||
+          result.status === "not_active" ? (
+          <ResultActionButton
+            disabled={!canLookup}
+            label="Manual lookup"
+            onClick={onManualLookup}
+            variant="secondary"
+          />
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+function ValidationSummary({ result }: { result: PassValidationResult }) {
+  if (result.status === "valid") {
+    return (
+      <div className="mx-auto mt-5 grid max-w-md grid-cols-2 gap-2">
+        <ResultMetric label="Ticket" value={result.ticketName} />
+        <ResultMetric
+          label="Admit count"
+          value={`${result.admitCount} of ${result.usesAllowed}`}
+        />
+      </div>
+    );
+  }
+
+  if (result.status === "already_used") {
+    return (
+      <div className="mx-auto mt-5 grid max-w-md grid-cols-2 gap-2">
+        <ResultMetric label="Ticket" value={result.ticketName} />
+        <ResultMetric
+          label="First scan"
+          value={
+            result.firstScannedAt
+              ? formatShortDateTime(result.firstScannedAt)
+              : "Recorded previously"
+          }
+        />
+      </div>
+    );
+  }
+
+  if (result.status === "wrong_day") {
+    return (
+      <div className="mx-auto mt-5 max-w-md">
+        <ResultMetric
+          label="Valid period"
+          value={formatValidity(result.validFrom, result.validUntil)}
+        />
+      </div>
+    );
+  }
+
+  if (result.status === "not_active") {
+    return (
+      <div className="mx-auto mt-5 max-w-md">
+        <ResultMetric label="Ticket" value={result.ticketName} />
+      </div>
+    );
+  }
+
+  return null;
+}
+
+function ValidationDetails({ result }: { result: PassValidationResult }) {
+  if (result.status === "valid") {
+    return (
+      <dl className="mx-auto mt-4 max-w-md divide-y divide-border rounded-2xl border border-border bg-black/15 px-4 text-left">
+        <ResultDetail label="Tournament" value={result.tournamentName} />
+        <ResultDetail label="Gate" value={result.gateName} />
+        <ResultDetail
+          label="Check-in time"
+          value={formatShortDateTime(result.checkInTime)}
+        />
+        <ResultDetail
+          label="Entry type"
+          value={
+            result.wasOverride
+              ? "Director override"
+              : result.wasManual
+                ? "Manual check-in"
+                : "Camera scan"
+          }
+        />
+      </dl>
+    );
+  }
+
+  if (result.status === "already_used") {
+    return (
+      <dl className="mx-auto mt-4 max-w-md divide-y divide-border rounded-2xl border border-border bg-black/15 px-4 text-left">
+        <ResultDetail
+          label="First gate"
+          value={result.firstGateName ?? "Unknown gate"}
+        />
+        <ResultDetail
+          label="Admissions"
+          value={`${result.admitCount} of ${result.usesAllowed}`}
+        />
+      </dl>
+    );
+  }
+
+  return null;
+}
+
+function ResultMetric({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-xl border border-white/10 bg-black/15 p-3">
+      <p className="text-xs font-medium uppercase tracking-[0.12em] text-slate-500">
+        {label}
+      </p>
+      <p className="mt-1 text-sm font-semibold text-white">{value}</p>
+    </div>
+  );
+}
+
+function ResultDetail({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-center justify-between gap-4 py-3 text-sm">
+      <dt className="text-slate-500">{label}</dt>
+      <dd className="text-right font-medium text-slate-200">{value}</dd>
+    </div>
+  );
+}
+
+function ResultActionButton({
+  disabled = false,
+  label,
+  onClick,
+  variant,
+}: {
+  disabled?: boolean;
+  label: string;
+  onClick: () => void;
+  variant: "danger" | "primary" | "secondary";
+}) {
+  const styles = {
+    danger:
+      "border-red-300/25 bg-red-300/[0.08] text-red-100 hover:bg-red-300/[0.14]",
+    primary: "border-blue-500 bg-blue-500 text-white hover:bg-blue-400",
+    secondary:
+      "border-white/10 bg-white/[0.04] text-slate-200 hover:bg-white/[0.08]",
+  };
+
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={onClick}
+      className={`inline-flex h-12 items-center justify-center rounded-xl border px-4 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50 ${styles[variant]}`}
+    >
+      {label}
+    </button>
+  );
+}
+
+function getValidationPresentation(result: PassValidationResult) {
+  if (result.status === "valid") {
+    return {
+      background: "bg-emerald-300/[0.09]",
+      description: result.wasOverride
+        ? "Override recorded. Admit the guest."
+        : "Pass approved. Admit the guest.",
+      eyebrow: result.wasOverride
+        ? "Admission override"
+        : "Secure validation complete",
+      text: "text-emerald-200",
+      title: "VALID",
+    };
+  }
+
+  if (result.status === "already_used") {
+    return {
+      background: "bg-red-400/[0.09]",
+      description: "Do not admit without a documented override.",
+      eyebrow: "Duplicate admission blocked",
+      text: "text-red-200",
+      title: "ALREADY SCANNED",
+    };
+  }
+
+  if (result.status === "wrong_day") {
+    return {
+      background: "bg-amber-300/[0.09]",
+      description: "This pass is outside its valid date or time.",
+      eyebrow: "Date check failed",
+      text: "text-amber-200",
+      title: "NOT VALID TODAY",
+    };
+  }
+
+  if (result.status === "not_active") {
+    return {
+      background: "bg-red-400/[0.09]",
+      description: result.message,
+      eyebrow: "Admission blocked",
+      text: "text-red-200",
+      title: "PASS NOT ACTIVE",
+    };
+  }
+
+  if (result.status === "invalid") {
+    return {
+      background: "bg-red-400/[0.09]",
+      description:
+        "This QR code does not match an active TourniBase ticket for this event.",
+      eyebrow: "Pass not recognized",
+      text: "text-red-200",
+      title: "INVALID PASS",
+    };
+  }
+
+  if (result.status === "scanner_unauthorized") {
+    return {
+      background: "bg-red-400/[0.09]",
+      description: result.message,
+      eyebrow: "Scanner access ended",
+      text: "text-red-200",
+      title: "SCANNER UNAVAILABLE",
+    };
+  }
+
+  return {
+    background: "bg-amber-300/[0.09]",
+    description: result.message,
+    eyebrow: "Validation could not finish",
+    text: "text-amber-200",
+    title: "TRY AGAIN",
+  };
+}
+
 function ResultPanel({
   actionLabel,
   description,
@@ -467,7 +1028,7 @@ function ResultPanel({
   eyebrow: string;
   onAction: () => void;
   title: string;
-  tone: "amber" | "blue" | "red";
+  tone: "amber" | "blue" | "green" | "red";
 }) {
   const styles = {
     amber: {
@@ -480,13 +1041,18 @@ function ResultPanel({
       button: "bg-blue-500 text-white hover:bg-blue-400",
       text: "text-blue-200",
     },
+    green: {
+      background: "bg-emerald-300/[0.08]",
+      button: "bg-emerald-300 text-emerald-950 hover:bg-emerald-200",
+      text: "text-emerald-200",
+    },
     red: {
       background: "bg-red-400/[0.08]",
       button: "bg-red-300 text-red-950 hover:bg-red-200",
       text: "text-red-200",
     },
   } satisfies Record<
-    "amber" | "blue" | "red",
+    "amber" | "blue" | "green" | "red",
     { background: string; button: string; text: string }
   >;
   const style = styles[tone];
@@ -539,39 +1105,41 @@ function GateToolButton({
   );
 }
 
-function RecentCaptures({ captures }: { captures: RecentCapture[] }) {
+function RecentScans({ scans }: { scans: RecentScan[] }) {
   return (
     <div className="mt-4 rounded-xl border border-border bg-black/10 p-4">
       <p className="text-sm font-semibold text-white">
-        Recent codes on this device
+        Recent results on this device
       </p>
-      {captures.length === 0 ? (
+      {scans.length === 0 ? (
         <p className="mt-2 text-sm leading-6 text-slate-500">
-          No pass codes have been captured in this browser session.
+          No passes have been validated in this browser session.
         </p>
       ) : (
         <ul className="mt-3 divide-y divide-border">
-          {captures.map((capture) => (
+          {scans.map((scan) => (
             <li
-              key={capture.id}
+              key={scan.id}
               className="flex items-center justify-between gap-3 py-2.5 text-xs"
             >
-              <span className="font-mono text-slate-300">
-                …{capture.passToken.slice(-8)}
+              <span
+                className={`font-semibold ${getRecentScanTone(scan.status)}`}
+              >
+                {scan.label}
               </span>
               <span className="text-slate-600">
                 {new Intl.DateTimeFormat("en-US", {
                   hour: "numeric",
                   minute: "2-digit",
                   second: "2-digit",
-                }).format(new Date(capture.capturedAt))}
+                }).format(new Date(scan.scannedAt))}
               </span>
             </li>
           ))}
         </ul>
       )}
       <p className="mt-3 text-xs leading-5 text-slate-600">
-        These are detected codes, not admission decisions.
+        This short list is stored only in the current browser session.
       </p>
     </div>
   );
@@ -593,6 +1161,55 @@ function getCameraErrorMessage(error: unknown) {
   }
 
   return "The camera could not start. Try again or use manual pass entry below.";
+}
+
+function getRecentScanLabel(result: PassValidationResult) {
+  if (result.status === "valid") {
+    return result.wasOverride ? "VALID · OVERRIDE" : "VALID";
+  }
+
+  if (result.status === "already_used") {
+    return "ALREADY SCANNED";
+  }
+
+  if (result.status === "wrong_day") {
+    return "NOT VALID TODAY";
+  }
+
+  if (result.status === "not_active") {
+    return "PASS NOT ACTIVE";
+  }
+
+  if (result.status === "invalid") {
+    return "INVALID PASS";
+  }
+
+  return "VALIDATION ERROR";
+}
+
+function getRecentScanTone(status: PassValidationResult["status"]) {
+  if (status === "valid") {
+    return "text-emerald-300";
+  }
+
+  if (status === "wrong_day" || status === "service_error") {
+    return "text-amber-300";
+  }
+
+  return "text-red-300";
+}
+
+function formatValidity(validFrom: string, validUntil: string) {
+  const dateFormatter = new Intl.DateTimeFormat("en-US", {
+    day: "numeric",
+    month: "short",
+    timeZone: "UTC",
+    year: "numeric",
+  });
+  const start = dateFormatter.format(new Date(validFrom));
+  const end = dateFormatter.format(new Date(validUntil));
+
+  return start === end ? start : `${start} – ${end}`;
 }
 
 function formatShortDateTime(value: string) {

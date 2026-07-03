@@ -10,7 +10,7 @@ Phase 1:
 - Supabase password authentication with cookie-backed server sessions
 - Server-side director authorization on every dashboard request
 - Protected `/dashboard` route
-- Complete MVP database schema with explicit grants, RLS policies, constraints, and indexes
+- Complete database foundation with explicit grants, RLS policies, constraints, and indexes
 
 Phase 2:
 
@@ -49,7 +49,7 @@ Phase 6:
 
 - Mobile-first individual passes at `/p/[pass-token]`
 - Server-only lookup by secure UUID with no anonymous order or pass access
-- QR codes containing only a secure validation URL
+- QR codes containing only a secure validation token
 - Event, ticket, validity, guest, order, venue, and organizer support details
 - Clear active, upcoming, used, refunded, voided, and expired pass states
 - Direct mobile-pass buttons on the order confirmation page
@@ -73,7 +73,18 @@ Phase 8:
 - Manual pass-link and UUID entry when camera scanning is unavailable
 - Large pass-detected, invalid-QR, and camera-error states
 - Permission-aware manual lookup, recent-capture, and gate-sale controls
-- Clear separation between code capture and Phase 9 admission validation
+
+Phase 9:
+
+- Atomic server-side pass validation and admission recording
+- Scanner, tournament, paid-order, pass-status, valid-date, and duplicate checks
+- Large valid, already-scanned, wrong-day, invalid, and inactive-pass results
+- Every scan attempt recorded without storing raw scanned tokens
+- Invalid attempts supported through nullable `check_ins.pass_id` values
+- Manual token entry recorded as a manual check-in
+- Duplicate admission overrides with required reasons
+- Check-in undo with pass-status restoration
+- Service-role-only validation functions with no anonymous or director execution
 
 ## Setup
 
