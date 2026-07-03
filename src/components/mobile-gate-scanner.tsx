@@ -252,8 +252,20 @@ export function MobileGateScanner({
 
         <section
           aria-live="assertive"
-          className="mt-4 overflow-hidden rounded-3xl border border-border bg-card"
+          className="relative mt-4 overflow-hidden rounded-3xl border border-border bg-card"
         >
+          <video
+            ref={videoRef}
+            autoPlay
+            muted
+            playsInline
+            aria-label="Live camera preview for QR scanning"
+            className={`pointer-events-none absolute inset-0 h-full w-full object-cover ${
+              view.mode === "starting" || view.mode === "scanning"
+                ? "opacity-100"
+                : "opacity-0"
+            }`}
+          />
           {view.mode === "captured" ? (
             <ResultPanel
               eyebrow="Pass detected"
@@ -290,7 +302,6 @@ export function MobileGateScanner({
                 stopCamera();
                 setView({ mode: "idle" });
               }}
-              videoRef={videoRef}
             />
           )}
         </section>
@@ -379,28 +390,19 @@ function CameraPanel({
   mode,
   onStart,
   onStop,
-  videoRef,
 }: {
   mode: "idle" | "scanning" | "starting";
   onStart: () => void;
   onStop: () => void;
-  videoRef: React.RefObject<HTMLVideoElement | null>;
 }) {
   const cameraActive = mode === "scanning" || mode === "starting";
 
   return (
-    <div className="relative min-h-[26rem] bg-black">
-      <video
-        ref={videoRef}
-        autoPlay
-        muted
-        playsInline
-        aria-label="Live camera preview for QR scanning"
-        className={`absolute inset-0 h-full w-full object-cover ${
-          cameraActive ? "opacity-100" : "opacity-0"
-        }`}
-      />
-
+    <div
+      className={`relative min-h-[26rem] ${
+        cameraActive ? "bg-transparent" : "bg-black"
+      }`}
+    >
       {cameraActive ? (
         <>
           <div className="pointer-events-none absolute inset-0 grid place-items-center bg-black/15 p-10">
