@@ -15,16 +15,17 @@ The web app is separate from the existing TourniBase waitlist website:
 
 Last updated: July 3, 2026
 
-- Current progress: Phases 1–9 of 19 are complete.
+- Current progress: Phases 1–10 of 19 are complete.
 - Available now: director authentication, event creation, ticket management,
   public event pages, Stripe test checkout, paid-order fulfillment, and secure
   individual mobile passes with QR codes, plus secure scanner-link creation and
   revocation for gate staff, a mobile camera scanner, authoritative admission
-  decisions, duplicate blocking, overrides, and check-in undo.
-- Next planned phase: buyer and order manual lookup.
-- Remaining launch work: manual lookup, persisted recent scan history, gate
-  sales, dashboard metrics, sharing, final copy and documentation, demo data,
-  quality checks, and release preparation.
+  decisions, duplicate blocking, overrides, check-in undo, and permission-gated
+  buyer and order lookup with manual pass check-in.
+- Next planned phase: persisted recent scan history.
+- Remaining launch work: persisted recent scan history, gate sales, dashboard
+  metrics, sharing, final copy and documentation, demo data, quality checks,
+  and release preparation.
 - Payment mode: Stripe test mode. Live keys should be enabled only when the
   complete purchase and gate-entry flow is ready for real customers.
 - Known launch dependency: production pass-link email delivery still needs a
@@ -207,6 +208,21 @@ The `check_ins.pass_id` column is nullable only for invalid scans where no pass
 exists or where a pass belongs to another tournament. A database constraint
 allows a missing pass only when the recorded result is `invalid`.
 
+## Phase 10 status
+
+Completed:
+
+- Permission-gated `/scan/[scanner-token]/lookup` route
+- Buyer search by name, email, phone, or formatted order number
+- Tournament-scoped results limited to orders with issued passes
+- Buyer, order, ticket, validity, payment, unused-pass, and scanned-pass details
+- Manual check-in actions for eligible unused passes
+- Manual admissions recorded through the same atomic validation engine as QR scans
+- Immediate lookup-result refresh after successful manual admission
+- Scanner authorization rechecked for every search and check-in action
+- Private pass tokens resolved only on the server and never returned in lookup results
+- Service-role-only lookup function with anonymous and authenticated execution revoked
+
 ## Security model
 
 - The publishable Supabase key is used by the web app.
@@ -217,10 +233,9 @@ allows a missing pass only when the recorded result is `invalid`.
 - User roles are database-protected; a director can update only their own name.
 - Published tournaments and active ticket types are the only records currently readable by anonymous users.
 - Passes, orders, scanner sessions, check-ins, and manual sales are not anonymously readable.
-- Validation, override, and undo functions are security-invoker functions
-  executable only by the server-side service role.
+- Validation, override, undo, and gate-lookup functions are security-invoker
+  functions executable only by the server-side service role.
 
 ## Next phase
 
-Phase 10 adds manual buyer and order lookup for resolving gate issues without a
-working QR code.
+Phase 11 adds persisted recent scan history for gate staff.

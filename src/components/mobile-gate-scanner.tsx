@@ -320,11 +320,9 @@ export function MobileGateScanner({
   function openManualLookup() {
     setShowRecent(false);
     setToolNotice(null);
-    manualInputRef.current?.scrollIntoView({
-      behavior: "smooth",
-      block: "center",
-    });
-    manualInputRef.current?.focus();
+    window.location.assign(
+      `${window.location.pathname.replace(/\/+$/, "")}/lookup`,
+    );
   }
 
   function openRecentScans() {

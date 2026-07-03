@@ -4,8 +4,8 @@ import {
   undoCheckInForScanner,
   validatePassForScanner,
 } from "@/app/scan/[scanner-token]/actions";
-import { Brand } from "@/components/brand";
 import { MobileGateScanner } from "@/components/mobile-gate-scanner";
+import { ScannerUnavailable } from "@/components/scanner-unavailable";
 import { getScannerSessionByToken } from "@/lib/scanner-sessions";
 import { getSupabaseAdminConfigurationIssues } from "@/lib/supabase/admin";
 
@@ -65,65 +65,5 @@ export default async function ScannerPage({
       validatePass={validatePass}
       venueName={lookup.session.venueName}
     />
-  );
-}
-
-function ScannerUnavailable({
-  status,
-}: {
-  status: "expired" | "invalid" | "revoked" | "service";
-}) {
-  const content = {
-    expired: {
-      eyebrow: "Scanner link expired",
-      title: "Ask the director for a new link",
-      description:
-        "This gate-access link has reached its expiration time and can no longer open the scanner.",
-    },
-    invalid: {
-      eyebrow: "Scanner link unavailable",
-      title: "Check the link",
-      description:
-        "This link is invalid or does not match an active TourniBase scanner session.",
-    },
-    revoked: {
-      eyebrow: "Scanner access revoked",
-      title: "This link is no longer active",
-      description:
-        "The tournament director disabled this scanner link. Ask the director to create a replacement if access is still needed.",
-    },
-    service: {
-      eyebrow: "Scanner temporarily unavailable",
-      title: "Try again in a moment",
-      description:
-        "TourniBase could not verify this scanner link. Refresh the page or contact the tournament director if the problem continues.",
-    },
-  } satisfies Record<
-    "expired" | "invalid" | "revoked" | "service",
-    { description: string; eyebrow: string; title: string }
-  >;
-  const message = content[status];
-
-  return (
-    <main className="app-grid min-h-screen bg-background">
-      <header className="border-b border-border bg-background/90">
-        <div className="mx-auto w-full max-w-xl px-5 py-4">
-          <Brand />
-        </div>
-      </header>
-      <div className="mx-auto w-full max-w-xl px-5 py-10">
-        <section className="rounded-3xl border border-amber-300/20 bg-card p-6 sm:p-8">
-          <p className="text-sm font-medium text-amber-200">
-            {message.eyebrow}
-          </p>
-          <h1 className="mt-2 text-3xl font-semibold tracking-[-0.035em] text-white">
-            {message.title}
-          </h1>
-          <p className="mt-3 leading-7 text-slate-400">
-            {message.description}
-          </p>
-        </section>
-      </div>
-    </main>
   );
 }

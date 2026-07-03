@@ -86,6 +86,15 @@ Phase 9:
 - Check-in undo with pass-status restoration
 - Service-role-only validation functions with no anonymous or director execution
 
+Phase 10:
+
+- Permission-gated manual lookup at `/scan/[scanner-token]/lookup`
+- Buyer search by name, email, phone, or order number
+- Tournament-scoped order results with ticket and pass status details
+- Unused-pass and already-scanned counts
+- Manual check-in of eligible passes through the same validation engine as QR scans
+- Server-only pass-token handling and service-role-only lookup access
+
 ## Setup
 
 1. Install dependencies:

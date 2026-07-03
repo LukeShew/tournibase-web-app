@@ -5,6 +5,15 @@ import {
   undoPassCheckIn,
   validatePassForEntry,
 } from "@/lib/pass-validation";
+import {
+  checkInManualLookupPass,
+  lookupManualGateOrders,
+} from "@/lib/manual-lookup";
+import type {
+  ManualLookupCheckInInput,
+  ManualLookupCheckInResult,
+  ManualLookupResult,
+} from "@/lib/manual-lookup-types";
 import type {
   OverridePassInput,
   PassValidationResult,
@@ -32,4 +41,18 @@ export async function undoCheckInForScanner(
   input: UndoCheckInInput,
 ): Promise<UndoCheckInResult> {
   return undoPassCheckIn(scannerToken, input);
+}
+
+export async function lookupOrdersForScanner(
+  scannerToken: string,
+  query: string,
+): Promise<ManualLookupResult> {
+  return lookupManualGateOrders(scannerToken, query);
+}
+
+export async function checkInLookupPassForScanner(
+  scannerToken: string,
+  input: ManualLookupCheckInInput,
+): Promise<ManualLookupCheckInResult> {
+  return checkInManualLookupPass(scannerToken, input);
 }
