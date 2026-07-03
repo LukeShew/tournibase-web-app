@@ -69,7 +69,7 @@ export default async function PassPage({
       dark: "#07101D",
       light: "#FFFFFF",
     },
-    errorCorrectionLevel: "M",
+    errorCorrectionLevel: "H",
     margin: 2,
     width: 320,
   });
@@ -102,7 +102,7 @@ export default async function PassPage({
           </div>
 
           <div className="p-5 sm:p-6">
-            <div className="mx-auto max-w-[352px] rounded-3xl bg-white p-4 shadow-lg shadow-black/25">
+            <div className="relative mx-auto max-w-[352px] rounded-3xl bg-white p-4 shadow-lg shadow-black/25">
               <Image
                 src={qrCodeDataUrl}
                 alt="Secure QR code for this admission pass"
@@ -112,6 +112,18 @@ export default async function PassPage({
                 priority
                 unoptimized
               />
+              <div
+                aria-hidden="true"
+                className="pointer-events-none absolute left-1/2 top-1/2 grid h-[19%] w-[19%] -translate-x-1/2 -translate-y-1/2 place-items-center rounded-2xl bg-white p-1 shadow-sm"
+              >
+                <Image
+                  src="/tournibase-app-icon.svg"
+                  alt=""
+                  width={64}
+                  height={64}
+                  className="h-full w-full"
+                />
+              </div>
             </div>
             <div className="mt-5 text-center">
               <p className="font-semibold text-white">
