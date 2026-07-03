@@ -78,7 +78,6 @@ export function MobileGateScanner({
     null,
   );
   const [resultActionPending, setResultActionPending] = useState(false);
-  const [toolNotice, setToolNotice] = useState<string | null>(null);
 
   const stopCamera = useCallback(() => {
     scannerControlsRef.current?.stop();
@@ -119,7 +118,6 @@ export function MobileGateScanner({
     setShowResultDetails(false);
     setOverrideReason("");
     setResultActionNotice(null);
-    setToolNotice(null);
     setView({ mode: "starting" });
 
     if (!window.isSecureContext || !navigator.mediaDevices?.getUserMedia) {
@@ -186,7 +184,6 @@ export function MobileGateScanner({
     setShowResultDetails(false);
     setOverrideReason("");
     setResultActionNotice(null);
-    setToolNotice(null);
     setView({ mode: "validating" });
 
     let result: PassValidationResult;
@@ -294,22 +291,20 @@ export function MobileGateScanner({
   }
 
   function openManualLookup() {
-    setToolNotice(null);
     window.location.assign(
       `${window.location.pathname.replace(/\/+$/, "")}/lookup`,
     );
   }
 
   function openRecentScans() {
-    setToolNotice(null);
     window.location.assign(
       `${window.location.pathname.replace(/\/+$/, "")}/recent`,
     );
   }
 
-  function showGateSaleNotice() {
-    setToolNotice(
-      "Gate sale recording is not enabled on this scanner yet.",
+  function openGateSale() {
+    window.location.assign(
+      `${window.location.pathname.replace(/\/+$/, "")}/sale`,
     );
   }
 
@@ -397,7 +392,7 @@ export function MobileGateScanner({
                 )
               }
               onScanNext={startCamera}
-              onSellCorrectPass={showGateSaleNotice}
+              onSellCorrectPass={openGateSale}
               onToggleDetails={() =>
                 setShowResultDetails((isVisible) => !isVisible)
               }
@@ -500,18 +495,9 @@ export function MobileGateScanner({
             <GateToolButton
               label="Gate sale"
               enabled={canRecordSale}
-              onClick={showGateSaleNotice}
+              onClick={openGateSale}
             />
           </div>
-
-          {toolNotice ? (
-            <p
-              aria-live="polite"
-              className="mt-4 rounded-xl border border-amber-300/15 bg-amber-300/[0.05] p-3 text-sm leading-6 text-amber-100"
-            >
-              {toolNotice}
-            </p>
-          ) : null}
         </section>
 
         <p className="mt-5 px-2 text-center text-xs leading-5 text-slate-600">

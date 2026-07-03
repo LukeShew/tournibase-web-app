@@ -15,16 +15,16 @@ The web app is separate from the existing TourniBase waitlist website:
 
 Last updated: July 3, 2026
 
-- Current progress: Phases 1–11 of 19 are complete.
+- Current progress: Phases 1–12 of 19 are complete.
 - Available now: director authentication, event creation, ticket management,
   public event pages, Stripe test checkout, paid-order fulfillment, and secure
   individual mobile passes with QR codes, plus secure scanner-link creation and
   revocation for gate staff, a mobile camera scanner, authoritative admission
   decisions, duplicate blocking, overrides, check-in undo, and permission-gated
   buyer and order lookup with manual pass check-in, plus persisted recent scan
-  history for each scanner session.
-- Next planned phase: gate sale tracking.
-- Remaining launch work: gate sales, dashboard metrics, sharing, final copy and
+  history for each scanner session and in-person gate sale tracking.
+- Next planned phase: director dashboard metrics.
+- Remaining launch work: dashboard metrics, sharing, final copy and
   documentation, demo data, quality checks, and release preparation.
 - Payment mode: Stripe test mode. Live keys should be enabled only when the
   complete purchase and gate-entry flow is ready for real customers.
@@ -250,6 +250,23 @@ Completed:
 - Security-invoker lookup function executable only by the server-side service role
 - Anonymous and authenticated browser roles cannot execute the recent-scan function
 
+## Phase 12 status
+
+Completed:
+
+- Permission-gated `/scan/[scanner-token]/sale` route
+- Active ticket selection, quantity, payment method, optional buyer, and notes
+- Cash, Venmo, external-card, and comp payment methods
+- Server-calculated totals using the current ticket price
+- Comp admissions recorded at zero dollars
+- Clear success screen showing how many guests to admit
+- Explicit notice that gate-sale tracking does not charge a card or issue a digital pass
+- Atomic scanner authorization and ticket ownership validation in Postgres
+- Gate sales stored with tournament, scanner session, ticket, quantity, method, amount, buyer, notes, and time
+- Service-role-only gate-sale function with anonymous and authenticated execution revoked
+- Public parent-checkout QR code on the director gate page
+- Printable letter-size admission poster linking to the public ticket page
+
 ## Security model
 
 - The publishable Supabase key is used by the web app.
@@ -260,10 +277,11 @@ Completed:
 - User roles are database-protected; a director can update only their own name.
 - Published tournaments and active ticket types are the only records currently readable by anonymous users.
 - Passes, orders, scanner sessions, check-ins, and manual sales are not anonymously readable.
-- Validation, override, undo, gate-lookup, and recent-scan functions are
-  security-invoker functions executable only by the server-side service role.
+- Validation, override, undo, gate-lookup, recent-scan, and gate-sale functions
+  are security-invoker functions executable only by the server-side service
+  role.
 
 ## Next phase
 
-Phase 12 adds gate sale tracking for cash, Venmo, external card, and comp
-transactions.
+Phase 13 adds director-facing sales, revenue, admissions, and gate-activity
+metrics.

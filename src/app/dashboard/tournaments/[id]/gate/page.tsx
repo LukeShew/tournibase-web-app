@@ -1,9 +1,13 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import QRCode from "qrcode";
+import { CopyLinkButton } from "@/components/copy-link-button";
 import { CreateScannerSessionForm } from "@/components/create-scanner-session-form";
 import { RevokeScannerSessionButton } from "@/components/revoke-scanner-session-button";
 import { requireDirector } from "@/lib/auth";
+import { getSiteUrl } from "@/lib/site-url";
 import { createClient } from "@/lib/supabase/server";
 import { formatEventDateRange } from "@/lib/tournaments";
 
@@ -15,6 +19,7 @@ type Tournament = {
   end_date: string;
   id: number;
   name: string;
+  public_slug: string;
   start_date: string;
   status: "draft" | "published" | "closed" | "archived";
   venue_name: string;
@@ -66,7 +71,9 @@ export default async function GateAccessPage({
 
   const { data: tournamentRow, error: tournamentError } = await supabase
     .from("tournaments")
-    .select("id, name, start_date, end_date, venue_name, status")
+    .select(
+      "id, name, start_date, end_date, venue_name, status, public_slug",
+    )
     .eq("id", tournamentId)
     .in("organization_id", organizationIds)
     .maybeSingle();
@@ -103,6 +110,17 @@ export default async function GateAccessPage({
     .at(-1);
   const canCreate =
     tournament.status !== "closed" && tournament.status !== "archived";
+  const publicPath = `/e/${tournament.public_slug}`;
+  const publicUrl = `${getSiteUrl()}${publicPath}`;
+  const ticketQrCodeDataUrl = await QRCode.toDataURL(publicUrl, {
+    color: {
+      dark: "#07101D",
+      light: "#FFFFFF",
+    },
+    errorCorrectionLevel: "H",
+    margin: 2,
+    width: 320,
+  });
 
   return (
     <div className="pb-12">
@@ -146,6 +164,50 @@ export default async function GateAccessPage({
           label="Last scanner activity"
           value={lastActiveAt ? formatDateTime(lastActiveAt) : "None yet"}
         />
+      </section>
+
+      <section className="mt-8 overflow-hidden rounded-2xl border border-border bg-card">
+        <div className="grid items-center gap-6 p-5 sm:p-6 lg:grid-cols-[1fr_auto]">
+          <div>
+            <p className="text-xs font-medium uppercase tracking-[0.16em] text-blue-300">
+              Parent self-checkout
+            </p>
+            <h2 className="mt-2 text-xl font-semibold text-white">
+              Public ticket QR poster
+            </h2>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400">
+              Put this QR code near the entrance so parents can buy admission
+              on their phones before reaching the scanner.
+            </p>
+            <p className="mt-3 break-all font-mono text-xs text-blue-300">
+              {publicUrl}
+            </p>
+            {tournament.status !== "published" ? (
+              <p className="mt-3 rounded-xl border border-amber-300/20 bg-amber-300/[0.06] p-3 text-sm text-amber-100">
+                Publish the ticket page before displaying this QR code.
+              </p>
+            ) : null}
+            <div className="mt-5 flex flex-wrap gap-2">
+              <CopyLinkButton path={publicPath} />
+              <Link
+                href={`/print/tournaments/${tournamentId}/gate-poster`}
+                className="inline-flex h-11 items-center justify-center rounded-xl border border-border bg-white/[0.04] px-4 text-sm font-semibold text-slate-200 transition hover:border-white/20 hover:text-white"
+              >
+                Open printable poster
+              </Link>
+            </div>
+          </div>
+          <div className="mx-auto w-48 rounded-2xl bg-white p-3 lg:mx-0">
+            <Image
+              src={ticketQrCodeDataUrl}
+              alt={`QR code to buy admission for ${tournament.name}`}
+              width={320}
+              height={320}
+              className="h-auto w-full"
+              unoptimized
+            />
+          </div>
+        </div>
       </section>
 
       <div className="mt-8 grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">

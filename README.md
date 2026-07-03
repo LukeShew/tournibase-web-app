@@ -103,6 +103,15 @@ Phase 11:
 - Mobile refresh and empty states
 - Service-role-only recent-scan function
 
+Phase 12:
+
+- Permission-gated gate-sale tracking at `/scan/[scanner-token]/sale`
+- Active ticket, quantity, cash, Venmo, external-card, and comp recording
+- Optional buyer name and notes
+- Server-calculated totals with zero-dollar comps
+- Public ticket QR code and printable parent self-checkout poster
+- Service-role-only gate-sale function
+
 Time-zone handling:
 
 - Tournament dates are anchored to the tournament's IANA time zone

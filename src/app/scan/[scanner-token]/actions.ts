@@ -1,5 +1,10 @@
 "use server";
 
+import { recordGateSale } from "@/lib/gate-sales";
+import type {
+  RecordGateSaleInput,
+  RecordGateSaleResult,
+} from "@/lib/gate-sales-types";
 import {
   overrideDuplicatePassEntry,
   undoPassCheckIn,
@@ -63,4 +68,11 @@ export async function recentScansForScanner(
   scannerToken: string,
 ): Promise<RecentScansResult> {
   return getRecentScannerActivity(scannerToken);
+}
+
+export async function recordGateSaleForScanner(
+  scannerToken: string,
+  input: RecordGateSaleInput,
+): Promise<RecordGateSaleResult> {
+  return recordGateSale(scannerToken, input);
 }
