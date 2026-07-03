@@ -1,5 +1,6 @@
 import "server-only";
 
+import { isValidPassToken } from "@/lib/pass-tokens";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
 export type PublicPassStatus =
@@ -53,13 +54,6 @@ export type PublicPass = {
   venueAddress: string;
   venueName: string;
 };
-
-const UUID_PATTERN =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-
-export function isValidPassToken(token: string) {
-  return UUID_PATTERN.test(token);
-}
 
 export async function getPublicPass(
   token: string,

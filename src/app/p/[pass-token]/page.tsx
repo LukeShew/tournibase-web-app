@@ -3,11 +3,8 @@ import Image from "next/image";
 import { notFound } from "next/navigation";
 import QRCode from "qrcode";
 import { Brand } from "@/components/brand";
-import {
-  getPublicPass,
-  isValidPassToken,
-  type PublicPass,
-} from "@/lib/public-passes";
+import { isValidPassToken } from "@/lib/pass-tokens";
+import { getPublicPass, type PublicPass } from "@/lib/public-passes";
 import { getSupabaseAdminConfigurationIssues } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";

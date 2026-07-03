@@ -64,6 +64,17 @@ Phase 7:
 - Active, expired, and revoked scanner-session history
 - Immediate scanner-link revocation
 
+Phase 8:
+
+- Mobile gate scanner at `/scan/[scanner-token]`
+- Server-only scanner-token hashing and active-session authorization
+- Event, venue, gate, staff, expiration, and readiness information
+- Rear-camera QR scanning with the pinned ZXing browser library
+- Manual pass-link and UUID entry when camera scanning is unavailable
+- Large pass-detected, invalid-QR, and camera-error states
+- Permission-aware manual lookup, recent-capture, and gate-sale controls
+- Clear separation between code capture and Phase 9 admission validation
+
 ## Setup
 
 1. Install dependencies:

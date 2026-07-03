@@ -15,13 +15,13 @@ The web app is separate from the existing TourniBase waitlist website:
 
 Last updated: July 3, 2026
 
-- Current progress: Phases 1–7 of 19 are complete.
+- Current progress: Phases 1–8 of 19 are complete.
 - Available now: director authentication, event creation, ticket management,
   public event pages, Stripe test checkout, paid-order fulfillment, and secure
   individual mobile passes with QR codes, plus secure scanner-link creation and
-  revocation for gate staff.
-- Next planned phase: the mobile web scanner used by gate staff.
-- Remaining launch work: gate scanning and validation, manual lookup, recent
+  revocation for gate staff and a mobile camera scanner.
+- Next planned phase: server-side pass validation and check-in recording.
+- Remaining launch work: validation decisions, manual lookup, persisted recent
   scan history, gate sales, dashboard metrics, sharing, final copy and
   documentation, demo data, quality checks, and release preparation.
 - Payment mode: Stripe test mode. Live keys should be enabled only when the
@@ -162,6 +162,28 @@ Completed:
 - Database constraints for token hashes, expiration, revocation, labels, and permissions
 - Existing director ownership checks and RLS enforcement on every scanner-session mutation
 
+## Phase 8 status
+
+Completed:
+
+- Mobile-first `/scan/[scanner-token]` route
+- Server-only scanner-token hashing and database lookup
+- Active, expired, revoked, invalid, and unavailable scanner-link handling
+- Scanner-session authorization before tournament or gate details are shown
+- Tournament, venue, gate, staff, expiration, and readiness information
+- Rear-camera QR scanning through pinned `@zxing/browser` packages
+- Explicit camera start and stop controls
+- Camera permission, missing-camera, in-use-camera, and insecure-context errors
+- Manual pass-link and UUID entry fallback
+- Shared pass-token parsing for mobile passes and the gate scanner
+- Large pass-detected, invalid-QR, and camera-error result states
+- Permission-aware manual lookup, recent-capture, and gate-sale controls
+- Recent pass-code captures held only in the current browser session
+- No raw scanner token or Supabase secret key is sent as component data
+
+Phase 8 captures and parses pass codes but does not approve admission. Phase 9
+adds the authoritative backend validation result and records scan attempts.
+
 ## Security model
 
 - The publishable Supabase key is used by the web app.
@@ -175,5 +197,6 @@ Completed:
 
 ## Next phase
 
-Phase 8 builds the mobile `/scan/[scanner-token]` experience for gate staff,
-including camera access, pass scanning, and clear validation results.
+Phase 9 builds the server-side validation engine, records every scan attempt,
+and returns authoritative valid, duplicate, wrong-day, invalid, refunded, or
+voided results.
