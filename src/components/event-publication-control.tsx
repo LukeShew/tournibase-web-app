@@ -37,8 +37,8 @@ export function EventPublicationControl({
   if (status === "closed" || status === "archived") {
     return (
       <p className="text-sm leading-6 text-slate-500">
-        This event is {status}. Reopening controls will be added with event
-        lifecycle management.
+        This event is {status}. Public ticket sales and publishing controls are
+        unavailable.
       </p>
     );
   }

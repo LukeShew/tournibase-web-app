@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { Brand } from "@/components/brand";
 import { LoginForm } from "@/components/login-form";
 import { getDirector } from "@/lib/auth";
+import { DIRECTOR_PROMISE } from "@/lib/product-copy";
 
 export const metadata: Metadata = {
   title: "Director sign in",
@@ -25,7 +26,7 @@ export default async function LoginPage() {
             Welcome back
           </h1>
           <p className="mt-3 leading-7 text-slate-400">
-            Sign in to manage tournament admission and gate activity.
+            {DIRECTOR_PROMISE}
           </p>
           <LoginForm />
           <p className="mt-6 text-center text-sm leading-6 text-slate-500">
@@ -43,18 +44,18 @@ export default async function LoginPage() {
                   TourniBase gate
                 </p>
                 <p className="mt-2 text-xl font-semibold text-white">
-                  Fast entry starts here
+                  Run a faster gate
                 </p>
               </div>
               <span className="rounded-full bg-brand-soft px-3 py-1.5 text-xs font-medium text-blue-300">
-                Web-first
+                Digital gate system
               </span>
             </div>
             <div className="mt-8 space-y-3">
               {[
-                "Sell spectator admission online",
-                "Block duplicate and invalid passes",
-                "See sales and check-ins in one dashboard",
+                "Sell tournament passes online",
+                "Scan people in faster",
+                "Stop duplicate tickets at the gate",
               ].map((item) => (
                 <div
                   key={item}

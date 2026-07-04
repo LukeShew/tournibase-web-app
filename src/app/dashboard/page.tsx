@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { requireDirector } from "@/lib/auth";
+import { DIRECTOR_PROMISE } from "@/lib/product-copy";
 import { createClient } from "@/lib/supabase/server";
 import { formatEventDateRange } from "@/lib/tournaments";
 
@@ -65,10 +66,10 @@ export default async function DashboardPage() {
         <div>
           <p className="text-sm font-medium text-blue-300">Director dashboard</p>
           <h1 className="mt-2 text-3xl font-semibold tracking-[-0.035em] text-white">
-            Admission overview
+            Digital gate overview
           </h1>
           <p className="mt-2 text-slate-400">
-            Your tournament sales and gate activity will live here.
+            {DIRECTOR_PROMISE}
           </p>
         </div>
         <Link
@@ -81,15 +82,17 @@ export default async function DashboardPage() {
 
       <section className="mt-8 grid gap-4 sm:grid-cols-3">
         <DashboardStat label="Organizations" value={organizations.length} />
-        <DashboardStat label="Tournaments" value={tournaments.length} />
+        <DashboardStat label="Admission events" value={tournaments.length} />
         <DashboardStat label="Published" value={publishedCount} />
       </section>
 
       <section className="mt-8 rounded-2xl border border-border bg-card">
         <div className="border-b border-border px-5 py-4">
-          <h2 className="font-semibold text-white">Recent tournaments</h2>
+          <h2 className="font-semibold text-white">
+            Recent admission events
+          </h2>
           <p className="mt-1 text-sm text-slate-500">
-            Open an event to review setup and continue building admission.
+            Open an event to review ticket sales and gate activity.
           </p>
         </div>
 
@@ -99,7 +102,7 @@ export default async function DashboardPage() {
               +
             </div>
             <h3 className="mt-4 font-semibold text-white">
-              No tournaments yet
+              No admission events yet
             </h3>
             <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-500">
               Create your first event, add the tournament details, and reserve

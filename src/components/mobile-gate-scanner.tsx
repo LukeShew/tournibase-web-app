@@ -17,6 +17,7 @@ import type {
   ValidatePassInput,
 } from "@/lib/pass-validation-types";
 import { formatEventValidity } from "@/lib/event-time";
+import { GATE_STAFF_PROMISE } from "@/lib/product-copy";
 
 type ScannerView =
   | { mode: "idle" }
@@ -354,6 +355,9 @@ export function MobileGateScanner({
               Expires {formatShortDateTime(expiresAt, eventTimeZone)}
             </span>
           </div>
+          <p className="mt-4 text-sm font-medium text-blue-200">
+            {GATE_STAFF_PROMISE}
+          </p>
         </section>
 
         <section

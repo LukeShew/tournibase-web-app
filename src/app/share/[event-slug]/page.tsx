@@ -10,6 +10,7 @@ import {
   buildParentMessage,
   getPublicTicketPath,
 } from "@/lib/coach-sharing";
+import { PARENT_PROMISE } from "@/lib/product-copy";
 import { getPublicEvent } from "@/lib/public-events";
 import { getSiteUrl } from "@/lib/site-url";
 import { formatEventDateRange } from "@/lib/tournaments";
@@ -89,6 +90,9 @@ export default async function CoachSharePage({
             {formatEventDateRange(event.start_date, event.end_date)}
           </p>
           <p className="mt-2 text-sm text-slate-400">{event.venue_name}</p>
+          <p className="mt-5 text-lg font-semibold text-slate-200">
+            {PARENT_PROMISE}
+          </p>
         </section>
 
         <div className="mt-6 grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">

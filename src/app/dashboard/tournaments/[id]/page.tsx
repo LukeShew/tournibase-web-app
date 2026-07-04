@@ -323,7 +323,7 @@ export default async function TournamentOverviewPage({
         <div>
           <h2 className="font-semibold text-white">Event tools</h2>
           <p className="mt-1 text-sm text-slate-500">
-            The event shell is ready. Each tool unlocks in its build phase.
+            Sell passes, share the ticket link, and run the gate from here.
           </p>
         </div>
         <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">

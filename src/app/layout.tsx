@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { PRODUCT_POSITIONING } from "@/lib/product-copy";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -17,8 +18,7 @@ export const metadata: Metadata = {
     default: "TourniBase",
     template: "%s | TourniBase",
   },
-  description:
-    "Digital tournament admission, fast gate check-in, and sales visibility for youth basketball directors.",
+  description: PRODUCT_POSITIONING,
 };
 
 export default function RootLayout({

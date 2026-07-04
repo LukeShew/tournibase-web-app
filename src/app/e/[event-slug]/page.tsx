@@ -5,6 +5,10 @@ import {
   PublicTicketForm,
   type PublicTicketOption,
 } from "@/components/public-ticket-form";
+import {
+  PARENT_PROMISE,
+  PRODUCT_POSITIONING,
+} from "@/lib/product-copy";
 import { getPublicEvent } from "@/lib/public-events";
 import { formatEventDateRange } from "@/lib/tournaments";
 
@@ -32,7 +36,7 @@ export async function generateMetadata({
 
   return {
     title: `${event.name} admission`,
-    description: `Buy digital admission passes for ${event.name} at ${event.venue_name}.`,
+    description: `${PARENT_PROMISE} Buy digital admission passes for ${event.name} at ${event.venue_name}.`,
   };
 }
 
@@ -86,7 +90,7 @@ export default async function PublicEventPage({
               {event.name}
             </h1>
             <p className="mt-5 text-xl font-medium leading-8 text-slate-200">
-              Buy before arrival. Show your pass. Skip the line.
+              {PARENT_PROMISE}
             </p>
 
             <dl className="mt-8 divide-y divide-border overflow-hidden rounded-2xl border border-border bg-card/90">
@@ -160,7 +164,7 @@ export default async function PublicEventPage({
             </section>
 
             <p className="mt-6 text-center text-xs leading-5 text-slate-600">
-              TourniBase is the digital gate system for this event.
+              {PRODUCT_POSITIONING}
             </p>
           </div>
         </div>

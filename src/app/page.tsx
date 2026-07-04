@@ -2,6 +2,10 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Brand } from "@/components/brand";
 import { getDirector } from "@/lib/auth";
+import {
+  DIRECTOR_PROMISE,
+  PRODUCT_POSITIONING,
+} from "@/lib/product-copy";
 
 export default async function Home() {
   const director = await getDirector();
@@ -26,14 +30,13 @@ export default async function Home() {
         <div>
           <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-brand/25 bg-brand-soft px-3 py-1.5 text-sm font-medium text-blue-200">
             <span className="h-2 w-2 rounded-full bg-brand" />
-            Tournament admission platform
+            Digital gate system
           </div>
           <h1 className="max-w-3xl text-5xl font-semibold tracking-[-0.045em] text-white sm:text-6xl">
-            Sell admission. Move the gate. Stop duplicate tickets.
+            {DIRECTOR_PROMISE}
           </h1>
           <p className="mt-6 max-w-2xl text-lg leading-8 text-slate-300">
-            TourniBase gives youth basketball directors one place to sell
-            spectator passes, scan guests in, and see live gate activity.
+            {PRODUCT_POSITIONING}
           </p>
           <div className="mt-9 flex flex-col gap-3 sm:flex-row">
             <Link
@@ -71,7 +74,7 @@ export default async function Home() {
             </div>
           </div>
           <div className="rounded-2xl border border-dashed border-white/15 px-4 py-5 text-center text-sm leading-6 text-slate-400">
-            Create or select a tournament to view live admission activity.
+            Create or select an admission event to view live gate activity.
           </div>
         </div>
       </section>

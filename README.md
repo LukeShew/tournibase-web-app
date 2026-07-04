@@ -134,6 +134,15 @@ Phase 14:
 - Coach-page link and access QR for the tournament director
 - Unpublished events remain unavailable on the public coach route
 
+Phase 15:
+
+- Centralized director, parent, gate-staff, and product-positioning messages
+- Director promise shown across the home page, login, and dashboard
+- Parent promise shown across public tickets, coach sharing, and gate posters
+- Gate instructions shown prominently on every active scanner
+- Development language removed from customer-facing event controls
+- Product language narrowed to digital admission, pass scanning, duplicate blocking, and gate reporting
+
 Time-zone handling:
 
 - Tournament dates are anchored to the tournament's IANA time zone

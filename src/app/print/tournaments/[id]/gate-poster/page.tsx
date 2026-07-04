@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import QRCode from "qrcode";
 import { PrintPosterButton } from "@/components/print-poster-button";
 import { requireDirector } from "@/lib/auth";
+import { PARENT_PROMISE } from "@/lib/product-copy";
 import { getSiteUrl } from "@/lib/site-url";
 import { createClient } from "@/lib/supabase/server";
 import { formatEventDateRange } from "@/lib/tournaments";
@@ -105,9 +106,11 @@ export default async function GatePosterPage({
         <h1 className="mt-6 max-w-2xl text-5xl font-black tracking-[-0.05em] text-slate-950">
           Buy admission here
         </h1>
-        <p className="mt-4 max-w-xl text-xl leading-8 text-slate-600">
-          Scan the QR code with your phone, purchase your pass, and show the
-          digital ticket at the gate.
+        <p className="mt-4 max-w-xl text-xl font-semibold leading-8 text-slate-700">
+          {PARENT_PROMISE}
+        </p>
+        <p className="mt-3 max-w-xl text-lg leading-7 text-slate-600">
+          Scan the code below to purchase admission on your phone.
         </p>
 
         <div className="mt-8 w-full max-w-[4.75in] rounded-[2rem] border-4 border-slate-950 bg-white p-5">

@@ -2,7 +2,9 @@
 
 ## Product boundary
 
-TourniBase is a web-first youth basketball tournament admission system. The MVP focuses on selling spectator admission, validating passes at the gate, blocking invalid or duplicate use, and showing directors sales and gate activity.
+TourniBase is a digital gate system for youth basketball tournaments. The MVP
+focuses on selling spectator admission, validating passes at the gate, blocking
+invalid or duplicate use, and showing directors sales and gate activity.
 
 The web app is separate from the existing TourniBase waitlist website:
 
@@ -15,7 +17,7 @@ The web app is separate from the existing TourniBase waitlist website:
 
 Last updated: July 4, 2026
 
-- Current progress: Phases 1–14 of 19 are complete.
+- Current progress: Phases 1–15 of 19 are complete.
 - Available now: director authentication, event creation, ticket management,
   public event pages, Stripe test checkout, paid-order fulfillment, and secure
   individual mobile passes with QR codes, plus secure scanner-link creation and
@@ -25,9 +27,9 @@ Last updated: July 4, 2026
   history for each scanner session, in-person gate sale tracking, and
   director-facing sales, revenue, admission, and gate-activity dashboards,
   plus a coach sharing flow with a parent-ready message and ticket QR code.
-- Next planned phase: UI copy updates.
-- Remaining launch work: final copy and documentation, demo data, quality
-  checks, and release preparation.
+- Next planned phase: documentation.
+- Remaining launch work: documentation, demo data, quality checks, and release
+  preparation.
 - Payment mode: Stripe test mode. Live keys should be enabled only when the
   complete purchase and gate-entry flow is ready for real customers.
 - Known launch dependency: production pass-link email delivery still needs a
@@ -303,6 +305,25 @@ Completed:
 - Published-event requirement for all public coach pages
 - Director ownership checks for the protected sharing workspace
 
+## Phase 15 status
+
+Completed:
+
+- Centralized product language for directors, parents, gate staff, and general
+  product positioning
+- Director promise: “Sell tournament passes online, scan people in faster, and
+  stop duplicate tickets at the gate.”
+- Parent promise: “Buy before arrival. Show your pass. Skip the line.”
+- Gate-staff instruction: “Scan the QR. Green means go. Red means stop.”
+- Product framing: “TourniBase is a digital gate system for youth basketball
+  tournaments.”
+- Updated home, login, dashboard, public ticket, coach sharing, gate poster,
+  metadata, scanner, and event-control copy
+- Removed customer-facing references to build phases, the event shell, and
+  future lifecycle management
+- Kept the product positioned around digital admission instead of full
+  tournament management
+
 ## Security model
 
 - The publishable Supabase key is used by the web app.
@@ -321,5 +342,5 @@ Completed:
 
 ## Next phase
 
-Phase 15 updates product language across director, parent, and gate-staff
-surfaces.
+Phase 16 expands the product, architecture, database, roadmap, and setup
+documentation.
