@@ -1,1 +1,6 @@
--- Seed data is intentionally empty. Create director accounts through Supabase Auth.
+-- Intentionally empty.
+--
+-- Demo data is created by `npm run seed`, which refuses to connect to any
+-- non-local Supabase hostname. Keeping the automatic SQL seed empty prevents
+-- `supabase db push --include-seed` from copying demo accounts or events to a
+-- hosted project.

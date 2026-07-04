@@ -5,12 +5,12 @@ Last updated: July 4, 2026
 ## Current status
 
 - Main product: TourniBase web MVP
-- Completed: Phases 1–16 of 19
+- Completed: Phases 1–17 of 19
 - Current production URL:
   [tournibase-web-app.vercel.app](https://tournibase-web-app.vercel.app)
 - Payment status: Stripe test mode
-- Next phase: Phase 17, local-only seed and demo data
-- Not started: Phases 17–19
+- Next phase: Phase 18, quality checks
+- Not started: Phases 18–19
 
 The waitlist website and a native mobile app are postponed, separate products.
 They are not part of this roadmap.
@@ -35,13 +35,14 @@ They are not part of this roadmap.
 | 14 | Coach and parent sharing flow | Complete |
 | 15 | Customer-facing product language and positioning | Complete |
 | 16 | Product, architecture, schema, roadmap, setup, and test docs | Complete |
-| 17 | Local-only seed and demo data | Not started |
+| 17 | Local-only seed and demo data | Complete |
 | 18 | Install, lint, typecheck, build, and reasonable fixes | Not started |
 | 19 | Final Git review, commit, and MVP handoff | Not started |
 
 ## Phase 17: Seed and demo data
 
-Add a safe local/development demo flow for:
+Completed with a guarded `npm run seed` command that refuses hosted Supabase
+URLs and creates:
 
 - Tournament: **DMV Summer Tip-Off Classic**
 - Venue: **Capital Sports Complex**
@@ -50,8 +51,12 @@ Add a safe local/development demo flow for:
 - Weekend Pass: **$30**
 - Student/Child Pass: **$10**
 
-Demo data must not be hardcoded into production pages or inserted into the live
-database by default.
+The event dates automatically use the next Saturday and Sunday in
+`America/New_York`. The command is idempotent, production pages contain no demo
+data, and the automatic SQL seed remains empty so remote seed pushes cannot
+copy the records.
+
+See [Local Demo Data](./demo-data.md).
 
 ## Phase 18: Quality checks
 

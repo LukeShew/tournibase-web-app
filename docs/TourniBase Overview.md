@@ -24,9 +24,9 @@ before expanding into a larger platform.
 
 | Item | Current state |
 | --- | --- |
-| Progress | Phases 1–16 of 19 complete |
-| Current phase | Phase 16 documentation complete |
-| Next phase | Phase 17 local-only demo data, not started |
+| Progress | Phases 1–17 of 19 complete |
+| Current phase | Phase 17 local-only demo data complete |
+| Next phase | Phase 18 quality checks, not started |
 | Production app | [tournibase-web-app.vercel.app](https://tournibase-web-app.vercel.app) |
 | Payments | Stripe test mode |
 | Database | Live Supabase schema matches all 11 committed migrations |
@@ -34,9 +34,8 @@ before expanding into a larger platform.
 
 Remaining numbered phases:
 
-1. Phase 17: local-only seed and demo data.
-2. Phase 18: install, lint, typecheck, build, and reasonable fixes.
-3. Phase 19: final Git review and MVP handoff.
+1. Phase 18: install, lint, typecheck, build, and reasonable fixes.
+2. Phase 19: final Git review and MVP handoff.
 
 Before accepting real customer payments, TourniBase must also add transactional
 pass email, switch Stripe and the production webhook to live mode, and complete
@@ -171,7 +170,7 @@ See [MVP Architecture](./mvp-architecture.md) and
 - Director accounts are created manually through Supabase.
 - Gate-sale recording tracks external payment but does not charge a card.
 - Refund and dispute operations are not automated.
-- Demo data is not available yet.
+- Demo data is available only through the guarded local seed command.
 - Final quality and release checks remain in Phases 18 and 19.
 
 ## Documentation
@@ -179,5 +178,6 @@ See [MVP Architecture](./mvp-architecture.md) and
 - [Web MVP Product Plan](./mvp-product-plan.md)
 - [MVP Architecture](./mvp-architecture.md)
 - [Database Schema](./database-schema.md)
+- [Local Demo Data](./demo-data.md)
 - [Implementation Roadmap](./implementation-roadmap.md)
 - [Repository setup and test guide](../README.md)

@@ -13,9 +13,9 @@ Production app:
 
 ## Current status
 
-- Phases 1–16 of 19 complete
+- Phases 1–17 of 19 complete
 - Stripe test mode
-- Next phase: local-only demo data
+- Next phase: install, lint, typecheck, and production build checks
 - Production pass-link email remains a launch dependency
 
 Current progress and remaining work:
@@ -27,6 +27,7 @@ Current progress and remaining work:
 - [Web MVP Product Plan](docs/mvp-product-plan.md)
 - [MVP Architecture](docs/mvp-architecture.md)
 - [Database Schema](docs/database-schema.md)
+- [Local Demo Data](docs/demo-data.md)
 - [Implementation Roadmap](docs/implementation-roadmap.md)
 
 ## What the MVP does
@@ -170,10 +171,20 @@ npx supabase db reset
 ```
 
 `db reset` reapplies every migration and then runs `supabase/seed.sql`. The seed
-file is intentionally empty until Phase 17 adds development-only demo data.
+file intentionally remains empty so demo data cannot be pushed to a hosted
+project.
 
 Use the local Supabase URL and keys printed by `npx supabase status` in
 `.env.local`.
+
+Create the local demo tournament after the reset:
+
+```bash
+npm run seed
+```
+
+See [Local Demo Data](docs/demo-data.md) for its safety guard, records, login,
+and repeatable setup.
 
 ## First director account
 
