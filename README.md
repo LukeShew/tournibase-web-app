@@ -112,6 +112,17 @@ Phase 12:
 - Public ticket QR code and printable parent self-checkout poster
 - Service-role-only gate-sale function
 
+Phase 13:
+
+- Live sales and admission snapshot on each tournament overview
+- Sales dashboard at `/dashboard/tournaments/[id]/sales`
+- Gate activity dashboard at `/dashboard/tournaments/[id]/scans`
+- Gross online sales, estimated Stripe fees and payout, ticket totals, manual sales, and total estimated revenue
+- Sales breakdowns by ticket type and tournament-local sale date
+- Scan attempts, successful check-ins, duplicate, invalid, wrong-day, manual, and override totals
+- Active scanner-link counts and online-pass check-in progress
+- RLS-protected database aggregation available only to the owning director
+
 Time-zone handling:
 
 - Tournament dates are anchored to the tournament's IANA time zone

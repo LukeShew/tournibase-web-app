@@ -2,8 +2,14 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CopyLinkButton } from "@/components/copy-link-button";
+import { DashboardMetricCard } from "@/components/dashboard-metric-card";
 import { EventPublicationControl } from "@/components/event-publication-control";
+import { TournamentDashboardNav } from "@/components/tournament-dashboard-nav";
 import { requireDirector } from "@/lib/auth";
+import {
+  formatCurrency,
+  getTournamentDashboardMetrics,
+} from "@/lib/dashboard-metrics";
 import { getStripeConfigurationIssues } from "@/lib/stripe";
 import { getSupabaseAdminConfigurationIssues } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
@@ -80,7 +86,7 @@ export default async function TournamentOverviewPage({
   const [
     { count: ticketTypeCount, error: ticketTypeError },
     { count: activeTicketCount, error: activeTicketError },
-    { count: scannerCount, error: scannerError },
+    metrics,
   ] = await Promise.all([
     supabase
       .from("ticket_types")
@@ -91,10 +97,7 @@ export default async function TournamentOverviewPage({
       .select("id", { count: "exact", head: true })
       .eq("tournament_id", tournamentId)
       .eq("status", "active"),
-    supabase
-      .from("scanner_sessions")
-      .select("id", { count: "exact", head: true })
-      .eq("tournament_id", tournamentId),
+    getTournamentDashboardMetrics(tournamentId),
   ]);
 
   if (ticketTypeError) {
@@ -105,8 +108,8 @@ export default async function TournamentOverviewPage({
     throw activeTicketError;
   }
 
-  if (scannerError) {
-    throw scannerError;
+  if (!metrics) {
+    notFound();
   }
 
   const publicPath = `/e/${tournament.public_slug}`;
@@ -115,6 +118,10 @@ export default async function TournamentOverviewPage({
       includePublishableKey: true,
       includeWebhookSecret: true,
     }).length === 0 && getSupabaseAdminConfigurationIssues().length === 0;
+  const salesOpen =
+    tournament.status === "published" &&
+    (activeTicketCount ?? 0) > 0 &&
+    checkoutConfigured;
 
   return (
     <div className="pb-12">
@@ -149,14 +156,24 @@ export default async function TournamentOverviewPage({
         <CopyLinkButton path={publicPath} />
       </div>
 
-      <section className="mt-8 grid gap-4 sm:grid-cols-3">
+      <TournamentDashboardNav active="overview" tournamentId={tournamentId} />
+
+      <section className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatusCard
           label="Ticket page"
-          value={tournament.status === "published" ? "Live" : "Draft"}
+          value={
+            tournament.status === "published"
+              ? "Live"
+              : tournament.status === "draft"
+                ? "Draft"
+                : "Closed"
+          }
           detail={
             tournament.status === "published"
               ? "Public page is visible to buyers."
-              : "Not visible to buyers yet."
+              : tournament.status === "draft"
+                ? "Not visible to buyers yet."
+                : "Public ticket sales are closed."
           }
         />
         <StatusCard
@@ -165,9 +182,27 @@ export default async function TournamentOverviewPage({
           detail={`${activeTicketCount ?? 0} active of ${ticketTypeCount ?? 0} total`}
         />
         <StatusCard
+          label="Sales status"
+          value={
+            salesOpen
+              ? "Open"
+              : tournament.status === "closed" ||
+                  tournament.status === "archived"
+                ? "Closed"
+                : tournament.status === "published"
+                  ? "Setup needed"
+                  : "Not live"
+          }
+          detail={
+            salesOpen
+              ? "Buyers can complete online checkout."
+              : "Online checkout is not currently available."
+          }
+        />
+        <StatusCard
           label="Scanner links"
-          value={`${scannerCount ?? 0}`}
-          detail="Create and manage secure access for gate staff."
+          value={`${metrics.scannerLinks.active} active`}
+          detail={`${metrics.scannerLinks.total} created for this event`}
         />
       </section>
 
@@ -239,6 +274,53 @@ export default async function TournamentOverviewPage({
 
       <section className="mt-8">
         <div>
+          <p className="text-xs font-medium uppercase tracking-[0.14em] text-blue-300">
+            Live event snapshot
+          </p>
+          <h2 className="mt-2 text-xl font-semibold text-white">
+            Sales and admissions now
+          </h2>
+          <p className="mt-2 text-sm text-slate-500">
+            Current totals from paid orders, gate activity, and recorded manual
+            sales.
+          </p>
+        </div>
+        <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          <DashboardMetricCard
+            detail="Paid online admission passes"
+            label="Online tickets sold"
+            value={metrics.sales.onlineTicketsSold}
+          />
+          <DashboardMetricCard
+            detail="Online passes admitted at the gate"
+            label="Checked in"
+            value={metrics.gate.checkedInPasses}
+          />
+          <DashboardMetricCard
+            detail="Paid online passes still unused"
+            label="Unscanned passes"
+            value={metrics.gate.unscannedPasses}
+          />
+          <DashboardMetricCard
+            detail={`${metrics.sales.manualSaleCount} recorded gate sales`}
+            label="Manual gate admissions"
+            value={metrics.sales.manualAdmissions}
+          />
+          <DashboardMetricCard
+            detail="Passes presented more than once"
+            label="Duplicate attempts"
+            value={metrics.gate.duplicateAttempts}
+          />
+          <DashboardMetricCard
+            detail="Online and recorded gate revenue"
+            label="Estimated revenue"
+            value={formatCurrency(metrics.sales.totalEstimatedRevenue)}
+          />
+        </div>
+      </section>
+
+      <section className="mt-8">
+        <div>
           <h2 className="font-semibold text-white">Event tools</h2>
           <p className="mt-1 text-sm text-slate-500">
             The event shell is ready. Each tool unlocks in its build phase.
@@ -268,15 +350,15 @@ export default async function TournamentOverviewPage({
             title="Create scanner link"
             description="Authorize gate staff and specific entrances."
           />
-          <FutureTool
+          <ActiveTool
+            href={`/dashboard/tournaments/${tournamentId}/scans`}
             title="Open gate dashboard"
             description="Track live admissions and scanner activity."
-            phase="Phase 13"
           />
-          <FutureTool
+          <ActiveTool
+            href={`/dashboard/tournaments/${tournamentId}/sales`}
             title="Open sales dashboard"
             description="Review online and manual admission sales."
-            phase="Phase 13"
           />
         </div>
       </section>

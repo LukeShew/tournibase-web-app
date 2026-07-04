@@ -13,19 +13,20 @@ The web app is separate from the existing TourniBase waitlist website:
 
 ## Web app MVP status
 
-Last updated: July 3, 2026
+Last updated: July 4, 2026
 
-- Current progress: Phases 1–12 of 19 are complete.
+- Current progress: Phases 1–13 of 19 are complete.
 - Available now: director authentication, event creation, ticket management,
   public event pages, Stripe test checkout, paid-order fulfillment, and secure
   individual mobile passes with QR codes, plus secure scanner-link creation and
   revocation for gate staff, a mobile camera scanner, authoritative admission
   decisions, duplicate blocking, overrides, check-in undo, and permission-gated
   buyer and order lookup with manual pass check-in, plus persisted recent scan
-  history for each scanner session and in-person gate sale tracking.
-- Next planned phase: director dashboard metrics.
-- Remaining launch work: dashboard metrics, sharing, final copy and
-  documentation, demo data, quality checks, and release preparation.
+  history for each scanner session, in-person gate sale tracking, and
+  director-facing sales, revenue, admission, and gate-activity dashboards.
+- Next planned phase: coach sharing flow.
+- Remaining launch work: sharing, final copy and documentation, demo data,
+  quality checks, and release preparation.
 - Payment mode: Stripe test mode. Live keys should be enabled only when the
   complete purchase and gate-entry flow is ready for real customers.
 - Known launch dependency: production pass-link email delivery still needs a
@@ -267,6 +268,25 @@ Completed:
 - Public parent-checkout QR code on the director gate page
 - Printable letter-size admission poster linking to the public ticket page
 
+## Phase 13 status
+
+Completed:
+
+- Tournament overview with ticket-page status, sales status, scanner-link
+  status, and a live event snapshot
+- Sales dashboard at `/dashboard/tournaments/[id]/sales`
+- Gate activity dashboard at `/dashboard/tournaments/[id]/scans`
+- Gross online sales, estimated Stripe fees, estimated net payout, online
+  tickets sold, manual gate sales, and total estimated admission revenue
+- Sales breakdowns by ticket type and tournament-local sale date
+- Total scan attempts, successful check-ins, duplicate attempts, invalid
+  attempts, wrong-day attempts, manual check-ins, and overrides
+- Live online-pass check-in progress, unscanned-pass totals, active scanner
+  links, and estimated revenue
+- Database-side aggregation to keep reporting work out of the browser
+- Security-invoker metrics function restricted to authenticated users and
+  protected by ownership checks plus existing row-level security
+
 ## Security model
 
 - The publishable Supabase key is used by the web app.
@@ -280,8 +300,10 @@ Completed:
 - Validation, override, undo, gate-lookup, recent-scan, and gate-sale functions
   are security-invoker functions executable only by the server-side service
   role.
+- The dashboard metrics function runs as the signed-in director, requires
+  tournament ownership, and remains subject to row-level security.
 
 ## Next phase
 
-Phase 13 adds director-facing sales, revenue, admissions, and gate-activity
-metrics.
+Phase 14 adds the coach sharing flow with a reusable parent message, text and
+email share actions, and a QR code.
