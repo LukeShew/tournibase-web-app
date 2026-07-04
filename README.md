@@ -123,6 +123,17 @@ Phase 13:
 - Active scanner-link counts and online-pass check-in progress
 - RLS-protected database aggregation available only to the owning director
 
+Phase 14:
+
+- Director sharing workspace at `/dashboard/tournaments/[id]/share`
+- Public coach page at `/share/[event-slug]` with no coach account required
+- Exact parent-ready admission message with one-click copy
+- Share-by-text and share-by-email actions
+- Public ticket link, copy action, and direct ticket-page access
+- Parent ticket QR code on the coach page
+- Coach-page link and access QR for the tournament director
+- Unpublished events remain unavailable on the public coach route
+
 Time-zone handling:
 
 - Tournament dates are anchored to the tournament's IANA time zone

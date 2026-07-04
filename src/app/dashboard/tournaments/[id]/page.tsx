@@ -351,6 +351,11 @@ export default async function TournamentOverviewPage({
             description="Authorize gate staff and specific entrances."
           />
           <ActiveTool
+            href={`/dashboard/tournaments/${tournamentId}/share`}
+            title="Share with coaches"
+            description="Give coaches a parent-ready message and ticket link."
+          />
+          <ActiveTool
             href={`/dashboard/tournaments/${tournamentId}/scans`}
             title="Open gate dashboard"
             description="Track live admissions and scanner activity."

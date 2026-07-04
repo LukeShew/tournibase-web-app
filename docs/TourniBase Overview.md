@@ -15,7 +15,7 @@ The web app is separate from the existing TourniBase waitlist website:
 
 Last updated: July 4, 2026
 
-- Current progress: Phases 1–13 of 19 are complete.
+- Current progress: Phases 1–14 of 19 are complete.
 - Available now: director authentication, event creation, ticket management,
   public event pages, Stripe test checkout, paid-order fulfillment, and secure
   individual mobile passes with QR codes, plus secure scanner-link creation and
@@ -23,10 +23,11 @@ Last updated: July 4, 2026
   decisions, duplicate blocking, overrides, check-in undo, and permission-gated
   buyer and order lookup with manual pass check-in, plus persisted recent scan
   history for each scanner session, in-person gate sale tracking, and
-  director-facing sales, revenue, admission, and gate-activity dashboards.
-- Next planned phase: coach sharing flow.
-- Remaining launch work: sharing, final copy and documentation, demo data,
-  quality checks, and release preparation.
+  director-facing sales, revenue, admission, and gate-activity dashboards,
+  plus a coach sharing flow with a parent-ready message and ticket QR code.
+- Next planned phase: UI copy updates.
+- Remaining launch work: final copy and documentation, demo data, quality
+  checks, and release preparation.
 - Payment mode: Stripe test mode. Live keys should be enabled only when the
   complete purchase and gate-entry flow is ready for real customers.
 - Known launch dependency: production pass-link email delivery still needs a
@@ -287,6 +288,21 @@ Completed:
 - Security-invoker metrics function restricted to authenticated users and
   protected by ownership checks plus existing row-level security
 
+## Phase 14 status
+
+Completed:
+
+- Director sharing workspace at `/dashboard/tournaments/[id]/share`
+- Public coach page at `/share/[event-slug]`
+- Coach link that works without a TourniBase login
+- Exact parent-ready admission message with one-click copying
+- Share-by-text and share-by-email actions
+- Public ticket link with direct open and copy actions
+- Parent ticket QR code on the public coach page
+- Coach-page access QR on the director page
+- Published-event requirement for all public coach pages
+- Director ownership checks for the protected sharing workspace
+
 ## Security model
 
 - The publishable Supabase key is used by the web app.
@@ -305,5 +321,5 @@ Completed:
 
 ## Next phase
 
-Phase 14 adds the coach sharing flow with a reusable parent message, text and
-email share actions, and a QR code.
+Phase 15 updates product language across director, parent, and gate-staff
+surfaces.
