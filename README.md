@@ -13,9 +13,9 @@ Production app:
 
 ## Current status
 
-- Phases 1–17 of 19 complete
+- Phases 1–18 of 19 complete
 - Stripe test mode
-- Next phase: install, lint, typecheck, and production build checks
+- Next phase: final Git review and MVP handoff
 - Production pass-link email remains a launch dependency
 
 Current progress and remaining work:

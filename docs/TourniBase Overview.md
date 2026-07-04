@@ -24,18 +24,17 @@ before expanding into a larger platform.
 
 | Item | Current state |
 | --- | --- |
-| Progress | Phases 1–17 of 19 complete |
-| Current phase | Phase 17 local-only demo data complete |
-| Next phase | Phase 18 quality checks, not started |
+| Progress | Phases 1–18 of 19 complete |
+| Current phase | Phase 18 quality checks complete |
+| Next phase | Phase 19 final Git review and MVP handoff, not started |
 | Production app | [tournibase-web-app.vercel.app](https://tournibase-web-app.vercel.app) |
 | Payments | Stripe test mode |
-| Database | Live Supabase schema matches all 11 committed migrations |
+| Database | 11 product migrations live; 1 local demo permission migration |
 | Launch dependency | Production receipt and pass-link email delivery |
 
 Remaining numbered phases:
 
-1. Phase 18: install, lint, typecheck, build, and reasonable fixes.
-2. Phase 19: final Git review and MVP handoff.
+1. Phase 19: final Git review and MVP handoff.
 
 Before accepting real customer payments, TourniBase must also add transactional
 pass email, switch Stripe and the production webhook to live mode, and complete
@@ -171,7 +170,7 @@ See [MVP Architecture](./mvp-architecture.md) and
 - Gate-sale recording tracks external payment but does not charge a card.
 - Refund and dispute operations are not automated.
 - Demo data is available only through the guarded local seed command.
-- Final quality and release checks remain in Phases 18 and 19.
+- Final Git review and MVP handoff remain in Phase 19.
 
 ## Documentation
 

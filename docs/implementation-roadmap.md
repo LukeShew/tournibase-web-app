@@ -5,12 +5,12 @@ Last updated: July 4, 2026
 ## Current status
 
 - Main product: TourniBase web MVP
-- Completed: Phases 1–17 of 19
+- Completed: Phases 1–18 of 19
 - Current production URL:
   [tournibase-web-app.vercel.app](https://tournibase-web-app.vercel.app)
 - Payment status: Stripe test mode
-- Next phase: Phase 18, quality checks
-- Not started: Phases 18–19
+- Next phase: Phase 19, final Git review and MVP handoff
+- Not started: Phase 19
 
 The waitlist website and a native mobile app are postponed, separate products.
 They are not part of this roadmap.
@@ -36,7 +36,7 @@ They are not part of this roadmap.
 | 15 | Customer-facing product language and positioning | Complete |
 | 16 | Product, architecture, schema, roadmap, setup, and test docs | Complete |
 | 17 | Local-only seed and demo data | Complete |
-| 18 | Install, lint, typecheck, build, and reasonable fixes | Not started |
+| 18 | Install, lint, typecheck, build, and reasonable fixes | Complete |
 | 19 | Final Git review, commit, and MVP handoff | Not started |
 
 ## Phase 17: Seed and demo data
@@ -60,7 +60,7 @@ See [Local Demo Data](./demo-data.md).
 
 ## Phase 18: Quality checks
 
-Run:
+Completed July 4, 2026. All required checks passed without code changes:
 
 ```bash
 npm install
@@ -69,8 +69,9 @@ npm run typecheck
 npm run build
 ```
 
-Fix all reasonable failures. If a problem cannot be fixed within the phase,
-record the exact error, likely cause, and recommended next action.
+Dependency installation was already current. ESLint reported zero warnings,
+TypeScript reported zero errors, and the optimized Next.js production build
+compiled and generated its static pages successfully.
 
 ## Phase 19: Final Git and handoff
 

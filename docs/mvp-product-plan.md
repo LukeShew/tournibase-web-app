@@ -149,12 +149,11 @@ The web MVP is successful when it can reliably:
 
 ## Remaining roadmap
 
-Phases 16 and 17 are complete. The local demo seed is guarded against hosted
-Supabase URLs. The remaining planned work is:
+Phases 16–18 are complete. The local demo seed is guarded against hosted
+Supabase URLs, and the install, lint, typecheck, and production build checks
+pass. The remaining planned work is:
 
-1. Phase 18: run and fix the full install, lint, typecheck, and production build
-   checks.
-2. Phase 19: complete the final Git review and MVP handoff.
+1. Phase 19: complete the final Git review and MVP handoff.
 
 Before charging real customers, TourniBase also needs production pass-link email
 delivery, Stripe live-mode configuration, and one complete live-mode purchase,
