@@ -1,6 +1,6 @@
 # TourniBase Web MVP Product Plan
 
-Last updated: July 4, 2026
+Last updated: July 5, 2026
 
 ## Current product
 
@@ -86,10 +86,14 @@ sales when permitted.
 4. Stripe Checkout collects payment.
 5. A signed Stripe success event marks the order paid and creates one pass per
    purchased admission.
-6. The success page shows the buyer’s individual mobile pass links.
+6. TourniBase prepares one branded email containing every individual mobile
+   pass link.
+7. The success page also shows all pass links as the permanent fallback.
 
-Production pass-link email delivery is not implemented yet. Until it is added,
-the buyer must keep or bookmark the success-page links.
+The pass-email template, protected delivery tracking, duplicate protection, and
+retry states are implemented. Real sending remains disabled until a provider
+and verified domain are connected, so the buyer must currently keep or bookmark
+the success-page links.
 
 ### Admit a buyer
 
@@ -119,7 +123,7 @@ card or issue a digital pass.
 - Tournament scheduling, brackets, teams, scores, standings, or referee tools
 - A full point-of-sale card terminal
 - Automated refunds or dispute handling
-- Production transactional pass emails
+- An activated transactional email provider and verified sending domain
 - Native iOS or Android apps
 - New waitlist-site work
 
@@ -153,9 +157,10 @@ All 19 numbered web MVP phases are complete. The local demo seed is guarded
 against hosted Supabase URLs, the quality checks pass, and the final repository
 review and handoff are complete.
 
-Before charging real customers, TourniBase also needs production pass-link email
-delivery, Stripe live-mode configuration, and one complete live-mode purchase,
-webhook, pass, and scan verification.
+Before charging real customers, TourniBase also needs to activate the completed
+pass-email foundation with a provider and verified domain, configure Stripe
+live mode, and complete one live-mode purchase, webhook, pass, email, and scan
+verification.
 
 See [Final MVP Handoff](./mvp-handoff.md) for the complete routes, environment,
 database, testing, limitations, and launch checklist.

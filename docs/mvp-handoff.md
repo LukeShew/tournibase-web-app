@@ -1,6 +1,6 @@
 # TourniBase Web MVP Handoff
 
-Last verified: July 4, 2026
+Last verified: July 5, 2026
 
 ## Handoff status
 
@@ -40,6 +40,7 @@ Vercel environment variables for hosted deployments.
 | `STRIPE_WEBHOOK_SECRET` | Server only | Verifies signed Stripe webhook requests |
 | `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Browser-safe | Stripe key matching the configured mode and account |
 | `NEXT_PUBLIC_SITE_URL` | Browser and server | Base URL for checkout, pass, scanner, and success links |
+| `EMAIL_PROVIDER` | Server only | `disabled` until a verified provider adapter is installed |
 
 `NEXT_PUBLIC_SITE_URL` is `http://localhost:3000` locally and
 `https://tournibase-web-app.vercel.app` in production.
@@ -89,13 +90,14 @@ authorized gate staff.
 | --- | --- |
 | `POST /api/checkout` | Validates a cart and creates Stripe Checkout |
 | `POST /api/stripe/webhook` | Verifies Stripe events and fulfills paid orders |
+| `GET /dev/email-preview` | Local-only branded pass-email preview; returns 404 in production |
 
 ## Database handoff
 
-Production has 11 applied product migrations. The local repository contains the
-same 11 migrations, so there is no migration drift.
+Production has 12 applied product migrations. The local repository contains the
+same 12 migrations, so there is no migration drift.
 
-The 10 public application tables are:
+The 11 public application tables are:
 
 - `users`
 - `organizations`
@@ -107,10 +109,12 @@ The 10 public application tables are:
 - `scanner_sessions`
 - `check_ins`
 - `manual_sales`
+- `order_email_deliveries`
 
-RLS is enabled on all 10 tables. Anonymous access is limited to published
+RLS is enabled on all 11 tables. Anonymous access is limited to published
 tournaments and active ticket types. Orders, passes, scanner records, and buyer
-data remain private.
+data remain private. Email delivery records and their atomic claim function are
+available only to the server-side service role.
 
 `supabase/seed.sql` contains local service-role grants but no demo records.
 The guarded `npm run seed` command creates demo data only when the Supabase URL
@@ -164,7 +168,7 @@ Demo event:
 
 ## Final verification
 
-Verified July 4, 2026:
+Verified July 5, 2026:
 
 - Both Git repositories matched their GitHub `main` branches before Phase 19
   changes.
@@ -176,17 +180,25 @@ Verified July 4, 2026:
 - ESLint passed with zero warnings.
 - TypeScript passed with zero errors.
 - The optimized Next.js production build passed.
+- Two automated email-template tests passed.
 - `npm audit --omit=dev` found zero vulnerabilities.
 - The production URL returned HTTP 200 from Vercel.
-- Production has all 11 migrations and RLS on all 10 public tables.
+- Production and local Supabase have all 12 migrations and RLS on all 11 public
+  tables.
+- The email delivery table blocks anonymous and signed-in browser access while
+  allowing only the service role to claim deliveries.
+- A transaction-only database test confirmed the first email claim succeeds and
+  a simultaneous second claim is blocked.
 - A clean local database reset applied all migrations and local grants.
-- The local demo seed completed after the clean reset.
+- The local demo seed completed after the clean reset using temporary local
+  Supabase variables without changing `.env.local`.
 - Supabase advisors reported no database security errors.
 
 ## Known limitations
 
-- Buyers receive pass links on the success page, but production receipt and
-  pass-link email is not implemented.
+- The branded order email, plain-text fallback, delivery tracking, duplicate
+  protection, and retry states are implemented. No real email is sent while
+  `EMAIL_PROVIDER=disabled`.
 - Stripe remains in test mode.
 - Director accounts are invite-only and created through Supabase.
 - Supabase leaked-password protection is disabled because it is unavailable on
@@ -201,7 +213,8 @@ Verified July 4, 2026:
 
 ## Requirements before real customer payments
 
-1. Add transactional receipt and mobile pass-link email delivery.
+1. Choose an email provider and sending domain, add the provider adapter and
+   production key, then complete a real delivery test.
 2. Switch the Stripe secret key, publishable key, and webhook to live mode
    together.
 3. Run one low-value purchase with a real card.

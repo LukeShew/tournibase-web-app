@@ -1,9 +1,9 @@
 # TourniBase Database Schema
 
-Last verified against the live Supabase project: July 4, 2026
+Last verified against the live Supabase project: July 5, 2026
 
 Current production migration:
-`20260704041441_add_phase_13_dashboard_metrics`
+`20260705053201_add_order_email_delivery_foundation`
 
 ## Relationship summary
 
@@ -14,6 +14,7 @@ erDiagram
   tournaments ||--o{ ticket_types : offers
   tournaments ||--o{ orders : receives
   orders ||--o{ order_items : contains
+  orders ||--o| order_email_deliveries : sends
   order_items ||--o{ passes : fulfills
   tournaments ||--o{ scanner_sessions : authorizes
   passes ||--o{ check_ins : attempts
@@ -124,6 +125,18 @@ Key fields: `id`, `tournament_id`, `scanner_session_id`, `ticket_type_id`,
 
 These rows affect reporting but do not create Stripe charges or digital passes.
 
+### `order_email_deliveries`
+
+Server-only state for one transactional pass email per online order.
+
+Key fields: `order_id`, `status`, `provider`, `provider_message_id`,
+`attempt_count`, `last_attempt_at`, `locked_at`, `sent_at`,
+`last_error_code`, `last_error_message`, `created_at`, `updated_at`.
+
+The primary key allows only one delivery record per order. The server claims a
+pending or retryable row before contacting a provider. A stale `sending` claim
+can be recovered after 10 minutes.
+
 ## Enum values
 
 | Enum | Values |
@@ -135,6 +148,7 @@ These rows affect reporting but do not create Stripe charges or digital passes.
 | `pass_status` | `active`, `checked_in`, `refunded`, `voided`, `expired` |
 | `check_in_result` | `valid`, `already_used`, `wrong_day`, `invalid`, `refunded`, `voided`, `manual_check_in`, `override` |
 | `manual_sale_payment_method` | `cash`, `venmo`, `card_outside_tournibase`, `comp` |
+| `order_email_delivery_status` | `pending`, `sending`, `sent`, `retryable_failure`, `permanent_failure` |
 
 ## Database functions
 
@@ -147,6 +161,7 @@ These rows affect reporting but do not create Stripe charges or digital passes.
 | `get_recent_scans` | Returns recent activity for one scanner session | Server secret key only |
 | `record_gate_sale` | Validates and records an in-person sale | Server secret key only |
 | `get_tournament_dashboard_metrics` | Aggregates director sales and gate reporting | Signed-in owning director |
+| `claim_order_email_delivery` | Atomically claims one order email and blocks concurrent duplicate sends | Server secret key only |
 
 All listed functions run as security invoker. The gate functions have execution
 revoked from anonymous and authenticated browser roles. Dashboard metrics remain
@@ -157,7 +172,7 @@ The private `handle_new_auth_user` trigger function creates a protected
 
 ## Row Level Security
 
-RLS is enabled on all 10 public application tables.
+RLS is enabled on all 11 public application tables.
 
 - A director can access only their own profile and data reachable through an
   organization they own.
@@ -165,6 +180,8 @@ RLS is enabled on all 10 public application tables.
   types.
 - Orders, order items, passes, scanner sessions, check-ins, and manual sales
   have no anonymous read policy.
+- Email delivery records have no browser policies or browser grants. Only the
+  service role can read, insert, update, or claim them.
 - Server-side fulfillment and gate operations use the Supabase secret key after
   application-level validation.
 
@@ -184,10 +201,11 @@ automatically expose new public tables.
 9. `20260703225316_add_phase_11_recent_scans`
 10. `20260703232057_add_phase_12_gate_sales`
 11. `20260704041441_add_phase_13_dashboard_metrics`
+12. `20260705053201_add_order_email_delivery_foundation`
 
 Migration files are the source of truth under `supabase/migrations`. New schema
 changes must be added as migrations and applied with `supabase db push`.
 
-Production and local migration histories match these 11 migrations.
+Production and local migration histories match these 12 migrations.
 `supabase/seed.sql` adds local service-role table and sequence permissions but
 contains no demo records and does not add migration history.

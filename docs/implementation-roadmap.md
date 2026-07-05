@@ -1,6 +1,6 @@
 # TourniBase Web MVP Implementation Roadmap
 
-Last updated: July 4, 2026
+Last updated: July 5, 2026
 
 ## Current status
 
@@ -9,6 +9,7 @@ Last updated: July 4, 2026
 - Current production URL:
   [tournibase-web-app.vercel.app](https://tournibase-web-app.vercel.app)
 - Payment status: Stripe test mode
+- Transactional email: Foundation complete; provider and domain not connected
 - Next phase: None
 - Not started: No numbered phases
 
@@ -90,7 +91,10 @@ Completed July 4, 2026:
 
 These are required before accepting real customer payments:
 
-- Add transactional email delivery for receipt and mobile pass links.
+- Choose a transactional email provider and verify a sending domain.
+- Add the provider adapter and production API key to the completed email
+  foundation.
+- Run a real delivery test containing every pass link in one order email.
 - Switch all Stripe variables and the production webhook to live mode together.
 - Run one low-value live purchase using a real card.
 - Confirm the live webhook marks the order paid and creates the correct passes.
@@ -100,7 +104,8 @@ These are required before accepting real customer payments:
 
 ## Known current limitations
 
-- Pass links appear on the success page but are not emailed automatically.
+- Pass-email rendering, tracking, duplicate protection, and retry handling are
+  built, but `EMAIL_PROVIDER=disabled` means no real email is sent.
 - Stripe is configured in test mode.
 - Gate sales record external payment; TourniBase does not process those charges.
 - Refund and dispute workflows are not automated.
@@ -115,7 +120,8 @@ The web MVP is ready for a controlled real tournament only when:
 - Phase 17 demo data remains development-only.
 - Phase 18 checks pass.
 - Phase 19 handoff is complete.
-- Transactional pass email is working.
+- Transactional pass email is connected to a verified provider and passes a
+  real delivery test.
 - Stripe live mode and its webhook pass an end-to-end test.
 - The event director can create tickets, publish, sell, scan, recover a buyer
   through lookup, and read the dashboard without developer intervention.

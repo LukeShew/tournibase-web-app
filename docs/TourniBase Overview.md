@@ -1,6 +1,6 @@
 # TourniBase Overview
 
-Last updated and verified: July 4, 2026
+Last updated and verified: July 5, 2026
 
 ## Current direction
 
@@ -29,15 +29,17 @@ before expanding into a larger platform.
 | Next phase | No numbered build phase remains |
 | Production app | [tournibase-web-app.vercel.app](https://tournibase-web-app.vercel.app) |
 | Payments | Stripe test mode |
-| Database | Live and local histories match all 11 product migrations |
-| Launch dependency | Production receipt and pass-link email delivery |
+| Database | Live and local histories match all 12 product migrations |
+| Email | Template, tracking, duplicate protection, and retry foundation complete; real sending disabled |
+| Launch dependency | Choose a provider and domain, then activate and test production email |
 
 No numbered phases remain. See the [Final MVP Handoff](./mvp-handoff.md) for
 routes, environment variables, database state, local testing, and launch work.
 
-Before accepting real customer payments, TourniBase must also add transactional
-pass email, switch Stripe and the production webhook to live mode, and complete
-one real end-to-end purchase and gate test.
+Before accepting real customer payments, TourniBase must connect the completed
+pass-email foundation to a verified provider and domain, switch Stripe and the
+production webhook to live mode, and complete one real end-to-end purchase and
+gate test.
 
 Keep this section current after every phase or material product change. The
 [Implementation Roadmap](./implementation-roadmap.md) is the detailed progress
@@ -95,15 +97,18 @@ tracker.
 3. A parent opens the public event page and pays through Stripe Checkout.
 4. A verified Stripe success event marks the order paid and creates one pass per
    admission.
-5. The buyer opens each mobile pass from the success page.
-6. Gate staff open a temporary scanner link and scan the QR.
-7. Postgres validates the scanner, tournament, payment, pass state, valid date,
+5. TourniBase prepares one confirmation email containing every pass link. Real
+   sending remains disabled until a provider and domain are added.
+6. The buyer can always open each mobile pass from the success page.
+7. Gate staff open a temporary scanner link and scan the QR.
+8. Postgres validates the scanner, tournament, payment, pass state, valid date,
    and prior admissions in one atomic operation.
-8. A valid pass is admitted. A second use is blocked as already scanned.
-9. The director reviews sales and gate activity from the dashboard.
+9. A valid pass is admitted. A second use is blocked as already scanned.
+10. The director reviews sales and gate activity from the dashboard.
 
-Production pass-link email is not built yet. The success-page links are the
-current delivery method.
+The branded email template and retry-safe delivery system are built. Production
+sending remains disabled, so success-page links are still the current delivery
+method.
 
 ## Current product boundary
 
@@ -138,6 +143,7 @@ gate staff can use it without installing anything.
 - Next.js App Router web app deployed on Vercel
 - Supabase Auth, Postgres, Row Level Security, and migration-managed schema
 - Stripe-hosted Checkout and signed webhook processing
+- React Email template rendering with provider-neutral delivery tracking
 - Server Components and Server Actions for protected data and mutations
 - Temporary scanner credentials stored only as SHA-256 hashes
 - Individual pass UUIDs resolved only through server-controlled pass and scanner
@@ -150,7 +156,7 @@ See [MVP Architecture](./mvp-architecture.md) and
 
 ## Security status
 
-- All 10 public application tables have RLS enabled.
+- All 11 public application tables have RLS enabled.
 - Anonymous users can read only published tournaments and active ticket types.
 - Orders, passes, scanner sessions, check-ins, and manual sales are not
   anonymously readable.
@@ -163,7 +169,8 @@ See [MVP Architecture](./mvp-architecture.md) and
 
 ## Known limitations
 
-- Automated receipt and pass-link email is not implemented.
+- The pass-email foundation is complete, but no provider or sending domain is
+  connected, so real emails are not sent.
 - Stripe remains in test mode.
 - Director accounts are created manually through Supabase.
 - Supabase leaked-password protection is unavailable on the current plan, so
@@ -180,5 +187,6 @@ See [MVP Architecture](./mvp-architecture.md) and
 - [Database Schema](./database-schema.md)
 - [Local Demo Data](./demo-data.md)
 - [Implementation Roadmap](./implementation-roadmap.md)
+- [Transactional Email](./transactional-email.md)
 - [Final MVP Handoff](./mvp-handoff.md)
 - [Repository setup and test guide](../README.md)

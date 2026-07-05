@@ -16,7 +16,8 @@ Production app:
 - All 19 numbered web MVP phases complete
 - Stripe test mode
 - Final repository review and MVP handoff complete
-- Production pass-link email remains a launch dependency
+- Pass-email foundation complete; provider and verified domain remain a launch
+  dependency
 
 Current progress and remaining work:
 [Implementation Roadmap](docs/implementation-roadmap.md)
@@ -29,6 +30,7 @@ Current progress and remaining work:
 - [Database Schema](docs/database-schema.md)
 - [Local Demo Data](docs/demo-data.md)
 - [Implementation Roadmap](docs/implementation-roadmap.md)
+- [Transactional Email](docs/transactional-email.md)
 - [Final MVP Handoff](docs/mvp-handoff.md)
 
 ## What the MVP does
@@ -108,6 +110,7 @@ Current progress and remaining work:
 | `STRIPE_WEBHOOK_SECRET` | Server only | Verifies signed Stripe webhook requests |
 | `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Browser-safe configuration | Matching Stripe mode and account |
 | `NEXT_PUBLIC_SITE_URL` | Browser and server | Base URL used for pass, scanner, success, and cancel links |
+| `EMAIL_PROVIDER` | Server only | Keep `disabled` until a provider adapter and sending domain are ready |
 
 Local values must use:
 
@@ -122,6 +125,28 @@ Use the Supabase **publishable** key in the browser variable and the
 service-role key in a `NEXT_PUBLIC_` variable.
 
 Do not commit `.env.local`.
+
+## Transactional email foundation
+
+TourniBase has a branded order email containing every pass link, a plain-text
+fallback, protected delivery tracking, atomic duplicate protection, and
+retryable/permanent failure states.
+
+Real sending is intentionally disabled until a provider and domain are chosen.
+Keep this value in local and Vercel environments:
+
+```text
+EMAIL_PROVIDER=disabled
+```
+
+With the development server running, preview the email at:
+
+```text
+http://localhost:3000/dev/email-preview
+```
+
+That route uses sample data and returns 404 in production. See
+[Transactional Email](docs/transactional-email.md) for the activation plan.
 
 ## Supabase setup
 
@@ -252,8 +277,9 @@ Test card:
 
 Use any future expiration date, any three-digit CVC, and any valid postal code.
 
-Do not switch to live keys until transactional pass email is working and the
-complete flow has passed Phase 18 and final launch checks.
+Do not switch to live keys until transactional pass email is connected to a
+verified provider and domain and the complete flow passes the final launch
+checks.
 
 ## End-to-end test flow
 
@@ -299,8 +325,9 @@ number.
 2. Confirm the event, ticket, buyer, valid date, and QR code appear.
 3. Keep this page open on one device for the scanner test.
 
-Automated pass email is not available yet. The success page is currently the
-only automatic pass-delivery screen.
+The pass-email foundation records the order as pending, but
+`EMAIL_PROVIDER=disabled` prevents real sending. The success page is currently
+the only automatic pass-delivery screen.
 
 ### 6. Create and use a scanner
 
@@ -370,6 +397,7 @@ only as SHA-256 attempt hashes.
 ## Checks
 
 ```bash
+npm test
 npm run lint
 npm run typecheck
 npm run build
@@ -377,7 +405,8 @@ npm run build
 
 ## Known limitations
 
-- Production receipt and pass-link email is not implemented.
+- The pass-email foundation is complete, but real sending remains disabled
+  until a provider and verified domain are connected.
 - Stripe is in test mode.
 - Director accounts are invite-only.
 - Refunds and disputes are not automated.

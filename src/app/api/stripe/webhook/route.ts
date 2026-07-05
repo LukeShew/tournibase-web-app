@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import type Stripe from "stripe";
+import { attemptOrderConfirmationEmail } from "@/lib/email/order-confirmation";
 import {
   fulfillCheckoutSession,
   markCheckoutFailed,
@@ -62,7 +63,29 @@ export async function POST(request: Request) {
       event.type === "checkout.session.completed" ||
       event.type === "checkout.session.async_payment_succeeded"
     ) {
-      await fulfillCheckoutSession(event.data.object.id);
+      const fulfillment = await fulfillCheckoutSession(
+        event.data.object.id,
+      );
+
+      if (fulfillment.fulfilled) {
+        const emailAttempt = await attemptOrderConfirmationEmail(
+          fulfillment.orderId,
+        );
+
+        if (emailAttempt.status === "retryable_failure") {
+          throw new Error(
+            `Confirmation email needs a retry (${emailAttempt.code}).`,
+          );
+        }
+
+        if (emailAttempt.status === "permanent_failure") {
+          console.warn("[stripe-webhook] confirmation email not sent", {
+            code: emailAttempt.code,
+            eventId: event.id,
+            orderId: fulfillment.orderId,
+          });
+        }
+      }
     }
 
     if (

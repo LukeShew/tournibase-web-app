@@ -9,6 +9,7 @@
     "lint": "eslint . --max-warnings=0",
     "seed": "node --env-file=.env.local scripts/seed-demo.mjs",
     "seed:preview": "node scripts/seed-demo.mjs --preview",
+    "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
@@ -20,6 +21,7 @@
     "qrcode": "^1.5.4",
     "react": "19.2.4",
     "react-dom": "19.2.4",
+    "react-email": "6.6.5",
     "stripe": "^22.3.0",
     "zod": "4.4.3"
   },
@@ -33,7 +35,8 @@
     "eslint-config-next": "16.2.10",
     "supabase": "2.109.0",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "4.1.9"
   },
   "overrides": {
     "postcss": "8.5.16"

@@ -1,5 +1,6 @@
 import "server-only";
 
+import { attemptOrderConfirmationEmail } from "@/lib/email/order-confirmation";
 import { getStripe } from "@/lib/stripe";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
@@ -115,9 +116,6 @@ export async function fulfillCheckoutSession(sessionId: string) {
     throw paymentUpdateError;
   }
 
-  // TODO: Send a production confirmation email containing the mobile pass
-  // links after transactional email infrastructure is configured.
-
   return { fulfilled: true as const, orderId: order.id };
 }
 
@@ -200,19 +198,30 @@ export async function getOrderConfirmation(
     ]),
   );
 
+  const confirmation: OrderConfirmation = {
+    amountTotal: Number(order.amount_total),
+    buyerName: order.buyer_name,
+    eventName: tournament.name as string,
+    orderNumber: `TB-${order.id.toString().padStart(6, "0")}`,
+    passes: ((passRows ?? []) as PassRecord[]).map((pass) => ({
+      id: pass.id,
+      publicToken: pass.public_token,
+      status: pass.status,
+      ticketName: ticketNames.get(pass.ticket_type_id) ?? "Admission pass",
+    })),
+  };
+
+  try {
+    await attemptOrderConfirmationEmail(order.id);
+  } catch (error) {
+    console.error("[order-success] email delivery attempt failed", {
+      message: error instanceof Error ? error.message : "Unknown error",
+      orderId: order.id,
+    });
+  }
+
   return {
     status: "paid",
-    confirmation: {
-      amountTotal: Number(order.amount_total),
-      buyerName: order.buyer_name,
-      eventName: tournament.name as string,
-      orderNumber: `TB-${order.id.toString().padStart(6, "0")}`,
-      passes: ((passRows ?? []) as PassRecord[]).map((pass) => ({
-        id: pass.id,
-        publicToken: pass.public_token,
-        status: pass.status,
-        ticketName: ticketNames.get(pass.ticket_type_id) ?? "Admission pass",
-      })),
-    },
+    confirmation,
   };
 }

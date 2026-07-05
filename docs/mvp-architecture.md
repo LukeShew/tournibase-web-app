@@ -1,6 +1,6 @@
 # TourniBase Web MVP Architecture
 
-Last verified: July 4, 2026
+Last verified: July 5, 2026
 
 ## System overview
 
@@ -14,6 +14,7 @@ flowchart LR
   Web --> Stripe["Stripe Checkout"]
   Stripe --> Webhook["Signed webhook route"]
   Webhook --> DB
+  Webhook --> Email["Transactional email provider (disabled until configured)"]
 ```
 
 The application is a Next.js App Router project deployed on Vercel. Supabase
@@ -50,6 +51,19 @@ form. The browser never receives the Supabase secret key or Stripe secret keys.
 - The app calculates prices on the server from current ticket records.
 - Stripe webhook signatures are verified against the raw request body.
 - Test mode remains active until production launch checks are complete.
+
+### Transactional email
+
+- React Email renders one branded order email containing every mobile pass
+  link plus a plain-text fallback.
+- The delivery layer uses a provider-neutral interface; no provider SDK is
+  installed yet.
+- `EMAIL_PROVIDER=disabled` keeps real sending off until a domain and provider
+  are selected.
+- Postgres tracks delivery status and atomically claims each order so concurrent
+  webhook requests cannot send duplicates.
+- Provider errors do not undo payment or pass creation. Temporary failures can
+  be retried; permanent failures remain recorded for support.
 
 ## Route map
 
@@ -120,7 +134,10 @@ form. The browser never receives the Supabase secret key or Stripe secret keys.
 7. The function upserts one `passes` row per purchased admission using the
    unique order-item and sequence-number pair.
 8. The order changes to `paid`.
-9. `/order/success` calls the same idempotent fulfillment function before
+9. The webhook creates or claims the order’s protected email delivery record.
+10. If a provider is active, TourniBase sends one email containing every pass
+    link with a deterministic idempotency key.
+11. `/order/success` calls the same idempotent fulfillment function before
    showing pass links. This safely handles a fast redirect or a webhook retry.
 
 Supported webhook events:
@@ -139,8 +156,9 @@ The page is resolved on the server and is shown only when its related order is
 paid. Orders and passes are not anonymously readable through the Supabase Data
 API.
 
-The current success page displays every pass link. Automated production email
-delivery is a known launch dependency.
+The success page displays every pass link. The branded email template, delivery
+tracking, duplicate protection, and retry states are built. Connecting a
+verified sending domain and provider remains a launch dependency.
 
 ## Scanner authorization
 
@@ -210,6 +228,8 @@ This is reporting-only and does not process payment.
   controls accessible rows.
 - `SUPABASE_SECRET_KEY`, `STRIPE_SECRET_KEY`, and
   `STRIPE_WEBHOOK_SECRET` are server-only.
+- Email delivery records and the claim function have no anonymous or
+  authenticated browser access.
 - Director authorization is enforced in server code and RLS, not only in
   `proxy.ts`.
 - Scanner URLs act as temporary gate credentials and can be expired or revoked.
