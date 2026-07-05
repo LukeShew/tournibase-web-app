@@ -1,5 +1,7 @@
 import "server-only";
 
+import { Resend, type ErrorResponse } from "resend";
+
 export type EmailSendRequest = {
   html: string;
   idempotencyKey: string;
@@ -56,6 +58,93 @@ const disabledProvider: EmailProvider = {
   },
 };
 
+type ResendSend = Resend["emails"]["send"];
+
+type ResendEmailProviderOptions = {
+  apiKey?: string;
+  from?: string;
+  send?: ResendSend;
+};
+
+const retryableResendErrors = new Set<ErrorResponse["name"]>([
+  "application_error",
+  "concurrent_idempotent_requests",
+  "daily_quota_exceeded",
+  "internal_server_error",
+  "monthly_quota_exceeded",
+  "rate_limit_exceeded",
+]);
+
+export function createResendEmailProvider({
+  apiKey = process.env.RESEND_API_KEY?.trim(),
+  from = process.env.EMAIL_FROM?.trim(),
+  send,
+}: ResendEmailProviderOptions = {}): EmailProvider {
+  if (!apiKey) {
+    throw new Error(
+      'EMAIL_PROVIDER is "resend", but RESEND_API_KEY is not configured.',
+    );
+  }
+
+  if (!from) {
+    throw new Error(
+      'EMAIL_PROVIDER is "resend", but EMAIL_FROM is not configured.',
+    );
+  }
+
+  const resend = send
+    ? null
+    : new Resend(apiKey, {
+        userAgent: "tournibase-web-app/0.1.0",
+      });
+  const sendEmail = send ?? resend!.emails.send.bind(resend!.emails);
+
+  return {
+    isConfigured: true,
+    name: "resend",
+    async send(request) {
+      const { data, error } = await sendEmail(
+        {
+          from,
+          html: request.html,
+          replyTo: request.replyTo,
+          subject: request.subject,
+          text: request.text,
+          to: request.to,
+        },
+        {
+          idempotencyKey: request.idempotencyKey,
+        },
+      );
+
+      if (error) {
+        const retryable = retryableResendErrors.has(error.name);
+
+        throw new EmailSendError({
+          code: `resend_${error.name}`,
+          message: `Resend ${error.name}: ${error.message}`,
+          retryable,
+          safeMessage: retryable
+            ? "Resend temporarily could not accept the confirmation email."
+            : "Resend rejected the confirmation email request.",
+        });
+      }
+
+      if (!data?.id) {
+        throw new EmailSendError({
+          code: "resend_missing_message_id",
+          message: "Resend accepted the request without returning a message ID.",
+          retryable: true,
+          safeMessage:
+            "Resend temporarily could not confirm the email delivery request.",
+        });
+      }
+
+      return { messageId: data.id };
+    },
+  };
+}
+
 export function getEmailProvider(): EmailProvider {
   const providerName =
     process.env.EMAIL_PROVIDER?.trim().toLowerCase() || "disabled";
@@ -64,8 +153,12 @@ export function getEmailProvider(): EmailProvider {
     return disabledProvider;
   }
 
+  if (providerName === "resend") {
+    return createResendEmailProvider();
+  }
+
   throw new Error(
-    `Unsupported EMAIL_PROVIDER "${providerName}". Keep it set to "disabled" until a provider adapter is installed.`,
+    `Unsupported EMAIL_PROVIDER "${providerName}". Use "disabled" or "resend".`,
   );
 }
 

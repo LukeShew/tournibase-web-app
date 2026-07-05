@@ -110,7 +110,9 @@ Current progress and remaining work:
 | `STRIPE_WEBHOOK_SECRET` | Server only | Verifies signed Stripe webhook requests |
 | `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Browser-safe configuration | Matching Stripe mode and account |
 | `NEXT_PUBLIC_SITE_URL` | Browser and server | Base URL used for pass, scanner, success, and cancel links |
-| `EMAIL_PROVIDER` | Server only | Keep `disabled` until a provider adapter and sending domain are ready |
+| `EMAIL_PROVIDER` | Server only | `disabled` locally; use `resend` only after production activation |
+| `RESEND_API_KEY` | Server only | Sending-only Resend API key |
+| `EMAIL_FROM` | Server only | Verified sender, such as `TourniBase <passes@tournibase.com>` |
 
 Local values must use:
 
@@ -129,14 +131,21 @@ Do not commit `.env.local`.
 ## Transactional email foundation
 
 TourniBase has a branded order email containing every pass link, a plain-text
-fallback, protected delivery tracking, atomic duplicate protection, and
-retryable/permanent failure states.
+fallback, protected delivery tracking, atomic duplicate protection,
+retryable/permanent failure states, and a Resend transport.
 
-Real sending is intentionally disabled until a provider and domain are chosen.
-Keep this value in local and Vercel environments:
+Keep local sending disabled unless you are intentionally running a delivery
+test:
 
 ```text
 EMAIL_PROVIDER=disabled
+```
+
+Production uses the verified `tournibase.com` domain. Activate the transport
+with `EMAIL_PROVIDER=resend`, a sending-only `RESEND_API_KEY`, and:
+
+```text
+EMAIL_FROM=TourniBase <passes@tournibase.com>
 ```
 
 With the development server running, preview the email at:
@@ -325,9 +334,10 @@ number.
 2. Confirm the event, ticket, buyer, valid date, and QR code appear.
 3. Keep this page open on one device for the scanner test.
 
-The pass-email foundation records the order as pending, but
-`EMAIL_PROVIDER=disabled` prevents real sending. The success page is currently
-the only automatic pass-delivery screen.
+When `EMAIL_PROVIDER=disabled`, the pass-email foundation records the order as
+pending without sending. With the verified Resend production configuration,
+the buyer receives one email containing every issued pass. The success page
+remains the backup pass-delivery screen.
 
 ### 6. Create and use a scanner
 

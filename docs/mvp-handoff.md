@@ -11,7 +11,7 @@ demos and controlled testing. It is not ready to accept real customer payments
 until the launch requirements in this document are complete.
 
 Production app:
-[tournibase-web-app.vercel.app](https://tournibase-web-app.vercel.app)
+[tournibase.com](https://tournibase.com)
 
 ## Repositories and services
 
@@ -40,10 +40,12 @@ Vercel environment variables for hosted deployments.
 | `STRIPE_WEBHOOK_SECRET` | Server only | Verifies signed Stripe webhook requests |
 | `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Browser-safe | Stripe key matching the configured mode and account |
 | `NEXT_PUBLIC_SITE_URL` | Browser and server | Base URL for checkout, pass, scanner, and success links |
-| `EMAIL_PROVIDER` | Server only | `disabled` until a verified provider adapter is installed |
+| `EMAIL_PROVIDER` | Server only | `disabled` locally; `resend` after production activation |
+| `RESEND_API_KEY` | Server only | Sending-only Resend API key |
+| `EMAIL_FROM` | Server only | Verified TourniBase sender address |
 
 `NEXT_PUBLIC_SITE_URL` is `http://localhost:3000` locally and
-`https://tournibase-web-app.vercel.app` in production.
+`https://tournibase.com` in production.
 
 ## Route inventory
 

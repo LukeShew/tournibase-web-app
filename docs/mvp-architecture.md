@@ -56,10 +56,11 @@ form. The browser never receives the Supabase secret key or Stripe secret keys.
 
 - React Email renders one branded order email containing every mobile pass
   link plus a plain-text fallback.
-- The delivery layer uses a provider-neutral interface; no provider SDK is
-  installed yet.
-- `EMAIL_PROVIDER=disabled` keeps real sending off until a domain and provider
-  are selected.
+- The provider-neutral delivery layer uses the Resend SDK in production.
+- The sending-only key stays server-side, and `tournibase.com` is the verified
+  sender domain.
+- `EMAIL_PROVIDER=disabled` keeps local and unactivated deployments from
+  sending real email.
 - Postgres tracks delivery status and atomically claims each order so concurrent
   webhook requests cannot send duplicates.
 - Provider errors do not undo payment or pass creation. Temporary failures can

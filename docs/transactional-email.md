@@ -4,8 +4,10 @@ Last verified: July 5, 2026
 
 ## Current status
 
-The provider-neutral email foundation is complete. Real email sending is
-disabled until TourniBase has a domain and a selected provider.
+The email foundation and Resend adapter are complete. `tournibase.com` is
+verified in Resend, and the sending-only API key is stored in Vercel. Real
+buyer delivery remains disabled until the adapter is deployed, production
+environment variables are activated, and the full test purchase succeeds.
 
 | Capability | Status |
 | --- | --- |
@@ -17,9 +19,10 @@ disabled until TourniBase has a domain and a selected provider.
 | Atomic duplicate-send protection | Built |
 | Temporary and permanent failure states | Built |
 | Local visual preview | Built |
-| Sending domain | Not selected |
-| Provider adapter and API key | Not selected |
-| Real buyer delivery | Disabled |
+| Sending domain | `tournibase.com` verified |
+| Provider adapter | Resend adapter built and tested locally |
+| Provider API key | Sending-only key stored in Vercel |
+| Real buyer delivery | Disabled pending deployment and end-to-end test |
 
 Stripe may separately send its standard payment receipt. The TourniBase email
 has a different job: delivering the actual mobile pass links created after
@@ -73,17 +76,16 @@ npm run lint
 npm run build
 ```
 
-## Activation steps for later
+## Remaining activation steps
 
-1. Buy the TourniBase domain.
-2. Choose a transactional provider such as Resend or Postmark.
-3. Verify a sending subdomain with the provider using its DNS records.
-4. Add a provider adapter behind the existing `EmailProvider` interface.
-5. Add its server-only API key and sender address to Vercel.
-6. Change `EMAIL_PROVIDER` from `disabled` to that provider.
-7. Make one Stripe test purchase using an email inbox you control.
-8. Confirm the email arrives, every pass link opens, and only one email is sent
-   if Stripe retries the webhook.
+1. Deploy the Resend adapter.
+2. Set production `NEXT_PUBLIC_SITE_URL=https://tournibase.com`.
+3. Set production `EMAIL_FROM=TourniBase <passes@tournibase.com>`.
+4. Change production `EMAIL_PROVIDER` from `disabled` to `resend`.
+5. Make one Stripe test purchase using an email inbox you control.
+6. Confirm the email arrives and every pass link opens on `tournibase.com`.
+7. Confirm the delivery record is `sent` with one Resend message ID.
+8. Replay the Stripe webhook and confirm no duplicate email is sent.
 
 Do not enable real sending until the domain is verified. Do not log buyer email
 addresses, pass tokens, rendered HTML, or provider API keys.

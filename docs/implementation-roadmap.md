@@ -91,9 +91,8 @@ Completed July 4, 2026:
 
 These are required before accepting real customer payments:
 
-- Choose a transactional email provider and verify a sending domain.
-- Add the provider adapter and production API key to the completed email
-  foundation.
+- Deploy and activate the completed Resend adapter with the verified
+  `tournibase.com` sender domain.
 - Run a real delivery test containing every pass link in one order email.
 - Switch all Stripe variables and the production webhook to live mode together.
 - Run one low-value live purchase using a real card.
@@ -104,8 +103,9 @@ These are required before accepting real customer payments:
 
 ## Known current limitations
 
-- Pass-email rendering, tracking, duplicate protection, and retry handling are
-  built, but `EMAIL_PROVIDER=disabled` means no real email is sent.
+- Pass-email rendering, tracking, duplicate protection, retry handling, and the
+  Resend adapter are built; production delivery still needs activation and an
+  end-to-end test.
 - Stripe is configured in test mode.
 - Gate sales record external payment; TourniBase does not process those charges.
 - Refund and dispute workflows are not automated.
