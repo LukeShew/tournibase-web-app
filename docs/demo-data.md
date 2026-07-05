@@ -13,9 +13,10 @@ these local hostnames:
 - `127.0.0.1`
 - `::1`
 
-The automatic `supabase/seed.sql` file remains intentionally empty. This
-prevents `supabase db push --include-seed` from copying the demo account or
-tournament into a hosted project.
+The automatic `supabase/seed.sql` file contains only the server-role grants
+needed by the local Supabase stack. It contains no demo accounts, tournaments,
+tickets, orders, or passes. The guarded JavaScript seed remains the only process
+that creates demo records.
 
 ## Demo records
 
@@ -54,7 +55,7 @@ variables or connecting to Supabase.
 2. Apply all migrations to a clean local database:
 
    ```bash
-   npx supabase db reset
+   npx supabase db reset --local
    ```
 
 3. Run `npx supabase status` and copy the local API URL, publishable key, and
@@ -99,7 +100,7 @@ The command can be run again safely:
 For a completely clean local database, run:
 
 ```bash
-npx supabase db reset
+npx supabase db reset --local
 npm run seed
 ```
 

@@ -24,17 +24,16 @@ before expanding into a larger platform.
 
 | Item | Current state |
 | --- | --- |
-| Progress | Phases 1–18 of 19 complete |
-| Current phase | Phase 18 quality checks complete |
-| Next phase | Phase 19 final Git review and MVP handoff, not started |
+| Progress | All 19 numbered phases complete |
+| Current phase | Phase 19 final Git review and MVP handoff complete |
+| Next phase | No numbered build phase remains |
 | Production app | [tournibase-web-app.vercel.app](https://tournibase-web-app.vercel.app) |
 | Payments | Stripe test mode |
-| Database | 11 product migrations live; 1 local demo permission migration |
+| Database | Live and local histories match all 11 product migrations |
 | Launch dependency | Production receipt and pass-link email delivery |
 
-Remaining numbered phases:
-
-1. Phase 19: final Git review and MVP handoff.
+No numbered phases remain. See the [Final MVP Handoff](./mvp-handoff.md) for
+routes, environment variables, database state, local testing, and launch work.
 
 Before accepting real customer payments, TourniBase must also add transactional
 pass email, switch Stripe and the production webhook to live mode, and complete
@@ -167,10 +166,12 @@ See [MVP Architecture](./mvp-architecture.md) and
 - Automated receipt and pass-link email is not implemented.
 - Stripe remains in test mode.
 - Director accounts are created manually through Supabase.
+- Supabase leaked-password protection is unavailable on the current plan, so
+  invited directors must use strong, unique passwords.
 - Gate-sale recording tracks external payment but does not charge a card.
 - Refund and dispute operations are not automated.
 - Demo data is available only through the guarded local seed command.
-- Final Git review and MVP handoff remain in Phase 19.
+- All numbered build phases are complete.
 
 ## Documentation
 
@@ -179,4 +180,5 @@ See [MVP Architecture](./mvp-architecture.md) and
 - [Database Schema](./database-schema.md)
 - [Local Demo Data](./demo-data.md)
 - [Implementation Roadmap](./implementation-roadmap.md)
+- [Final MVP Handoff](./mvp-handoff.md)
 - [Repository setup and test guide](../README.md)

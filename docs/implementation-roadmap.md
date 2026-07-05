@@ -5,12 +5,12 @@ Last updated: July 4, 2026
 ## Current status
 
 - Main product: TourniBase web MVP
-- Completed: Phases 1–18 of 19
+- Completed: All 19 numbered phases
 - Current production URL:
   [tournibase-web-app.vercel.app](https://tournibase-web-app.vercel.app)
 - Payment status: Stripe test mode
-- Next phase: Phase 19, final Git review and MVP handoff
-- Not started: Phase 19
+- Next phase: None
+- Not started: No numbered phases
 
 The waitlist website and a native mobile app are postponed, separate products.
 They are not part of this roadmap.
@@ -37,7 +37,7 @@ They are not part of this roadmap.
 | 16 | Product, architecture, schema, roadmap, setup, and test docs | Complete |
 | 17 | Local-only seed and demo data | Complete |
 | 18 | Install, lint, typecheck, build, and reasonable fixes | Complete |
-| 19 | Final Git review, commit, and MVP handoff | Not started |
+| 19 | Final Git review, commit, and MVP handoff | Complete |
 
 ## Phase 17: Seed and demo data
 
@@ -53,8 +53,8 @@ URLs and creates:
 
 The event dates automatically use the next Saturday and Sunday in
 `America/New_York`. The command is idempotent, production pages contain no demo
-data, and the automatic SQL seed remains empty so remote seed pushes cannot
-copy the records.
+data, and the automatic SQL seed contains permissions only, so it cannot copy
+demo records to a hosted project.
 
 See [Local Demo Data](./demo-data.md).
 
@@ -75,11 +75,16 @@ compiled and generated its static pages successfully.
 
 ## Phase 19: Final Git and handoff
 
-- Review the complete diff and repository status.
-- Confirm no secrets or environment files are committed.
-- Commit the final MVP state with a clear message.
-- Provide the final routes, schema changes, environment variables, local test
-  instructions, and known limitations.
+Completed July 4, 2026:
+
+- Reviewed both repositories and confirmed they matched GitHub before Phase 19.
+- Confirmed no real secrets or private environment files are tracked or present
+  in Git history.
+- Confirmed production and local migration histories match.
+- Rebuilt and reseeded the local Docker database from scratch.
+- Recorded final routes, environment variables, schema state, local test
+  instructions, verification results, and known limitations in the
+  [Final MVP Handoff](./mvp-handoff.md).
 
 ## Launch dependencies outside the numbered build phases
 

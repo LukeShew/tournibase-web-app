@@ -2,7 +2,7 @@
 
 Last verified against the live Supabase project: July 4, 2026
 
-Current migration:
+Current production migration:
 `20260704041441_add_phase_13_dashboard_metrics`
 
 ## Relationship summary
@@ -187,3 +187,7 @@ automatically expose new public tables.
 
 Migration files are the source of truth under `supabase/migrations`. New schema
 changes must be added as migrations and applied with `supabase db push`.
+
+Production and local migration histories match these 11 migrations.
+`supabase/seed.sql` adds local service-role table and sequence permissions but
+contains no demo records and does not add migration history.

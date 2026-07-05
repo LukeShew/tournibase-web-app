@@ -13,9 +13,9 @@ Production app:
 
 ## Current status
 
-- Phases 1–18 of 19 complete
+- All 19 numbered web MVP phases complete
 - Stripe test mode
-- Next phase: final Git review and MVP handoff
+- Final repository review and MVP handoff complete
 - Production pass-link email remains a launch dependency
 
 Current progress and remaining work:
@@ -29,6 +29,7 @@ Current progress and remaining work:
 - [Database Schema](docs/database-schema.md)
 - [Local Demo Data](docs/demo-data.md)
 - [Implementation Roadmap](docs/implementation-roadmap.md)
+- [Final MVP Handoff](docs/mvp-handoff.md)
 
 ## What the MVP does
 
