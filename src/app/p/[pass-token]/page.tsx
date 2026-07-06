@@ -3,11 +3,14 @@ import Image from "next/image";
 import { notFound } from "next/navigation";
 import QRCode from "qrcode";
 import { Brand } from "@/components/brand";
-import { eventDateFromTimestamp } from "@/lib/event-time";
+import {
+  formatPassValidity,
+  getOfflinePassFilename,
+  getOfflinePassPath,
+} from "@/lib/pass-display";
 import { isValidPassToken } from "@/lib/pass-tokens";
 import { getPublicPass, type PublicPass } from "@/lib/public-passes";
 import { getSupabaseAdminConfigurationIssues } from "@/lib/supabase/admin";
-import { formatEventDateRange } from "@/lib/tournaments";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -134,6 +137,21 @@ export default async function PassPage({
                 Turn up your screen brightness before the pass is scanned.
               </p>
             </div>
+
+            <a
+              href={getOfflinePassPath(pass.publicToken)}
+              download={getOfflinePassFilename({
+                orderNumber: pass.orderNumber,
+                passId: pass.id,
+              })}
+              className="mt-5 inline-flex min-h-12 w-full items-center justify-center rounded-xl bg-brand px-5 text-sm font-semibold text-white transition hover:bg-brand-strong"
+            >
+              Save pass to phone
+            </a>
+            <p className="mt-2 text-center text-xs leading-5 text-slate-500">
+              Save the image to Photos or Files before arriving. The saved QR
+              works without internet on this phone.
+            </p>
 
             <div
               className={`mt-6 rounded-2xl border p-4 ${statusStyles[passState.tone]}`}
@@ -307,8 +325,5 @@ function formatValidity(
   validUntil: string,
   timeZone: string,
 ) {
-  return formatEventDateRange(
-    eventDateFromTimestamp(validFrom, timeZone),
-    eventDateFromTimestamp(validUntil, timeZone),
-  );
+  return formatPassValidity(validFrom, validUntil, timeZone);
 }

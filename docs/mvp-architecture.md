@@ -14,7 +14,7 @@ flowchart LR
   Web --> Stripe["Stripe Checkout"]
   Stripe --> Webhook["Signed webhook route"]
   Webhook --> DB
-  Webhook --> Email["Transactional email provider (disabled until configured)"]
+  Webhook --> Email["Resend transactional email"]
 ```
 
 The application is a Next.js App Router project deployed on Vercel. Supabase
@@ -59,8 +59,8 @@ form. The browser never receives the Supabase secret key or Stripe secret keys.
 - The provider-neutral delivery layer uses the Resend SDK in production.
 - The sending-only key stays server-side, and `tournibase.com` is the verified
   sender domain.
-- `EMAIL_PROVIDER=disabled` keeps local and unactivated deployments from
-  sending real email.
+- Production sends through Resend from `passes@tournibase.com`.
+- `EMAIL_PROVIDER=disabled` keeps local development from sending real email.
 - Postgres tracks delivery status and atomically claims each order so concurrent
   webhook requests cannot send duplicates.
 - Provider errors do not undo payment or pass creation. Temporary failures can
@@ -78,6 +78,7 @@ form. The browser never receives the Supabase secret key or Stripe secret keys.
 | `/share/[event-slug]` | Coach and parent sharing page |
 | `/order/success` | Payment confirmation and pass links |
 | `/p/[pass-token]` | Individual mobile pass |
+| `/p/[pass-token]/offline-pass.png` | Downloadable offline QR pass image |
 
 ### Director routes
 
@@ -158,8 +159,14 @@ paid. Orders and passes are not anonymously readable through the Supabase Data
 API.
 
 The success page displays every pass link. The branded email template, delivery
-tracking, duplicate protection, and retry states are built. Connecting a
-verified sending domain and provider remains a launch dependency.
+tracking, duplicate protection, and retry states are live through Resend.
+
+The success page, mobile pass page, and order email each link to
+`/p/[pass-token]/offline-pass.png`. The server verifies the paid order and
+generates a private, no-store PNG containing the same pass token as the mobile
+QR. The saved image remains available when the buyer’s phone has no internet.
+The scanner still requires internet because current pass status, validity, and
+prior use must be checked against the database.
 
 ## Scanner authorization
 

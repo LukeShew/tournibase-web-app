@@ -30,6 +30,7 @@ export type OrderConfirmationEmailData = {
   organizerName: string;
   passes: Array<{
     label: string;
+    offlineUrl: string;
     url: string;
   }>;
   venueAddress: string | null;
@@ -105,6 +106,13 @@ export function OrderConfirmationEmail({
                 <Button href={pass.url} style={button}>
                   Open mobile pass
                 </Button>
+                <Button href={pass.offlineUrl} style={secondaryButton}>
+                  Save pass offline
+                </Button>
+                <Text style={offlineHelp}>
+                  Save the image to Photos or Files before arriving if service
+                  at the venue may be weak.
+                </Text>
                 <Text style={fallbackText}>
                   If the button does not work, copy this link:
                   <br />
@@ -171,7 +179,7 @@ export function createOrderConfirmationText({
   const passLines = passes
     .map(
       (pass, index) =>
-        `${pass.label} · Pass ${index + 1}\n${pass.url}`,
+        `${pass.label} · Pass ${index + 1}\nOpen pass: ${pass.url}\nSave offline: ${pass.offlineUrl}`,
     )
     .join("\n\n");
   const itemLines = items
@@ -328,6 +336,26 @@ const button: CSSProperties = {
   fontWeight: 700,
   padding: "12px 18px",
   textDecoration: "none",
+};
+
+const secondaryButton: CSSProperties = {
+  backgroundColor: "#e8f0ff",
+  border: "1px solid #bfd1f5",
+  borderRadius: "9px",
+  color: "#1d4ed8",
+  display: "inline-block",
+  fontSize: "14px",
+  fontWeight: 700,
+  marginLeft: "8px",
+  padding: "11px 16px",
+  textDecoration: "none",
+};
+
+const offlineHelp: CSSProperties = {
+  color: "#62748a",
+  fontSize: "12px",
+  lineHeight: "1.5",
+  margin: "12px 0 0",
 };
 
 const fallbackText: CSSProperties = {

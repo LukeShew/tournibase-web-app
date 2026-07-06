@@ -7,9 +7,10 @@ Last updated: July 5, 2026
 - Main product: TourniBase web MVP
 - Completed: All 19 numbered phases
 - Current production URL:
-  [tournibase-web-app.vercel.app](https://tournibase-web-app.vercel.app)
+  [tournibase.com](https://tournibase.com)
 - Payment status: Stripe test mode
-- Transactional email: Foundation complete; provider and domain not connected
+- Transactional email: Live through Resend and end-to-end tested
+- Offline access: Downloadable PNG for every paid pass
 - Next phase: None
 - Not started: No numbered phases
 
@@ -91,9 +92,6 @@ Completed July 4, 2026:
 
 These are required before accepting real customer payments:
 
-- Deploy and activate the completed Resend adapter with the verified
-  `tournibase.com` sender domain.
-- Run a real delivery test containing every pass link in one order email.
 - Switch all Stripe variables and the production webhook to live mode together.
 - Run one low-value live purchase using a real card.
 - Confirm the live webhook marks the order paid and creates the correct passes.
@@ -103,10 +101,11 @@ These are required before accepting real customer payments:
 
 ## Known current limitations
 
-- Pass-email rendering, tracking, duplicate protection, retry handling, and the
-  Resend adapter are built; production delivery still needs activation and an
-  end-to-end test.
+- Pass-email delivery is live and has passed a Stripe test purchase.
 - Stripe is configured in test mode.
+- Saved pass PNGs work offline for buyers, but scanner devices still require
+  internet for authoritative validation and duplicate prevention.
+- Apple Wallet and Google Wallet passes are postponed.
 - Gate sales record external payment; TourniBase does not process those charges.
 - Refund and dispute workflows are not automated.
 - Ticket quantity limits are enforced during checkout, but this is not a
@@ -120,8 +119,7 @@ The web MVP is ready for a controlled real tournament only when:
 - Phase 17 demo data remains development-only.
 - Phase 18 checks pass.
 - Phase 19 handoff is complete.
-- Transactional pass email is connected to a verified provider and passes a
-  real delivery test.
+- Transactional pass email remains healthy in production.
 - Stripe live mode and its webhook pass an end-to-end test.
 - The event director can create tickets, publish, sell, scan, recover a buyer
   through lookup, and read the dashboard without developer intervention.

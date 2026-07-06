@@ -5,14 +5,15 @@ Last verified: July 5, 2026
 ## Current status
 
 The email foundation and Resend adapter are complete. `tournibase.com` is
-verified in Resend, and the sending-only API key is stored in Vercel. Real
-buyer delivery remains disabled until the adapter is deployed, production
-environment variables are activated, and the full test purchase succeeds.
+verified in Resend, the sending-only API key is stored in Vercel, and production
+delivery is active. A real Stripe test purchase successfully delivered the
+buyer email on July 5, 2026.
 
 | Capability | Status |
 | --- | --- |
 | One branded email per paid order | Built |
 | Every mobile pass link in that email | Built |
+| Offline PNG link for every pass | Built |
 | Plain-text fallback | Built |
 | Event, venue, order, total, and organizer details | Built |
 | Protected database delivery tracking | Built |
@@ -20,9 +21,9 @@ environment variables are activated, and the full test purchase succeeds.
 | Temporary and permanent failure states | Built |
 | Local visual preview | Built |
 | Sending domain | `tournibase.com` verified |
-| Provider adapter | Resend adapter built and tested locally |
+| Provider adapter | Resend active in production |
 | Provider API key | Sending-only key stored in Vercel |
-| Real buyer delivery | Disabled pending deployment and end-to-end test |
+| Real buyer delivery | Active and end-to-end tested |
 
 Stripe may separately send its standard payment receipt. The TourniBase email
 has a different job: delivering the actual mobile pass links created after
@@ -35,7 +36,8 @@ payment.
 3. The webhook creates one pending `order_email_deliveries` record.
 4. If `EMAIL_PROVIDER=disabled`, the record stays pending and no email is sent.
 5. Once a provider is configured, the server atomically claims the order.
-6. TourniBase renders HTML and plain-text versions containing every pass link.
+6. TourniBase renders HTML and plain-text versions containing every mobile pass
+   link and offline PNG download.
 7. The provider receives a deterministic idempotency key based on the order ID.
 8. A successful send records the provider message ID and sent time.
 9. Temporary failures remain eligible for a Stripe webhook retry. Permanent
@@ -76,16 +78,12 @@ npm run lint
 npm run build
 ```
 
-## Remaining activation steps
+## Production configuration
 
-1. Deploy the Resend adapter.
-2. Set production `NEXT_PUBLIC_SITE_URL=https://tournibase.com`.
-3. Set production `EMAIL_FROM=TourniBase <passes@tournibase.com>`.
-4. Change production `EMAIL_PROVIDER` from `disabled` to `resend`.
-5. Make one Stripe test purchase using an email inbox you control.
-6. Confirm the email arrives and every pass link opens on `tournibase.com`.
-7. Confirm the delivery record is `sent` with one Resend message ID.
-8. Replay the Stripe webhook and confirm no duplicate email is sent.
+- `NEXT_PUBLIC_SITE_URL=https://tournibase.com`
+- `EMAIL_FROM=TourniBase <passes@tournibase.com>`
+- `EMAIL_PROVIDER=resend`
+- A sending-only `RESEND_API_KEY`
 
-Do not enable real sending until the domain is verified. Do not log buyer email
-addresses, pass tokens, rendered HTML, or provider API keys.
+Do not log buyer email addresses, pass tokens, rendered HTML, or provider API
+keys. Keep the success page available as the backup retrieval method.

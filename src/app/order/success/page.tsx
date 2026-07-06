@@ -2,6 +2,10 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Brand } from "@/components/brand";
 import { getOrderConfirmation } from "@/lib/orders";
+import {
+  getOfflinePassFilename,
+  getOfflinePassPath,
+} from "@/lib/pass-display";
 import { getStripeConfigurationIssues } from "@/lib/stripe";
 import { getSupabaseAdminConfigurationIssues } from "@/lib/supabase/admin";
 
@@ -125,6 +129,7 @@ export default async function OrderSuccessPage({
           </h2>
           <p className="mt-2 text-sm leading-6 text-slate-400">
             Each guest receives a unique mobile pass and QR code for entry.
+            Save each pass before arriving if service at the venue may be weak.
           </p>
         </div>
 
@@ -143,12 +148,24 @@ export default async function OrderSuccessPage({
                     {pass.status}
                   </p>
                 </div>
-                <Link
-                  href={`/p/${pass.publicToken}`}
-                  className="inline-flex min-h-11 items-center justify-center rounded-xl bg-brand px-4 text-sm font-semibold text-white transition hover:bg-brand-strong"
-                >
-                  Open mobile pass
-                </Link>
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <Link
+                    href={`/p/${pass.publicToken}`}
+                    className="inline-flex min-h-11 items-center justify-center rounded-xl bg-brand px-4 text-sm font-semibold text-white transition hover:bg-brand-strong"
+                  >
+                    Open mobile pass
+                  </Link>
+                  <a
+                    href={getOfflinePassPath(pass.publicToken)}
+                    download={getOfflinePassFilename({
+                      orderNumber: confirmation.orderNumber,
+                      passId: pass.id,
+                    })}
+                    className="inline-flex min-h-11 items-center justify-center rounded-xl border border-blue-400/30 bg-blue-400/10 px-4 text-sm font-semibold text-blue-200 transition hover:bg-blue-400/15"
+                  >
+                    Save offline
+                  </a>
+                </div>
               </div>
             </article>
           ))}

@@ -22,6 +22,7 @@ Production app:
 | Production hosting | Vercel project `tournibase-web-app` |
 | Production database | Supabase project `khwaafsdtgiymucppkmo` |
 | Payments | Stripe test mode |
+| Transactional email | Resend from `passes@tournibase.com` |
 
 The postponed waitlist website remains in the separate
 [LukeShew/TourniBase](https://github.com/LukeShew/TourniBase) repository.
@@ -59,6 +60,7 @@ Vercel environment variables for hosted deployments.
 | `/share/[event-slug]` | Parent and coach sharing page |
 | `/order/success` | Paid-order confirmation and pass links |
 | `/p/[pass-token]` | Individual mobile QR pass |
+| `/p/[pass-token]/offline-pass.png` | Private downloadable offline pass PNG |
 
 ### Director routes
 
@@ -182,7 +184,7 @@ Verified July 5, 2026:
 - ESLint passed with zero warnings.
 - TypeScript passed with zero errors.
 - The optimized Next.js production build passed.
-- Two automated email-template tests passed.
+- Ten automated email and pass-display tests passed.
 - `npm audit --omit=dev` found zero vulnerabilities.
 - The production URL returned HTTP 200 from Vercel.
 - Production and local Supabase have all 12 migrations and RLS on all 11 public
@@ -195,12 +197,15 @@ Verified July 5, 2026:
 - The local demo seed completed after the clean reset using temporary local
   Supabase variables without changing `.env.local`.
 - Supabase advisors reported no database security errors.
+- A real Stripe test purchase delivered the TourniBase pass email through
+  Resend.
+- A local paid-pass test generated a private 900 × 1200 PNG with the expected
+  filename, no-store headers, and QR encoding the expected pass token.
 
 ## Known limitations
 
 - The branded order email, plain-text fallback, delivery tracking, duplicate
-  protection, and retry states are implemented. No real email is sent while
-  `EMAIL_PROVIDER=disabled`.
+  protection, retry states, and Resend delivery are active in production.
 - Stripe remains in test mode.
 - Director accounts are invite-only and created through Supabase.
 - Supabase leaked-password protection is disabled because it is unavailable on
@@ -212,15 +217,17 @@ Verified July 5, 2026:
 - Refunds and disputes are not automated.
 - Ticket quantity limits are not a reserved-inventory system for heavy
   simultaneous demand.
+- Saved pass PNGs work without buyer internet, but scanner devices require an
+  internet connection for database validation.
+- Apple Wallet and Google Wallet passes are postponed.
 
 ## Requirements before real customer payments
 
-1. Choose an email provider and sending domain, add the provider adapter and
-   production key, then complete a real delivery test.
-2. Switch the Stripe secret key, publishable key, and webhook to live mode
+1. Switch the Stripe secret key, publishable key, and webhook to live mode
    together.
-3. Run one low-value purchase with a real card.
-4. Confirm the live webhook marks the order paid and creates every pass.
+2. Run one low-value purchase with a real card.
+3. Confirm the live webhook marks the order paid and creates every pass.
+4. Confirm the buyer receives the Resend email and can save every offline pass.
 5. Open and scan every issued pass through a production scanner link.
 6. Confirm TourniBase sales totals match Stripe.
 7. Define a basic tournament-day support and refund process.

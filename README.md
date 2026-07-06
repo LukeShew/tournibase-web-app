@@ -9,15 +9,15 @@ website and a future native mobile app are postponed and are not part of this
 repository.
 
 Production app:
-[tournibase-web-app.vercel.app](https://tournibase-web-app.vercel.app)
+[tournibase.com](https://tournibase.com)
 
 ## Current status
 
 - All 19 numbered web MVP phases complete
 - Stripe test mode
 - Final repository review and MVP handoff complete
-- Pass-email foundation complete; provider and verified domain remain a launch
-  dependency
+- Transactional pass email is live through Resend and passed a real test order
+- Buyers can download each QR pass as a PNG for offline access
 
 Current progress and remaining work:
 [Implementation Roadmap](docs/implementation-roadmap.md)
@@ -49,6 +49,8 @@ Current progress and remaining work:
 - Buy passes from a public tournament page
 - Pay through Stripe-hosted Checkout
 - Open an individual mobile QR pass for each admission
+- Receive every pass by email
+- Save pass images to Photos or Files before arriving
 
 ### Gate staff
 
@@ -128,7 +130,7 @@ service-role key in a `NEXT_PUBLIC_` variable.
 
 Do not commit `.env.local`.
 
-## Transactional email foundation
+## Transactional email
 
 TourniBase has a branded order email containing every pass link, a plain-text
 fallback, protected delivery tracking, atomic duplicate protection,
@@ -141,8 +143,8 @@ test:
 EMAIL_PROVIDER=disabled
 ```
 
-Production uses the verified `tournibase.com` domain. Activate the transport
-with `EMAIL_PROVIDER=resend`, a sending-only `RESEND_API_KEY`, and:
+Production uses the verified `tournibase.com` domain with
+`EMAIL_PROVIDER=resend`, a sending-only `RESEND_API_KEY`, and:
 
 ```text
 EMAIL_FROM=TourniBase <passes@tournibase.com>
@@ -155,7 +157,7 @@ http://localhost:3000/dev/email-preview
 ```
 
 That route uses sample data and returns 404 in production. See
-[Transactional Email](docs/transactional-email.md) for the activation plan.
+[Transactional Email](docs/transactional-email.md) for delivery details.
 
 ## Supabase setup
 
@@ -244,7 +246,7 @@ Keep all Stripe values in the same mode. During development, use only
 Create a Stripe webhook endpoint at:
 
 ```text
-https://tournibase-web-app.vercel.app/api/stripe/webhook
+https://tournibase.com/api/stripe/webhook
 ```
 
 Subscribe it to:
@@ -286,8 +288,7 @@ Test card:
 
 Use any future expiration date, any three-digit CVC, and any valid postal code.
 
-Do not switch to live keys until transactional pass email is connected to a
-verified provider and domain and the complete flow passes the final launch
+Do not switch to live keys until the complete flow passes the final launch
 checks.
 
 ## End-to-end test flow
@@ -332,12 +333,17 @@ number.
 
 1. Open a pass link from the success page.
 2. Confirm the event, ticket, buyer, valid date, and QR code appear.
-3. Keep this page open on one device for the scanner test.
+3. Choose **Save pass to phone**.
+4. Confirm a PNG is saved and can be opened from Photos or Files.
+5. Turn off that phone’s internet connection and confirm the saved QR remains
+   visible.
+6. Keep the saved image open on one device for the scanner test.
 
 When `EMAIL_PROVIDER=disabled`, the pass-email foundation records the order as
 pending without sending. With the verified Resend production configuration,
-the buyer receives one email containing every issued pass. The success page
-remains the backup pass-delivery screen.
+the buyer receives one email containing every issued pass and a separate
+offline-download link for each pass. The success page remains the backup
+pass-delivery screen.
 
 ### 6. Create and use a scanner
 
@@ -415,12 +421,13 @@ npm run build
 
 ## Known limitations
 
-- The pass-email foundation is complete, but real sending remains disabled
-  until a provider and verified domain are connected.
 - Stripe is in test mode.
 - Director accounts are invite-only.
 - Refunds and disputes are not automated.
 - Gate-sale recording does not process payment.
+- Saved pass images work without internet on the buyer’s phone, but the gate
+  scanner still needs internet to validate current status and prevent reuse.
+- Apple Wallet and Google Wallet passes are postponed.
 - Native apps and the waitlist site are postponed.
 
 ## Connected services

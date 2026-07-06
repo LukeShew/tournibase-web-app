@@ -7,6 +7,13 @@ Last updated and verified: July 5, 2026
 TourniBase is currently a web-based digital gate system for youth basketball
 tournaments.
 
+TourniBase’s long-term goal is to become the go-to admissions operating system
+for youth sports tournaments. The broader vision is not limited to basketball.
+
+The current wedge is intentionally narrow: youth basketball tournament
+admission control. TourniBase focuses on shorter, smoother entry lines and
+fraud prevention through reliable pass validation and duplicate-use blocking.
+
 The web MVP in this repository is the main product. It is built to let
 tournament directors:
 
@@ -27,18 +34,18 @@ before expanding into a larger platform.
 | Progress | All 19 numbered phases complete |
 | Current phase | Phase 19 final Git review and MVP handoff complete |
 | Next phase | No numbered build phase remains |
-| Production app | [tournibase-web-app.vercel.app](https://tournibase-web-app.vercel.app) |
+| Production app | [tournibase.com](https://tournibase.com) |
 | Payments | Stripe test mode |
 | Database | Live and local histories match all 12 product migrations |
-| Email | Template, tracking, duplicate protection, and retry foundation complete; real sending disabled |
-| Launch dependency | Choose a provider and domain, then activate and test production email |
+| Email | Live through Resend and end-to-end tested |
+| Offline access | Downloadable pass PNG for Photos or Files |
+| Launch dependency | Stripe live-mode setup and one controlled live purchase |
 
 No numbered phases remain. See the [Final MVP Handoff](./mvp-handoff.md) for
 routes, environment variables, database state, local testing, and launch work.
 
-Before accepting real customer payments, TourniBase must connect the completed
-pass-email foundation to a verified provider and domain, switch Stripe and the
-production webhook to live mode, and complete one real end-to-end purchase and
+Before accepting real customer payments, TourniBase must switch Stripe and the
+production webhook to live mode and complete one controlled live purchase and
 gate test.
 
 Keep this section current after every phase or material product change. The
@@ -66,6 +73,8 @@ tracker.
 - Stripe-hosted test checkout
 - One individual mobile pass per purchased admission
 - Branded QR code on each pass
+- Pass delivery by email
+- Offline pass image download for Photos or Files
 - Clear event, ticket, validity, venue, order, and support information
 
 ### Gate tools
@@ -97,18 +106,17 @@ tracker.
 3. A parent opens the public event page and pays through Stripe Checkout.
 4. A verified Stripe success event marks the order paid and creates one pass per
    admission.
-5. TourniBase prepares one confirmation email containing every pass link. Real
-   sending remains disabled until a provider and domain are added.
-6. The buyer can always open each mobile pass from the success page.
+5. TourniBase emails every mobile pass and offline-download link through Resend.
+6. The buyer can open each mobile pass from the success page or save it to
+   Photos or Files before arriving.
 7. Gate staff open a temporary scanner link and scan the QR.
 8. Postgres validates the scanner, tournament, payment, pass state, valid date,
    and prior admissions in one atomic operation.
 9. A valid pass is admitted. A second use is blocked as already scanned.
 10. The director reviews sales and gate activity from the dashboard.
 
-The branded email template and retry-safe delivery system are built. Production
-sending remains disabled, so success-page links are still the current delivery
-method.
+The branded email template and retry-safe Resend delivery system are live. The
+success page remains the backup retrieval method.
 
 ## Current product boundary
 
@@ -169,8 +177,6 @@ See [MVP Architecture](./mvp-architecture.md) and
 
 ## Known limitations
 
-- The pass-email foundation is complete, but no provider or sending domain is
-  connected, so real emails are not sent.
 - Stripe remains in test mode.
 - Director accounts are created manually through Supabase.
 - Supabase leaked-password protection is unavailable on the current plan, so
@@ -178,6 +184,9 @@ See [MVP Architecture](./mvp-architecture.md) and
 - Gate-sale recording tracks external payment but does not charge a card.
 - Refund and dispute operations are not automated.
 - Demo data is available only through the guarded local seed command.
+- Saved pass images work without buyer internet, but scanner devices still need
+  internet to prevent duplicate or reused entry.
+- Apple Wallet and Google Wallet passes are postponed.
 - All numbered build phases are complete.
 
 ## Documentation
