@@ -1,6 +1,6 @@
 # TourniBase Web MVP Handoff
 
-Last verified: July 5, 2026
+Last verified: July 6, 2026
 
 ## Handoff status
 
@@ -23,6 +23,7 @@ Production app:
 | Production database | Supabase project `khwaafsdtgiymucppkmo` |
 | Payments | Stripe test mode |
 | Transactional email | Resend from `passes@tournibase.com` |
+| Refund support | Manual Stripe refunds with automatic full-refund pass invalidation |
 
 The postponed waitlist website remains in the separate
 [LukeShew/TourniBase](https://github.com/LukeShew/TourniBase) repository.
@@ -93,7 +94,7 @@ authorized gate staff.
 | Route | Purpose |
 | --- | --- |
 | `POST /api/checkout` | Validates a cart and creates Stripe Checkout |
-| `POST /api/stripe/webhook` | Verifies Stripe events and fulfills paid orders |
+| `POST /api/stripe/webhook` | Verifies Stripe events, fulfills paid orders, and syncs refunds |
 | `GET /dev/email-preview` | Local-only branded pass-email preview; returns 404 in production |
 
 ## Database handoff
@@ -201,6 +202,7 @@ Verified July 5, 2026:
   Resend.
 - A local paid-pass test generated a private 900 × 1200 PNG with the expected
   filename, no-store headers, and QR encoding the expected pass token.
+- Refund webhook code maps full Stripe refunds to refunded orders and passes.
 
 ## Known limitations
 
@@ -214,7 +216,11 @@ Verified July 5, 2026:
   [Supabase password security](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection).
 - Gate-sale recording tracks cash, Venmo, external-card, or comp payments but
   does not process those payments.
-- Refunds and disputes are not automated.
+- Full Stripe refunds automatically mark the order refunded and invalidate
+  active or checked-in passes for that order.
+- Partial refunds are tracked at the order level, but pass-specific partial
+  refund handling is not automated.
+- Disputes are not automated.
 - Ticket quantity limits are not a reserved-inventory system for heavy
   simultaneous demand.
 - Saved pass PNGs work without buyer internet, but scanner devices require an
@@ -230,7 +236,10 @@ Verified July 5, 2026:
 4. Confirm the buyer receives the Resend email and can save every offline pass.
 5. Open and scan every issued pass through a production scanner link.
 6. Confirm TourniBase sales totals match Stripe.
-7. Define a basic tournament-day support and refund process.
+7. Fully refund one test order and confirm the scanner blocks the refunded
+   pass.
+8. Follow the basic tournament-day support and refund process in
+   [Refund and Support Process](./refund-support.md).
 
 Do not switch only one Stripe key to live mode. All Stripe variables and the
 production webhook must use the same account and mode.

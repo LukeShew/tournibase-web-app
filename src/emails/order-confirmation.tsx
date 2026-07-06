@@ -146,11 +146,12 @@ export function OrderConfirmationEmail({
             <Hr style={divider} />
 
             <Text style={supportText}>
-              Questions about this event? Contact{" "}
+              Questions or refund requests? Contact{" "}
               <Link href={`mailto:${organizerEmail}`} style={supportLink}>
                 {organizerName}
               </Link>
-              .
+              {" "}
+              and include order {orderNumber}.
             </Text>
           </Section>
 
@@ -206,7 +207,7 @@ export function createOrderConfirmationText({
     `Amount paid: ${amountPaid}`,
     `Order: ${orderNumber}`,
     "",
-    `Questions? Contact ${organizerName} at ${organizerEmail}.`,
+    `Questions or refund requests? Contact ${organizerName} at ${organizerEmail} and include order ${orderNumber}.`,
     "",
     "TourniBase digital admission",
   ].join("\n");

@@ -1,6 +1,6 @@
 # TourniBase Web MVP Implementation Roadmap
 
-Last updated: July 5, 2026
+Last updated: July 6, 2026
 
 ## Current status
 
@@ -11,6 +11,7 @@ Last updated: July 5, 2026
 - Payment status: Stripe test mode
 - Transactional email: Live through Resend and end-to-end tested
 - Offline access: Downloadable PNG for every paid pass
+- Refund support: Basic organizer support flow and Stripe refund sync built
 - Next phase: None
 - Not started: No numbered phases
 
@@ -95,19 +96,24 @@ These are required before accepting real customer payments:
 - Switch all Stripe variables and the production webhook to live mode together.
 - Run one low-value live purchase using a real card.
 - Confirm the live webhook marks the order paid and creates the correct passes.
+- Confirm a full Stripe refund marks the order and passes refunded.
 - Open and scan every issued pass through a production scanner link.
 - Confirm the director dashboard totals match Stripe and the gate results.
-- Write a basic support and refund procedure for tournament day.
+- Follow the basic support and refund procedure for tournament day.
 
 ## Known current limitations
 
 - Pass-email delivery is live and has passed a Stripe test purchase.
+- Full Stripe refunds sync into TourniBase and invalidate active or checked-in
+  passes for that order.
 - Stripe is configured in test mode.
 - Saved pass PNGs work offline for buyers, but scanner devices still require
   internet for authoritative validation and duplicate prevention.
 - Apple Wallet and Google Wallet passes are postponed.
 - Gate sales record external payment; TourniBase does not process those charges.
-- Refund and dispute workflows are not automated.
+- Partial refunds are tracked at the order level, but pass-specific partial
+  refund handling is not automated.
+- Dispute workflows are not automated.
 - Ticket quantity limits are enforced during checkout, but this is not a
   reserved-inventory system for heavy concurrent demand.
 - Director accounts are invite-only and created through Supabase.
@@ -121,6 +127,7 @@ The web MVP is ready for a controlled real tournament only when:
 - Phase 19 handoff is complete.
 - Transactional pass email remains healthy in production.
 - Stripe live mode and its webhook pass an end-to-end test.
+- Stripe refund sync passes an end-to-end test.
 - The event director can create tickets, publish, sell, scan, recover a buyer
   through lookup, and read the dashboard without developer intervention.
 

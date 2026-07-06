@@ -47,6 +47,7 @@ describe("order confirmation email", () => {
     expect(html).toContain(sample.eventName);
     expect(html).toContain(sample.orderNumber);
     expect(html).toContain(sample.amountPaid);
+    expect(html).toContain("Questions or refund requests?");
 
     for (const pass of sample.passes) {
       expect(html).toContain(pass.url);
@@ -60,6 +61,7 @@ describe("order confirmation email", () => {
     expect(text).toContain("MOBILE PASSES");
     expect(text).toContain(sample.organizerEmail);
     expect(text).toContain(sample.venueAddress);
+    expect(text).toContain("refund requests");
 
     for (const pass of sample.passes) {
       expect(text).toContain(pass.url);

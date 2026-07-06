@@ -1,6 +1,6 @@
 # TourniBase Transactional Email
 
-Last verified: July 5, 2026
+Last verified: July 6, 2026
 
 ## Current status
 
@@ -14,6 +14,7 @@ buyer email on July 5, 2026.
 | One branded email per paid order | Built |
 | Every mobile pass link in that email | Built |
 | Offline PNG link for every pass | Built |
+| Refund/support instructions with order number | Built |
 | Plain-text fallback | Built |
 | Event, venue, order, total, and organizer details | Built |
 | Protected database delivery tracking | Built |
@@ -27,7 +28,8 @@ buyer email on July 5, 2026.
 
 Stripe may separately send its standard payment receipt. The TourniBase email
 has a different job: delivering the actual mobile pass links created after
-payment.
+payment and telling buyers how to contact the organizer for admission help or
+refund requests.
 
 ## Delivery flow
 

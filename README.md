@@ -18,6 +18,7 @@ Production app:
 - Final repository review and MVP handoff complete
 - Transactional pass email is live through Resend and passed a real test order
 - Buyers can download each QR pass as a PNG for offline access
+- Full Stripe refunds sync back into TourniBase and invalidate active passes
 
 Current progress and remaining work:
 [Implementation Roadmap](docs/implementation-roadmap.md)
@@ -31,6 +32,7 @@ Current progress and remaining work:
 - [Local Demo Data](docs/demo-data.md)
 - [Implementation Roadmap](docs/implementation-roadmap.md)
 - [Transactional Email](docs/transactional-email.md)
+- [Refund and Support Process](docs/refund-support.md)
 - [Final MVP Handoff](docs/mvp-handoff.md)
 
 ## What the MVP does
@@ -255,9 +257,13 @@ Subscribe it to:
 - `checkout.session.async_payment_succeeded`
 - `checkout.session.async_payment_failed`
 - `checkout.session.expired`
+- `charge.refunded`
 
 Copy that endpoint’s `whsec_...` signing secret into the Vercel
 `STRIPE_WEBHOOK_SECRET` variable.
+
+TourniBase syncs full Stripe refunds back into order and pass statuses. See
+[Refund and Support Process](docs/refund-support.md).
 
 ### Local webhook forwarding
 

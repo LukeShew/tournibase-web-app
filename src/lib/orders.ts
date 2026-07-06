@@ -1,14 +1,21 @@
 import "server-only";
 
+import type Stripe from "stripe";
 import { attemptOrderConfirmationEmail } from "@/lib/email/order-confirmation";
+import {
+  getRefundPaymentStatusForCharge,
+  parseStripeOrderIdMetadata,
+} from "@/lib/order-refunds";
 import { getStripe } from "@/lib/stripe";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
+
+type PaymentStatus = "pending" | "paid" | "failed" | "refunded" | "partial_refund";
 
 type OrderRecord = {
   amount_total: number | string;
   buyer_name: string;
   id: number;
-  payment_status: "pending" | "paid" | "failed" | "refunded" | "partial_refund";
+  payment_status: PaymentStatus;
   tournament_id: number;
 };
 
@@ -28,6 +35,16 @@ type PassRecord = {
   status: "active" | "checked_in" | "refunded" | "voided" | "expired";
   ticket_type_id: number;
 };
+
+export type StripeRefundSyncResult =
+  | {
+      amountRefundedCents: number;
+      amountTotalCents: number;
+      orderId: number;
+      status: "refunded" | "partial_refund";
+    }
+  | { chargeId: string; status: "order_not_found" }
+  | { status: "not_refunded" };
 
 export type OrderConfirmation = {
   amountTotal: number;
@@ -130,6 +147,92 @@ export async function markCheckoutFailed(sessionId: string) {
   if (error) {
     throw error;
   }
+}
+
+export async function syncStripeChargeRefund(
+  charge: Stripe.Charge,
+): Promise<StripeRefundSyncResult> {
+  const refundStatus = getRefundPaymentStatusForCharge(charge);
+
+  if (!refundStatus) {
+    return { status: "not_refunded" };
+  }
+
+  const orderId = await resolveOrderIdForStripeCharge(charge);
+
+  if (!orderId) {
+    return { chargeId: charge.id, status: "order_not_found" };
+  }
+
+  const supabase = getSupabaseAdmin();
+  const { data: orderRow, error: orderError } = await supabase
+    .from("orders")
+    .select("id, payment_status")
+    .eq("id", orderId)
+    .maybeSingle();
+
+  if (orderError) {
+    throw orderError;
+  }
+
+  if (!orderRow) {
+    return { chargeId: charge.id, status: "order_not_found" };
+  }
+
+  const order = orderRow as Pick<OrderRecord, "id" | "payment_status">;
+  const nextStatus =
+    order.payment_status === "refunded" ? "refunded" : refundStatus;
+
+  const { error: orderUpdateError } = await supabase
+    .from("orders")
+    .update({ payment_status: nextStatus })
+    .eq("id", order.id);
+
+  if (orderUpdateError) {
+    throw orderUpdateError;
+  }
+
+  if (nextStatus === "refunded") {
+    const { error: passUpdateError } = await supabase
+      .from("passes")
+      .update({ status: "refunded" })
+      .eq("order_id", order.id)
+      .in("status", ["active", "checked_in"]);
+
+    if (passUpdateError) {
+      throw passUpdateError;
+    }
+  }
+
+  return {
+    amountRefundedCents: charge.amount_refunded,
+    amountTotalCents: charge.amount,
+    orderId: order.id,
+    status: nextStatus,
+  };
+}
+
+async function resolveOrderIdForStripeCharge(charge: Stripe.Charge) {
+  const chargeMetadataOrderId = parseStripeOrderIdMetadata(charge.metadata);
+
+  if (chargeMetadataOrderId) {
+    return chargeMetadataOrderId;
+  }
+
+  const paymentIntentId =
+    typeof charge.payment_intent === "string"
+      ? charge.payment_intent
+      : charge.payment_intent?.id;
+
+  if (!paymentIntentId) {
+    return null;
+  }
+
+  const paymentIntent = await getStripe().paymentIntents.retrieve(
+    paymentIntentId,
+  );
+
+  return parseStripeOrderIdMetadata(paymentIntent.metadata);
 }
 
 export async function getOrderConfirmation(

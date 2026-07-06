@@ -151,8 +151,8 @@ export default async function PublicEventPage({
                 will need their own digital pass at the gate.
               </InfoCard>
               <InfoCard title="Refunds and support">
-                Admission and refund questions are handled by the event
-                organizer.{" "}
+                For admission help or refund requests, email the event
+                organizer and include your order number.{" "}
                 <a
                   href={`mailto:${event.contact_email}`}
                   className="font-medium text-blue-300 underline decoration-blue-300/40 underline-offset-4 hover:text-blue-200"

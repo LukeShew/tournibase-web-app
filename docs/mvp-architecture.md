@@ -1,6 +1,6 @@
 # TourniBase Web MVP Architecture
 
-Last verified: July 5, 2026
+Last verified: July 6, 2026
 
 ## System overview
 
@@ -50,6 +50,10 @@ form. The browser never receives the Supabase secret key or Stripe secret keys.
 - TourniBase uses Stripe-hosted Checkout in payment mode.
 - The app calculates prices on the server from current ticket records.
 - Stripe webhook signatures are verified against the raw request body.
+- Full Stripe refunds sync back into TourniBase and invalidate active or
+  checked-in passes for the refunded order.
+- Partial Stripe refunds mark the order as partially refunded but do not
+  automatically void a specific pass.
 - Test mode remains active until production launch checks are complete.
 
 ### Transactional email
@@ -108,7 +112,7 @@ form. The browser never receives the Supabase secret key or Stripe secret keys.
 | Route | Purpose |
 | --- | --- |
 | `POST /api/checkout` | Validate an order and create Stripe Checkout |
-| `POST /api/stripe/webhook` | Verify Stripe events and fulfill paid orders |
+| `POST /api/stripe/webhook` | Verify Stripe events, fulfill paid orders, and sync refunds |
 
 ## Tournament setup flow
 
@@ -148,6 +152,19 @@ Supported webhook events:
 - `checkout.session.async_payment_succeeded`
 - `checkout.session.async_payment_failed`
 - `checkout.session.expired`
+- `charge.refunded`
+
+## Refund sync flow
+
+1. An operator issues a refund in Stripe.
+2. Stripe sends `charge.refunded` to `/api/stripe/webhook`.
+3. The webhook verifies the Stripe signature.
+4. TourniBase resolves the order ID from Stripe metadata on the charge or its
+   PaymentIntent.
+5. A full refund marks the order as `refunded` and marks active or checked-in
+   passes as `refunded`.
+6. A partial refund marks the order as `partial_refund` and leaves passes
+   usable unless staff handle a specific pass manually.
 
 ## Mobile pass flow
 

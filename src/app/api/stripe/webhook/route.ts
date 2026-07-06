@@ -4,6 +4,7 @@ import { attemptOrderConfirmationEmail } from "@/lib/email/order-confirmation";
 import {
   fulfillCheckoutSession,
   markCheckoutFailed,
+  syncStripeChargeRefund,
 } from "@/lib/orders";
 import {
   getStripe,
@@ -93,6 +94,19 @@ export async function POST(request: Request) {
       event.type === "checkout.session.async_payment_failed"
     ) {
       await markCheckoutFailed(event.data.object.id);
+    }
+
+    if (event.type === "charge.refunded") {
+      const refundSync = await syncStripeChargeRefund(
+        event.data.object as Stripe.Charge,
+      );
+
+      if (refundSync.status === "order_not_found") {
+        console.warn("[stripe-webhook] refunded charge had no matching order", {
+          chargeId: refundSync.chargeId,
+          eventId: event.id,
+        });
+      }
     }
   } catch (error) {
     console.error("[stripe-webhook] event processing failed", {
