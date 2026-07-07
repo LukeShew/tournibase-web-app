@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { LegalFooter } from "@/components/legal-footer";
 import { PRODUCT_POSITIONING } from "@/lib/product-copy";
 import "./globals.css";
 
@@ -31,7 +32,10 @@ export default function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="flex min-h-full flex-col">{children}</body>
+      <body className="flex min-h-full flex-col">
+        <div className="flex-1">{children}</div>
+        <LegalFooter />
+      </body>
     </html>
   );
 }

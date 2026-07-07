@@ -161,12 +161,13 @@ Supported webhook events:
 1. An operator issues a refund in Stripe.
 2. Stripe sends `charge.refunded` to `/api/stripe/webhook`.
 3. The webhook verifies the Stripe signature.
-4. TourniBase resolves the order ID from Stripe metadata on the charge or its
-   PaymentIntent.
+4. TourniBase retrieves the latest Stripe charge, then resolves the order ID
+   from Stripe metadata on the charge or its PaymentIntent.
 5. A full refund marks the order as `refunded` and marks active or checked-in
    passes as `refunded`.
 6. A partial refund marks the order as `partial_refund` and leaves passes
    usable unless staff handle a specific pass manually.
+7. TourniBase sends the buyer a refund confirmation email through Resend.
 
 ## Mobile pass flow
 

@@ -152,16 +152,18 @@ export async function markCheckoutFailed(sessionId: string) {
 export async function syncStripeChargeRefund(
   charge: Stripe.Charge,
 ): Promise<StripeRefundSyncResult> {
-  const refundStatus = getRefundPaymentStatusForCharge(charge);
+  const stripe = getStripe();
+  const latestCharge = await stripe.charges.retrieve(charge.id);
+  const refundStatus = getRefundPaymentStatusForCharge(latestCharge);
 
   if (!refundStatus) {
     return { status: "not_refunded" };
   }
 
-  const orderId = await resolveOrderIdForStripeCharge(charge);
+  const orderId = await resolveOrderIdForStripeCharge(latestCharge);
 
   if (!orderId) {
-    return { chargeId: charge.id, status: "order_not_found" };
+    return { chargeId: latestCharge.id, status: "order_not_found" };
   }
 
   const supabase = getSupabaseAdmin();
@@ -205,8 +207,8 @@ export async function syncStripeChargeRefund(
   }
 
   return {
-    amountRefundedCents: charge.amount_refunded,
-    amountTotalCents: charge.amount,
+    amountRefundedCents: latestCharge.amount_refunded,
+    amountTotalCents: latestCharge.amount,
     orderId: order.id,
     status: nextStatus,
   };

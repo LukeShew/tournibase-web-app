@@ -204,7 +204,8 @@ Verified July 5, 2026:
   Resend.
 - A local paid-pass test generated a private 900 × 1200 PNG with the expected
   filename, no-store headers, and QR encoding the expected pass token.
-- Refund webhook code maps full Stripe refunds to refunded orders and passes.
+- Refund webhook code maps full Stripe refunds to refunded orders and passes,
+  and sends the buyer a TourniBase refund confirmation email.
 
 ## Known limitations
 
@@ -218,8 +219,8 @@ Verified July 5, 2026:
   [Supabase password security](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection).
 - Gate-sale recording tracks cash, Venmo, external-card, or comp payments but
   does not process those payments.
-- Full Stripe refunds automatically mark the order refunded and invalidate
-  active or checked-in passes for that order.
+- Full Stripe refunds automatically mark the order refunded, invalidate active
+  or checked-in passes for that order, and send a buyer refund email.
 - Partial refunds are tracked at the order level, but pass-specific partial
   refund handling is not automated.
 - Disputes are not automated.
@@ -238,8 +239,8 @@ Verified July 5, 2026:
 4. Confirm the buyer receives the Resend email and can save every offline pass.
 5. Open and scan every issued pass through a production scanner link.
 6. Confirm TourniBase sales totals match Stripe.
-7. Fully refund one test order and confirm the scanner blocks the refunded
-   pass.
+7. Fully refund one test order, confirm the buyer receives the refund email,
+   and confirm the scanner blocks the refunded pass.
 8. Follow the basic tournament-day support and refund process in
    [Refund and Support Process](./refund-support.md).
 

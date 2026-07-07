@@ -96,7 +96,8 @@ These are required before accepting real customer payments:
 - Switch all Stripe variables and the production webhook to live mode together.
 - Run one low-value live purchase using a real card.
 - Confirm the live webhook marks the order paid and creates the correct passes.
-- Confirm a full Stripe refund marks the order and passes refunded.
+- Confirm a full Stripe refund marks the order and passes refunded and sends
+  the buyer a TourniBase refund email.
 - Open and scan every issued pass through a production scanner link.
 - Confirm the director dashboard totals match Stripe and the gate results.
 - Follow the basic support and refund procedure for tournament day.
@@ -104,8 +105,8 @@ These are required before accepting real customer payments:
 ## Known current limitations
 
 - Pass-email delivery is live and has passed a Stripe test purchase.
-- Full Stripe refunds sync into TourniBase and invalidate active or checked-in
-  passes for that order.
+- Full Stripe refunds sync into TourniBase, invalidate active or checked-in
+  passes for that order, and send the buyer a refund email.
 - Stripe is configured in test mode.
 - Saved pass PNGs work offline for buyers, but scanner devices still require
   internet for authoritative validation and duplicate prevention.

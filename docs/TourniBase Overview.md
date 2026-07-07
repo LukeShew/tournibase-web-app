@@ -1,6 +1,6 @@
 # TourniBase Overview
 
-Last updated and verified: July 6, 2026
+Last updated and verified: July 7, 2026
 
 ## Current direction
 
@@ -39,7 +39,8 @@ before expanding into a larger platform.
 | Database | Live and local histories match all 12 product migrations |
 | Email | Live through Resend and end-to-end tested |
 | Offline access | Downloadable pass PNG for Photos or Files |
-| Refund support | Manual Stripe refunds with automatic full-refund invalidation |
+| Refund support | Manual Stripe refunds with automatic full-refund invalidation and refund email |
+| Legal/support pages | Footer links to Terms, Privacy, Refund Policy, and Support |
 | Launch dependency | Stripe live-mode setup, live purchase test, and refund test |
 
 No numbered phases remain. See the [Final MVP Handoff](./mvp-handoff.md) for
@@ -74,6 +75,7 @@ tracker.
 - One individual mobile pass per purchased admission
 - Branded QR code on each pass
 - Pass delivery by email
+- TourniBase refund confirmation email after Stripe refund webhook
 - Offline pass image save flow for weak-service backup
 - Clear event, ticket, validity, venue, order, and support information
 
@@ -114,8 +116,9 @@ tracker.
    and prior admissions in one atomic operation.
 9. A valid pass is admitted. A second use is blocked as already scanned.
 10. The director reviews sales and gate activity from the dashboard.
-11. If an order is fully refunded in Stripe, TourniBase marks the order and
-    active or checked-in passes as refunded.
+11. If an order is refunded in Stripe, TourniBase retrieves the latest Stripe
+    charge, syncs the refund state, emails the buyer, and fully invalidates
+    active or checked-in passes on full refunds.
 
 The branded email template and retry-safe Resend delivery system are live. The
 success page remains the backup retrieval method.
@@ -154,7 +157,8 @@ gate staff can use it without installing anything.
 - Next.js App Router web app deployed on Vercel
 - Supabase Auth, Postgres, Row Level Security, and migration-managed schema
 - Stripe-hosted Checkout and signed webhook processing
-- Stripe full-refund sync into order and pass statuses
+- Stripe refund sync into order and pass statuses
+- TourniBase refund confirmation emails
 - React Email template rendering with provider-neutral delivery tracking
 - Server Components and Server Actions for protected data and mutations
 - Temporary scanner credentials stored only as SHA-256 hashes
@@ -186,8 +190,10 @@ See [MVP Architecture](./mvp-architecture.md) and
 - Supabase leaked-password protection is unavailable on the current plan, so
   invited directors must use strong, unique passwords.
 - Gate-sale recording tracks external payment but does not charge a card.
-- Full Stripe refunds automatically invalidate active or checked-in passes.
-- Partial refunds are tracked only at the order level.
+- Full Stripe refunds automatically invalidate active or checked-in passes and
+  send the buyer a refund confirmation email.
+- Partial refunds are tracked at the order level and send a buyer email, but
+  pass-specific partial refund handling is not automated.
 - Dispute operations are not automated.
 - Demo data is available only through the guarded local seed command.
 - Saved pass images work without buyer internet, but scanner devices still need

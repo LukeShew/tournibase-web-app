@@ -1,17 +1,18 @@
 # TourniBase Transactional Email
 
-Last verified: July 6, 2026
+Last verified: July 7, 2026
 
 ## Current status
 
 The email foundation and Resend adapter are complete. `tournibase.com` is
 verified in Resend, the sending-only API key is stored in Vercel, and production
 delivery is active. A real Stripe test purchase successfully delivered the
-buyer email on July 5, 2026.
+buyer pass email on July 5, 2026.
 
 | Capability | Status |
 | --- | --- |
 | One branded email per paid order | Built |
+| Refund confirmation email after Stripe refund webhook | Built |
 | Every mobile pass link in that email | Built |
 | Offline PNG link for every pass | Built |
 | Refund/support instructions with order number | Built |
@@ -26,10 +27,10 @@ buyer email on July 5, 2026.
 | Provider API key | Sending-only key stored in Vercel |
 | Real buyer delivery | Active and end-to-end tested |
 
-Stripe may separately send its standard payment receipt. The TourniBase email
-has a different job: delivering the actual mobile pass links created after
-payment and telling buyers how to contact the organizer for admission help or
-refund requests.
+Stripe may separately send its standard payment or refund receipts. TourniBase
+emails have a different job: delivering the actual mobile pass links created
+after payment and giving buyers a clear TourniBase refund/pass-validity message
+after a refund webhook.
 
 ## Delivery flow
 
@@ -47,6 +48,17 @@ refund requests.
 
 The success page remains a backup delivery method even when email sending
 fails.
+
+## Refund email flow
+
+1. An operator refunds a payment in Stripe.
+2. Stripe sends `charge.refunded` to the TourniBase webhook.
+3. TourniBase retrieves the latest Stripe charge before deciding whether the
+   refund is full or partial.
+4. TourniBase updates the order refund status.
+5. Full refunds also mark active or checked-in passes as refunded.
+6. TourniBase sends a buyer refund confirmation email through Resend.
+7. Temporary email failures return a webhook error so Stripe can retry.
 
 ## Delivery statuses
 

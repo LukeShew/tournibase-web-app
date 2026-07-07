@@ -150,9 +150,12 @@ export default async function GateAccessPage({
         />
       </section>
 
-      <details className="mt-8 overflow-hidden rounded-2xl border border-border bg-card">
-        <summary className="cursor-pointer list-none px-5 py-4 text-sm font-semibold text-slate-200 transition hover:bg-white/[0.025] hover:text-white">
-          Create scanner link
+      <details className="mt-8 overflow-hidden rounded-2xl border border-brand/30 bg-card shadow-lg shadow-blue-950/20">
+        <summary className="cursor-pointer list-none bg-brand-strong px-5 py-4 text-sm font-semibold text-white transition hover:bg-blue-500">
+          <span className="flex items-center justify-center gap-2">
+            <span aria-hidden="true">+</span>
+            Create scanner link
+          </span>
         </summary>
         <div className="border-t border-border p-4 sm:p-5">
           {canCreate ? (

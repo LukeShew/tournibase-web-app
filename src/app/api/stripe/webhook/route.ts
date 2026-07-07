@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import type Stripe from "stripe";
 import { attemptOrderConfirmationEmail } from "@/lib/email/order-confirmation";
+import { attemptRefundConfirmationEmail } from "@/lib/email/refund-confirmation";
 import {
   fulfillCheckoutSession,
   markCheckoutFailed,
@@ -106,6 +107,39 @@ export async function POST(request: Request) {
           chargeId: refundSync.chargeId,
           eventId: event.id,
         });
+      }
+
+      if (
+        refundSync.status === "refunded" ||
+        refundSync.status === "partial_refund"
+      ) {
+        console.info("[stripe-webhook] refund synced", {
+          amountRefundedCents: refundSync.amountRefundedCents,
+          eventId: event.id,
+          orderId: refundSync.orderId,
+          status: refundSync.status,
+        });
+
+        const refundEmailAttempt = await attemptRefundConfirmationEmail({
+          amountRefundedCents: refundSync.amountRefundedCents,
+          amountTotalCents: refundSync.amountTotalCents,
+          orderId: refundSync.orderId,
+          status: refundSync.status,
+        });
+
+        if (refundEmailAttempt.status === "retryable_failure") {
+          throw new Error(
+            `Refund email needs a retry (${refundEmailAttempt.code}).`,
+          );
+        }
+
+        if (refundEmailAttempt.status === "permanent_failure") {
+          console.warn("[stripe-webhook] refund email not sent", {
+            code: refundEmailAttempt.code,
+            eventId: event.id,
+            orderId: refundSync.orderId,
+          });
+        }
       }
     }
   } catch (error) {
