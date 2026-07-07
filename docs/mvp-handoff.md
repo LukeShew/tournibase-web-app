@@ -71,6 +71,7 @@ Vercel environment variables for hosted deployments.
 | `/dashboard` | Director tournament list |
 | `/dashboard/tournaments/new` | Create a tournament |
 | `/dashboard/tournaments/[id]` | Tournament overview and publishing |
+| `/dashboard/tournaments/[id]/edit` | Event detail editing |
 | `/dashboard/tournaments/[id]/tickets` | Ticket type management |
 | `/dashboard/tournaments/[id]/gate` | Scanner-link management |
 | `/dashboard/tournaments/[id]/sales` | Sales dashboard |

@@ -147,7 +147,7 @@ export default async function PassPage({
                   href={getOfflinePassSavePath(pass.publicToken)}
                   className="mt-5 inline-flex min-h-12 w-full items-center justify-center rounded-xl bg-brand px-5 text-sm font-semibold text-white transition hover:bg-brand-strong"
                 >
-                  Save for weak service
+                  Save to device
                 </a>
                 <p className="mt-2 text-center text-xs leading-5 text-slate-500">
                   Opens a simple save page with Photos and Files options.

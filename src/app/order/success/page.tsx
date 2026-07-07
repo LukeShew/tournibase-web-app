@@ -156,7 +156,7 @@ export default async function OrderSuccessPage({
                     href={getOfflinePassSavePath(pass.publicToken)}
                     className="inline-flex min-h-11 items-center justify-center rounded-xl border border-blue-400/30 bg-blue-400/10 px-4 text-sm font-semibold text-blue-200 transition hover:bg-blue-400/15"
                   >
-                    Save for weak service
+                    Save to device
                   </Link>
                 </div>
               </div>

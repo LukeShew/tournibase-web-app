@@ -92,6 +92,7 @@ form. The browser never receives the Supabase secret key or Stripe secret keys.
 | `/dashboard` | Director tournament list |
 | `/dashboard/tournaments/new` | Create a tournament |
 | `/dashboard/tournaments/[id]` | Tournament overview |
+| `/dashboard/tournaments/[id]/edit` | Edit event details |
 | `/dashboard/tournaments/[id]/tickets` | Manage ticket types |
 | `/dashboard/tournaments/[id]/gate` | Create and revoke scanner links |
 | `/dashboard/tournaments/[id]/sales` | Sales dashboard |

@@ -108,7 +108,7 @@ export function OrderConfirmationEmail({
                     Open mobile pass
                   </Button>
                   <Button href={pass.offlineUrl} style={secondaryButton}>
-                    Save for weak service
+                    Save to device
                   </Button>
                 </Section>
                 <Text style={offlineHelp}>
@@ -182,7 +182,7 @@ export function createOrderConfirmationText({
   const passLines = passes
     .map(
       (pass, index) =>
-        `${pass.label} · Pass ${index + 1}\nOpen pass: ${pass.url}\nSave for weak service: ${pass.offlineUrl}`,
+        `${pass.label} · Pass ${index + 1}\nOpen pass: ${pass.url}\nSave to device: ${pass.offlineUrl}`,
     )
     .join("\n\n");
   const itemLines = items

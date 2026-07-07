@@ -208,11 +208,19 @@ export default async function TournamentOverviewPage({
 
       <div className="mt-8 grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
         <section className="rounded-2xl border border-border bg-card">
-          <div className="border-b border-border px-5 py-4">
-            <h2 className="font-semibold text-white">Event details</h2>
-            <p className="mt-1 text-sm text-slate-500">
-              The information connected to this admission event.
-            </p>
+          <div className="flex flex-col gap-3 border-b border-border px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="font-semibold text-white">Event details</h2>
+              <p className="mt-1 text-sm text-slate-500">
+                The information connected to this admission event.
+              </p>
+            </div>
+            <Link
+              href={`/dashboard/tournaments/${tournamentId}/edit`}
+              className="inline-flex h-10 items-center justify-center rounded-xl border border-border bg-white/[0.04] px-4 text-sm font-semibold text-slate-200 transition hover:border-white/20 hover:text-white"
+            >
+              Edit event
+            </Link>
           </div>
           <dl className="grid gap-px bg-border sm:grid-cols-2">
             <DetailItem
@@ -327,6 +335,11 @@ export default async function TournamentOverviewPage({
           </p>
         </div>
         <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          <ActiveTool
+            href={`/dashboard/tournaments/${tournamentId}/edit`}
+            title="Edit event details"
+            description="Fix event dates, venue, description, and contact info."
+          />
           <ActiveTool
             href={`/dashboard/tournaments/${tournamentId}/tickets`}
             title="Edit tickets"
