@@ -15,7 +15,7 @@ export default async function Home() {
   }
 
   return (
-    <main className="app-grid flex min-h-screen flex-col">
+    <main className="app-grid flex min-h-full flex-col">
       <header className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-6 lg:px-8">
         <Brand />
         <Link

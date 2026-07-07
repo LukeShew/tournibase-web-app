@@ -17,7 +17,7 @@ export default async function LoginPage() {
   }
 
   return (
-    <main className="app-grid grid min-h-screen lg:grid-cols-[1fr_1fr]">
+    <main className="app-grid grid min-h-full lg:grid-cols-[1fr_1fr]">
       <section className="flex flex-col px-6 py-6 sm:px-10 lg:px-14">
         <Brand />
         <div className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center py-14">
