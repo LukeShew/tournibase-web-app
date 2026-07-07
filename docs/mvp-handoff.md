@@ -77,7 +77,7 @@ Vercel environment variables for hosted deployments.
 | `/dashboard/tournaments/[id]/sales` | Sales dashboard |
 | `/dashboard/tournaments/[id]/scans` | Gate-activity dashboard |
 | `/dashboard/tournaments/[id]/share` | Sharing tools |
-| `/print/tournaments/[id]/gate-poster` | Printable public-checkout poster |
+| `/print/tournaments/[id]/gate-poster` | Legacy printable public-checkout poster |
 
 ### Scanner routes
 

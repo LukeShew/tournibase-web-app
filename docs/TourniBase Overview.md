@@ -65,7 +65,6 @@ tracker.
 - Temporary, revocable scanner links with permission levels
 - Sales, revenue, admission, and gate-activity dashboards
 - Coach and parent sharing tools
-- Printable public-checkout gate poster
 
 ### Buyer tools
 
@@ -75,7 +74,7 @@ tracker.
 - One individual mobile pass per purchased admission
 - Branded QR code on each pass
 - Pass delivery by email
-- Offline pass image download for Photos or Files
+- Offline pass image save flow for weak-service backup
 - Clear event, ticket, validity, venue, order, and support information
 
 ### Gate tools

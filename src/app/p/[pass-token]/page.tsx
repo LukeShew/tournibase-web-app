@@ -150,7 +150,7 @@ export default async function PassPage({
                   Save to device
                 </a>
                 <p className="mt-2 text-center text-xs leading-5 text-slate-500">
-                  Opens a simple save page with Photos and Files options.
+                  Opens a simple save page for weak-service backup.
                 </p>
               </>
             ) : null}

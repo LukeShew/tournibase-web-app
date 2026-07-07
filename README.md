@@ -340,7 +340,7 @@ number.
 1. Open a pass link from the success page.
 2. Confirm the event, ticket, buyer, valid date, and QR code appear.
 3. Choose **Save to device**.
-4. Confirm the save page opens with a pass image plus Photos and Files options.
+4. Confirm the save page opens with a pass image and device-save actions.
 5. Turn off that phone’s internet connection and confirm the saved QR remains
    visible.
 6. Keep the saved image open on one device for the scanner test.
@@ -355,7 +355,8 @@ pass-delivery screen.
 
 1. Return to the director’s tournament overview.
 2. Open **Gate tools**.
-3. Create a temporary scanner link with the permission level you want to test.
+3. Expand **Create scanner link** and create a temporary scanner link with the
+   permission level you want to test.
 4. Copy the one-time link and open it on another phone or browser.
 5. Start the camera and allow camera access.
 6. Scan the pass QR.

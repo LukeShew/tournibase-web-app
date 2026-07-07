@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect, useRef } from "react";
 import { useFormStatus } from "react-dom";
 import {
   setTicketTypeStatus,
@@ -36,12 +36,19 @@ export function TicketTypeCard({
     initialTicketTypeFormState,
   );
   const state = actionState ?? initialTicketTypeFormState;
+  const detailsRef = useRef<HTMLDetailsElement>(null);
   const nextStatus = ticketType.status === "active" ? "inactive" : "active";
   const setStatusForTicket = setTicketTypeStatus.bind(
     null,
     ticketType.id,
     nextStatus,
   );
+
+  useEffect(() => {
+    if (state.successId) {
+      detailsRef.current?.removeAttribute("open");
+    }
+  }, [state.successId]);
 
   return (
     <article className="rounded-2xl border border-border bg-card">
@@ -85,7 +92,7 @@ export function TicketTypeCard({
         </div>
       </div>
 
-      <details className="border-t border-border">
+      <details ref={detailsRef} className="border-t border-border">
         <summary className="cursor-pointer list-none px-5 py-4 text-sm font-medium text-slate-300 transition hover:bg-white/[0.025] hover:text-white">
           Edit ticket details
         </summary>

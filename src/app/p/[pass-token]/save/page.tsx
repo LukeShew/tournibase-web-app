@@ -7,6 +7,7 @@ import {
   getOfflinePassFilename,
   getOfflinePassPath,
 } from "@/lib/pass-display";
+import { SavePassActions } from "@/components/save-pass-actions";
 import { isValidPassToken } from "@/lib/pass-tokens";
 import { getPublicPass } from "@/lib/public-passes";
 import { getSupabaseAdminConfigurationIssues } from "@/lib/supabase/admin";
@@ -91,11 +92,11 @@ export default async function SavePassPage({
             Offline backup
           </p>
           <h1 className="mt-2 text-3xl font-semibold tracking-[-0.035em] text-white">
-            Save this pass before arriving
+            Save this pass to your device
           </h1>
           <p className="mt-3 max-w-2xl leading-7 text-slate-400">
-            This is a backup image of your QR pass. Save it to Photos or Files
-            now so it is available even if cell service is weak at the gate.
+            This is a backup image of your QR pass. Save it now so it is
+            available even if cell service is weak at the gate.
           </p>
 
           <div className="mt-6 rounded-3xl border border-border bg-background/60 p-3 sm:p-4">
@@ -107,38 +108,26 @@ export default async function SavePassPage({
             />
           </div>
 
-          <div className="mt-5 grid gap-3 sm:grid-cols-2">
-            <a
-              href={imagePath}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex min-h-12 items-center justify-center rounded-xl bg-brand px-5 text-sm font-semibold text-white transition hover:bg-brand-strong"
-            >
-              Open image to save
-            </a>
-            <a
-              href={downloadPath}
-              download={filename}
-              className="inline-flex min-h-12 items-center justify-center rounded-xl border border-blue-400/30 bg-blue-400/10 px-5 text-sm font-semibold text-blue-200 transition hover:bg-blue-400/15"
-            >
-              Download file
-            </a>
-          </div>
+          <SavePassActions
+            downloadPath={downloadPath}
+            filename={filename}
+            imagePath={imagePath}
+          />
         </section>
 
         <section className="mt-4 grid gap-4 sm:grid-cols-2">
           <InstructionCard
             title="Save to Photos"
             steps={[
-              "Tap Open image to save.",
-              "Touch and hold the pass image.",
-              "Choose Save to Photos or Save Image.",
+              "Tap Save to device.",
+              "If your phone opens the share sheet, choose Save Image or Save to Photos.",
+              "If it opens as an image instead, touch and hold the pass, then save it.",
             ]}
           />
           <InstructionCard
             title="Save to Files"
             steps={[
-              "Tap Download file.",
+              "Tap Download file if Save to device is not available.",
               "Choose where to save it if your phone asks.",
               "Open it from Files at the gate if service is weak.",
             ]}

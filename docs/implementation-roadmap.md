@@ -33,7 +33,7 @@ They are not part of this roadmap.
 | 9 | Atomic validation, duplicate blocking, override, undo | Complete |
 | 10 | Buyer/order lookup and manual check-in | Complete |
 | 11 | Persisted recent scanner activity | Complete |
-| 12 | In-person gate-sale recording and checkout poster | Complete |
+| 12 | In-person gate-sale recording and gate access cleanup | Complete |
 | 13 | Director sales and gate dashboards | Complete |
 | 14 | Coach and parent sharing flow | Complete |
 | 15 | Customer-facing product language and positioning | Complete |

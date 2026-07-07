@@ -98,7 +98,7 @@ form. The browser never receives the Supabase secret key or Stripe secret keys.
 | `/dashboard/tournaments/[id]/sales` | Sales dashboard |
 | `/dashboard/tournaments/[id]/scans` | Gate-activity dashboard |
 | `/dashboard/tournaments/[id]/share` | Coach and parent sharing tools |
-| `/print/tournaments/[id]/gate-poster` | Printable buyer checkout poster |
+| `/print/tournaments/[id]/gate-poster` | Legacy printable buyer checkout poster |
 
 ### Gate routes
 
