@@ -111,7 +111,7 @@ export default async function GateAccessPage({
     <div className="pb-12">
       <Link
         href={`/dashboard/tournaments/${tournamentId}`}
-        className="inline-flex items-center gap-2 text-sm font-medium text-slate-400 transition hover:text-white"
+        className="inline-flex items-center gap-2 text-sm font-semibold text-slate-500 transition hover:text-slate-900"
       >
         <span aria-hidden="true">←</span>
         Back to event
@@ -119,16 +119,18 @@ export default async function GateAccessPage({
 
       <div className="mt-6 flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
         <div>
-          <p className="text-sm font-medium text-blue-300">Gate access</p>
-          <h1 className="mt-2 text-3xl font-semibold tracking-[-0.035em] text-white sm:text-4xl">
+          <p className="text-sm font-semibold text-blue-700">Gate access</p>
+          <h1 className="mt-2 text-4xl font-semibold tracking-[-0.04em] text-slate-950">
             Gate setup
           </h1>
           <p className="mt-3 max-w-2xl leading-7 text-slate-400">
             Review scanner access and create secure gate links when needed.
           </p>
         </div>
-        <div className="rounded-xl border border-border bg-card px-4 py-3 text-right">
-          <p className="text-sm font-semibold text-white">{tournament.name}</p>
+        <div className="rounded-2xl border border-border bg-card px-4 py-3 text-right shadow-sm">
+          <p className="text-sm font-semibold text-slate-950">
+            {tournament.name}
+          </p>
           <p className="mt-1 font-mono text-xs text-slate-500">
             {formatEventDateRange(
               tournament.start_date,
@@ -150,7 +152,7 @@ export default async function GateAccessPage({
         />
       </section>
 
-      <details className="mt-8 overflow-hidden rounded-2xl border border-brand/30 bg-card shadow-lg shadow-blue-950/20">
+      <details className="mt-8 overflow-hidden rounded-[2rem] border border-blue-200 bg-card shadow-sm">
         <summary className="cursor-pointer list-none bg-brand-strong px-5 py-4 text-sm font-semibold text-white transition hover:bg-blue-500">
           <span className="flex items-center justify-center gap-2">
             <span aria-hidden="true">+</span>
@@ -168,7 +170,7 @@ export default async function GateAccessPage({
               <p className="text-sm font-medium text-amber-200">
                 Event {tournament.status}
               </p>
-              <h2 className="mt-2 text-xl font-semibold text-white">
+              <h2 className="mt-2 text-xl font-semibold text-slate-950">
                 New scanner links are disabled
               </h2>
               <p className="mt-2 text-sm leading-6 text-slate-400">
@@ -180,9 +182,9 @@ export default async function GateAccessPage({
         </div>
       </details>
 
-      <section className="mt-8 rounded-2xl border border-border bg-card">
-        <div className="border-b border-border px-5 py-4">
-          <h2 className="font-semibold text-white">Scanner access history</h2>
+      <section className="mt-8 overflow-hidden rounded-[2rem] border border-border bg-card shadow-sm">
+        <div className="border-b border-border bg-card-strong px-6 py-5">
+          <h2 className="font-semibold text-slate-950">Scanner access history</h2>
           <p className="mt-1 text-sm text-slate-500">
             Raw scanner links are hidden after creation and cannot be
             recovered.
@@ -194,7 +196,7 @@ export default async function GateAccessPage({
             <div className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-brand-soft text-lg text-blue-300">
               ↗
             </div>
-            <h3 className="mt-4 font-semibold text-white">
+            <h3 className="mt-4 font-semibold text-slate-950">
               No scanner links yet
             </h3>
             <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-500">
@@ -214,7 +216,7 @@ export default async function GateAccessPage({
                 >
                   <div>
                     <div className="flex flex-wrap items-center gap-2">
-                      <h3 className="font-semibold text-white">
+                      <h3 className="font-semibold text-slate-950">
                         {session.gate_name}
                       </h3>
                       <StatusBadge status={status} />
@@ -250,9 +252,11 @@ export default async function GateAccessPage({
 
 function StatusCard({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-2xl border border-border bg-card p-5">
-      <p className="text-sm text-slate-500">{label}</p>
-      <p className="mt-2 font-mono text-2xl font-semibold text-white">{value}</p>
+    <div className="rounded-[1.75rem] border border-border bg-card p-5 shadow-sm">
+      <p className="text-sm font-medium text-slate-500">{label}</p>
+      <p className="mt-2 font-mono text-2xl font-semibold text-blue-700">
+        {value}
+      </p>
     </div>
   );
 }

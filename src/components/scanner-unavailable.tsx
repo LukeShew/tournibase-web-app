@@ -50,7 +50,7 @@ export function ScannerUnavailable({
   const message = content[status];
 
   return (
-    <main className="app-grid min-h-screen bg-background">
+    <main className="gate-dark app-grid min-h-screen bg-background">
       <header className="border-b border-border bg-background/90">
         <div className="mx-auto w-full max-w-xl px-5 py-4">
           <Brand />

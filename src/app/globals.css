@@ -1,17 +1,17 @@
 @import "tailwindcss";
 
 :root {
-  color-scheme: dark;
-  --background: #07101d;
-  --foreground: #f8fafc;
-  --card: #0d1828;
-  --card-strong: #111f33;
-  --muted: #94a3b8;
-  --border: rgba(148, 163, 184, 0.16);
+  color-scheme: light;
+  --background: #f6f7fb;
+  --foreground: #101828;
+  --card: #ffffff;
+  --card-strong: #f0f2f5;
+  --muted: #667085;
+  --border: rgba(16, 24, 40, 0.12);
   --brand: #3b82f6;
   --brand-strong: #2563eb;
-  --brand-soft: rgba(59, 130, 246, 0.14);
-  --success: #34d399;
+  --brand-soft: rgba(59, 130, 246, 0.1);
+  --success: #12b76a;
 }
 
 @theme inline {
@@ -53,14 +53,174 @@ textarea {
 .app-grid {
   background-image:
     radial-gradient(
+      circle at 18% -10%,
+      rgba(59, 130, 246, 0.16),
+      transparent 34rem
+    ),
+    linear-gradient(rgba(16, 24, 40, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(16, 24, 40, 0.035) 1px, transparent 1px);
+  background-size:
+    auto,
+    44px 44px,
+    44px 44px;
+}
+
+.gate-dark {
+  color-scheme: dark;
+  --background: #07101d;
+  --foreground: #f8fafc;
+  --card: #0d1828;
+  --card-strong: #111f33;
+  --muted: #94a3b8;
+  --border: rgba(148, 163, 184, 0.16);
+  --brand-soft: rgba(59, 130, 246, 0.14);
+}
+
+.gate-dark.app-grid {
+  background-image:
+    radial-gradient(
       circle at 12% 0%,
       rgba(37, 99, 235, 0.18),
       transparent 32rem
     ),
     linear-gradient(rgba(148, 163, 184, 0.035) 1px, transparent 1px),
     linear-gradient(90deg, rgba(148, 163, 184, 0.035) 1px, transparent 1px);
-  background-size:
-    auto,
-    44px 44px,
-    44px 44px;
+}
+
+.light-ui .text-white,
+.light-ui .text-slate-50,
+.light-ui .text-slate-100 {
+  color: #101828;
+}
+
+.light-ui .text-slate-200,
+.light-ui .text-slate-300 {
+  color: #344054;
+}
+
+.light-ui .text-slate-400,
+.light-ui .text-slate-500,
+.light-ui .text-slate-600 {
+  color: #667085;
+}
+
+.light-ui .text-blue-100,
+.light-ui .text-blue-200,
+.light-ui .text-blue-300 {
+  color: #1d4ed8;
+}
+
+.light-ui .text-emerald-300 {
+  color: #047857;
+}
+
+.light-ui .text-red-300 {
+  color: #b42318;
+}
+
+.light-ui .text-amber-100,
+.light-ui .text-amber-200,
+.light-ui .text-amber-300 {
+  color: #92400e;
+}
+
+.light-ui .hover\:text-white:hover {
+  color: #101828;
+}
+
+.light-ui .bg-white\/5,
+.light-ui .bg-white\/10,
+.light-ui .bg-white\/\[0\.02\],
+.light-ui .bg-white\/\[0\.025\],
+.light-ui .bg-white\/\[0\.04\],
+.light-ui .bg-black\/10,
+.light-ui .bg-black\/15,
+.light-ui .bg-black\/20,
+.light-ui .bg-black\/25 {
+  background-color: rgba(16, 24, 40, 0.04);
+}
+
+.light-ui .bg-black\/\[0\.15\] {
+  background-color: rgba(16, 24, 40, 0.04);
+}
+
+.light-ui .border-white\/10,
+.light-ui .border-white\/15,
+.light-ui .border-white\/20 {
+  border-color: rgba(16, 24, 40, 0.12);
+}
+
+.light-ui .hover\:bg-white\/5:hover,
+.light-ui .hover\:bg-white\/10:hover,
+.light-ui .hover\:bg-white\/15:hover,
+.light-ui .hover\:bg-white\/\[0\.025\]:hover,
+.light-ui .hover\:bg-white\/\[0\.08\]:hover {
+  background-color: rgba(16, 24, 40, 0.06);
+}
+
+.light-ui .bg-brand.text-white,
+.light-ui .bg-brand-strong.text-white,
+.light-ui .bg-blue-500.text-white,
+.light-ui .bg-blue-600.text-white,
+.light-ui .bg-red-500.text-white,
+.light-ui .bg-emerald-500.text-white,
+.light-ui .gate-dark .text-white,
+.light-ui .gate-dark .bg-brand.text-white,
+.light-ui .gate-dark .bg-brand-strong.text-white,
+.light-ui .gate-dark .bg-blue-500.text-white {
+  color: #ffffff;
+}
+
+.light-ui .gate-dark .text-slate-100,
+.light-ui .gate-dark .text-slate-200 {
+  color: #e2e8f0;
+}
+
+.light-ui .gate-dark .text-slate-300 {
+  color: #cbd5e1;
+}
+
+.light-ui .gate-dark .text-slate-400 {
+  color: #94a3b8;
+}
+
+.light-ui .gate-dark .text-slate-500,
+.light-ui .gate-dark .text-slate-600 {
+  color: #64748b;
+}
+
+.light-ui .gate-dark .text-blue-100,
+.light-ui .gate-dark .text-blue-200,
+.light-ui .gate-dark .text-blue-300 {
+  color: #bfdbfe;
+}
+
+.light-ui .gate-dark .text-emerald-300 {
+  color: #6ee7b7;
+}
+
+.light-ui .gate-dark .text-red-300 {
+  color: #fca5a5;
+}
+
+.light-ui .gate-dark .text-amber-100,
+.light-ui .gate-dark .text-amber-200,
+.light-ui .gate-dark .text-amber-300 {
+  color: #fde68a;
+}
+
+.light-ui .gate-dark .bg-white\/5,
+.light-ui .gate-dark .bg-white\/10,
+.light-ui .gate-dark .bg-white\/\[0\.02\],
+.light-ui .gate-dark .bg-white\/\[0\.025\],
+.light-ui .gate-dark .bg-white\/\[0\.04\] {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+.light-ui .gate-dark .bg-black\/10,
+.light-ui .gate-dark .bg-black\/15,
+.light-ui .gate-dark .bg-black\/20,
+.light-ui .gate-dark .bg-black\/25,
+.light-ui .gate-dark .bg-black\/\[0\.15\] {
+  background-color: rgba(0, 0, 0, 0.18);
 }

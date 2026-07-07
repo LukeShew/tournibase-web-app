@@ -322,7 +322,7 @@ export function MobileGateScanner({
         : "Ready to scan";
 
   return (
-    <main className="app-grid min-h-screen bg-background pb-8">
+    <main className="gate-dark app-grid min-h-screen bg-background pb-8">
       <header className="border-b border-border bg-background/90 backdrop-blur-xl">
         <div className="mx-auto flex w-full max-w-xl items-center justify-between gap-4 px-4 py-4 sm:px-5">
           <div>

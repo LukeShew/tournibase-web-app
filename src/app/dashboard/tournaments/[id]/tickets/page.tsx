@@ -91,7 +91,7 @@ export default async function TicketTypesPage({
     <div className="pb-12">
       <Link
         href={`/dashboard/tournaments/${tournamentId}`}
-        className="inline-flex items-center gap-2 text-sm font-medium text-slate-400 transition hover:text-white"
+        className="inline-flex items-center gap-2 text-sm font-semibold text-slate-500 transition hover:text-slate-900"
       >
         <span aria-hidden="true">←</span>
         Back to event overview
@@ -99,17 +99,17 @@ export default async function TicketTypesPage({
 
       <div className="mt-6 flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
         <div>
-          <p className="text-sm font-medium text-blue-300">
+          <p className="text-sm font-semibold text-blue-700">
             {tournament.name}
           </p>
-          <h1 className="mt-2 text-3xl font-semibold tracking-[-0.035em] text-white">
+          <h1 className="mt-2 text-4xl font-semibold tracking-[-0.04em] text-slate-950">
             Ticket types
           </h1>
           <p className="mt-3 text-slate-400">
             Create the admission options parents can purchase.
           </p>
         </div>
-        <div className="rounded-xl border border-border bg-white/5 px-4 py-3">
+        <div className="rounded-2xl border border-border bg-card px-4 py-3 shadow-sm">
           <p className="text-xs uppercase tracking-[0.14em] text-slate-500">
             Event dates
           </p>
@@ -144,18 +144,18 @@ export default async function TicketTypesPage({
 
         <section>
           <div>
-            <h2 className="font-semibold text-white">Admission options</h2>
+            <h2 className="font-semibold text-slate-950">Admission options</h2>
             <p className="mt-1 text-sm text-slate-500">
               Edit pricing and validity, or temporarily deactivate a ticket.
             </p>
           </div>
 
           {ticketTypes.length === 0 ? (
-            <div className="mt-4 rounded-2xl border border-dashed border-white/15 bg-card/50 px-6 py-14 text-center">
+            <div className="mt-4 rounded-[2rem] border border-dashed border-border bg-card px-6 py-14 text-center shadow-sm">
               <div className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-brand-soft text-xl text-blue-300">
                 +
               </div>
-              <h3 className="mt-4 font-semibold text-white">
+              <h3 className="mt-4 font-semibold text-slate-950">
                 No ticket types yet
               </h3>
               <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-500">
@@ -182,9 +182,11 @@ export default async function TicketTypesPage({
 
 function StatCard({ label, value }: { label: string; value: number }) {
   return (
-    <div className="rounded-2xl border border-border bg-card p-5">
-      <p className="text-sm text-slate-500">{label}</p>
-      <p className="mt-2 font-mono text-3xl font-semibold text-white">{value}</p>
+    <div className="rounded-[1.75rem] border border-border bg-card p-5 shadow-sm">
+      <p className="text-sm font-medium text-slate-500">{label}</p>
+      <p className="mt-2 font-mono text-3xl font-semibold text-blue-700">
+        {value}
+      </p>
     </div>
   );
 }

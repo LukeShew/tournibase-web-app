@@ -14,15 +14,15 @@ export default async function NewTournamentPage() {
     <div className="pb-12">
       <Link
         href="/dashboard"
-        className="inline-flex items-center gap-2 text-sm font-medium text-slate-400 transition hover:text-white"
+        className="inline-flex items-center gap-2 text-sm font-semibold text-slate-500 transition hover:text-slate-900"
       >
         <span aria-hidden="true">←</span>
         Back to events
       </Link>
 
       <div className="mt-6 max-w-3xl">
-        <p className="text-sm font-medium text-blue-300">New admission event</p>
-        <h1 className="mt-2 text-3xl font-semibold tracking-[-0.035em] text-white">
+        <p className="text-sm font-semibold text-blue-700">New admission event</p>
+        <h1 className="mt-2 text-4xl font-semibold tracking-[-0.04em] text-slate-950">
           Set up your tournament
         </h1>
         <p className="mt-3 max-w-2xl leading-7 text-slate-400">

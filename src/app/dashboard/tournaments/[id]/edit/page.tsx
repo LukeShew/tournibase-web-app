@@ -78,7 +78,7 @@ export default async function EditTournamentPage({
     <div className="pb-12">
       <Link
         href={`/dashboard/tournaments/${tournamentId}`}
-        className="inline-flex items-center gap-2 text-sm font-medium text-slate-400 transition hover:text-white"
+        className="inline-flex items-center gap-2 text-sm font-semibold text-slate-500 transition hover:text-slate-900"
       >
         <span aria-hidden="true">←</span>
         Back to event
@@ -86,8 +86,8 @@ export default async function EditTournamentPage({
 
       <div className="mt-6 flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
         <div>
-          <p className="text-sm font-medium text-blue-300">Event settings</p>
-          <h1 className="mt-2 text-3xl font-semibold tracking-[-0.035em] text-white sm:text-4xl">
+          <p className="text-sm font-semibold text-blue-700">Event settings</p>
+          <h1 className="mt-2 text-4xl font-semibold tracking-[-0.04em] text-slate-950">
             Edit event details
           </h1>
           <p className="mt-3 max-w-2xl leading-7 text-slate-400">
@@ -95,8 +95,10 @@ export default async function EditTournamentPage({
             details buyers see on the public admission page.
           </p>
         </div>
-        <div className="rounded-xl border border-border bg-card px-4 py-3 text-right">
-          <p className="text-sm font-semibold text-white">{tournament.name}</p>
+        <div className="rounded-2xl border border-border bg-card px-4 py-3 text-right shadow-sm">
+          <p className="text-sm font-semibold text-slate-950">
+            {tournament.name}
+          </p>
           <p className="mt-1 font-mono text-xs text-slate-500">
             {formatEventDateRange(
               tournament.start_date,

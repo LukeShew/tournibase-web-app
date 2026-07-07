@@ -49,7 +49,7 @@ export default async function TournamentScansPage({
     <div className="pb-12">
       <Link
         href={`/dashboard/tournaments/${tournamentId}`}
-        className="inline-flex items-center gap-2 text-sm font-medium text-slate-400 transition hover:text-white"
+        className="inline-flex items-center gap-2 text-sm font-semibold text-slate-500 transition hover:text-slate-900"
       >
         <span aria-hidden="true">←</span>
         Back to event
@@ -57,10 +57,10 @@ export default async function TournamentScansPage({
 
       <div className="mt-6 flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
         <div>
-          <p className="text-sm font-medium text-blue-300">
+          <p className="text-sm font-semibold text-blue-700">
             {metrics.tournament.name}
           </p>
-          <h1 className="mt-2 text-3xl font-semibold tracking-[-0.035em] text-white sm:text-4xl">
+          <h1 className="mt-2 text-4xl font-semibold tracking-[-0.04em] text-slate-950">
             Gate activity
           </h1>
           <p className="mt-3 font-mono text-sm text-slate-400">
@@ -72,7 +72,7 @@ export default async function TournamentScansPage({
         </div>
         <Link
           href={`/dashboard/tournaments/${tournamentId}/gate`}
-          className="inline-flex h-11 items-center justify-center rounded-xl bg-brand-strong px-4 text-sm font-semibold text-white transition hover:bg-blue-500"
+          className="inline-flex h-11 items-center justify-center rounded-2xl bg-brand-strong px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-500"
         >
           Manage scanner links
         </Link>
@@ -80,26 +80,26 @@ export default async function TournamentScansPage({
 
       <TournamentDashboardNav active="scans" tournamentId={tournamentId} />
 
-      <section className="mt-8 rounded-2xl border border-brand/20 bg-gradient-to-br from-blue-500/10 to-transparent p-5 sm:p-6">
+      <section className="mt-8 rounded-[2rem] border border-blue-100 bg-card p-6 shadow-sm">
         <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
           <div>
-            <p className="text-xs font-medium uppercase tracking-[0.14em] text-blue-300">
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-blue-700">
               Live event snapshot
             </p>
-            <h2 className="mt-2 text-xl font-semibold text-white">
+            <h2 className="mt-2 text-xl font-semibold text-slate-950">
               Admission progress
             </h2>
-            <p className="mt-2 text-sm text-slate-400">
+            <p className="mt-2 text-sm text-slate-500">
               {metrics.gate.checkedInPasses} of{" "}
               {metrics.sales.onlineTicketsSold} online passes checked in.
             </p>
           </div>
-          <p className="font-mono text-3xl font-semibold text-blue-200">
+          <p className="font-mono text-4xl font-semibold text-blue-700">
             {checkInRate}%
           </p>
         </div>
         <div
-          className="mt-5 h-2 overflow-hidden rounded-full bg-white/10"
+          className="mt-5 h-3 overflow-hidden rounded-full bg-card-strong"
           role="progressbar"
           aria-label="Online pass check-in progress"
           aria-valuemax={100}
@@ -107,7 +107,7 @@ export default async function TournamentScansPage({
           aria-valuenow={checkInRate}
         >
           <div
-            className="h-full rounded-full bg-blue-400"
+            className="h-full rounded-full bg-blue-600"
             style={{ width: `${checkInRate}%` }}
           />
         </div>
@@ -141,10 +141,10 @@ export default async function TournamentScansPage({
 
       <section className="mt-8">
         <div>
-          <p className="text-xs font-medium uppercase tracking-[0.14em] text-blue-300">
+          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-blue-700">
             Gate activity
           </p>
-          <h2 className="mt-2 text-xl font-semibold text-white">
+          <h2 className="mt-2 text-xl font-semibold text-slate-950">
             Validation results
           </h2>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
@@ -207,9 +207,11 @@ function SnapshotItem({
   value: number | string;
 }) {
   return (
-    <div className="rounded-xl border border-white/10 bg-slate-950/30 px-4 py-4">
+    <div className="rounded-3xl bg-card-strong px-4 py-4">
       <p className="text-xs text-slate-500">{label}</p>
-      <p className="mt-2 font-mono text-xl font-semibold text-white">{value}</p>
+      <p className="mt-2 font-mono text-xl font-semibold text-slate-950">
+        {value}
+      </p>
     </div>
   );
 }

@@ -127,7 +127,7 @@ export default async function TournamentOverviewPage({
     <div className="pb-12">
       <Link
         href="/dashboard"
-        className="inline-flex items-center gap-2 text-sm font-medium text-slate-400 transition hover:text-white"
+        className="inline-flex items-center gap-2 text-sm font-semibold text-slate-500 transition hover:text-slate-900"
       >
         <span aria-hidden="true">←</span>
         Back to events
@@ -136,14 +136,14 @@ export default async function TournamentOverviewPage({
       <div className="mt-6 flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
         <div>
           <div className="flex flex-wrap items-center gap-3">
-            <p className="text-sm font-medium text-blue-300">
+            <p className="text-sm font-semibold text-blue-700">
               Youth basketball admission
             </p>
-            <span className="rounded-full border border-border bg-white/5 px-2.5 py-1 text-xs font-medium capitalize text-slate-300">
+            <span className="rounded-full border border-border bg-card-strong px-2.5 py-1 text-xs font-semibold capitalize text-slate-600">
               {tournament.status}
             </span>
           </div>
-          <h1 className="mt-3 text-3xl font-semibold tracking-[-0.035em] text-white sm:text-4xl">
+          <h1 className="mt-3 text-4xl font-semibold tracking-[-0.04em] text-slate-950">
             {tournament.name}
           </h1>
           <p className="mt-3 font-mono text-sm text-slate-400">
@@ -207,17 +207,17 @@ export default async function TournamentOverviewPage({
       </section>
 
       <div className="mt-8 grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
-        <section className="rounded-2xl border border-border bg-card">
-          <div className="flex flex-col gap-3 border-b border-border px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+        <section className="overflow-hidden rounded-[2rem] border border-border bg-card shadow-sm">
+          <div className="flex flex-col gap-3 border-b border-border bg-card-strong px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h2 className="font-semibold text-white">Event details</h2>
+              <h2 className="font-semibold text-slate-950">Event details</h2>
               <p className="mt-1 text-sm text-slate-500">
                 The information connected to this admission event.
               </p>
             </div>
             <Link
               href={`/dashboard/tournaments/${tournamentId}/edit`}
-              className="inline-flex h-10 items-center justify-center rounded-xl border border-border bg-white/[0.04] px-4 text-sm font-semibold text-slate-200 transition hover:border-white/20 hover:text-white"
+              className="inline-flex h-10 items-center justify-center rounded-2xl border border-border bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-blue-50 hover:text-blue-700"
             >
               Edit event
             </Link>
@@ -243,7 +243,7 @@ export default async function TournamentOverviewPage({
             <DetailItem label="Sport" value="Youth basketball" />
           </dl>
           {tournament.description ? (
-            <div className="border-t border-border px-5 py-5">
+            <div className="border-t border-border px-6 py-5">
               <p className="text-xs font-medium uppercase tracking-[0.14em] text-slate-500">
                 Description
               </p>
@@ -254,7 +254,7 @@ export default async function TournamentOverviewPage({
           ) : null}
         </section>
 
-        <section className="rounded-2xl border border-border bg-card p-5">
+        <section className="rounded-[2rem] border border-border bg-card p-6 shadow-sm">
           <p className="text-xs font-medium uppercase tracking-[0.14em] text-slate-500">
             Public ticket link
           </p>
@@ -282,10 +282,10 @@ export default async function TournamentOverviewPage({
 
       <section className="mt-8">
         <div>
-          <p className="text-xs font-medium uppercase tracking-[0.14em] text-blue-300">
+          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-blue-700">
             Live event snapshot
           </p>
-          <h2 className="mt-2 text-xl font-semibold text-white">
+          <h2 className="mt-2 text-xl font-semibold text-slate-950">
             Sales and admissions now
           </h2>
           <p className="mt-2 text-sm text-slate-500">
@@ -329,7 +329,7 @@ export default async function TournamentOverviewPage({
 
       <section className="mt-8">
         <div>
-          <h2 className="font-semibold text-white">Event tools</h2>
+          <h2 className="font-semibold text-slate-950">Event tools</h2>
           <p className="mt-1 text-sm text-slate-500">
             Sell passes, share the ticket link, and run the gate from here.
           </p>
@@ -362,6 +362,7 @@ export default async function TournamentOverviewPage({
             href={`/dashboard/tournaments/${tournamentId}/gate`}
             title="Create scanner link"
             description="Authorize gate staff and specific entrances."
+            highlight
           />
           <ActiveTool
             href={`/dashboard/tournaments/${tournamentId}/share`}
@@ -394,9 +395,9 @@ function StatusCard({
   value: string;
 }) {
   return (
-    <div className="rounded-2xl border border-border bg-card p-5">
-      <p className="text-sm text-slate-500">{label}</p>
-      <p className="mt-2 text-xl font-semibold text-white">{value}</p>
+    <div className="rounded-[1.75rem] border border-border bg-card p-5 shadow-sm">
+      <p className="text-sm font-medium text-slate-500">{label}</p>
+      <p className="mt-2 text-xl font-semibold text-slate-950">{value}</p>
       <p className="mt-2 text-xs leading-5 text-slate-500">{detail}</p>
     </div>
   );
@@ -404,36 +405,62 @@ function StatusCard({
 
 function DetailItem({ label, value }: { label: string; value: string }) {
   return (
-    <div className="bg-card px-5 py-4">
+    <div className="bg-card px-6 py-4">
       <dt className="text-xs font-medium uppercase tracking-[0.14em] text-slate-500">
         {label}
       </dt>
-      <dd className="mt-2 text-sm leading-6 text-slate-200">{value}</dd>
+      <dd className="mt-2 text-sm font-medium leading-6 text-slate-800">
+        {value}
+      </dd>
     </div>
   );
 }
 
 function ActiveTool({
   description,
+  highlight = false,
   href,
   title,
 }: {
   description: string;
+  highlight?: boolean;
   href: string;
   title: string;
 }) {
   return (
     <Link
       href={href}
-      className="rounded-2xl border border-brand/25 bg-brand-soft p-5 transition hover:border-brand/45 hover:bg-blue-500/20"
+      className={`group rounded-[1.75rem] border p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md ${
+        highlight
+          ? "border-blue-200 bg-blue-600 text-white hover:bg-blue-500"
+          : "border-border bg-card hover:border-blue-200 hover:bg-blue-50"
+      }`}
     >
       <div className="flex items-start justify-between gap-3">
-        <p className="font-medium text-blue-100">{title}</p>
-        <span className="shrink-0 rounded-full bg-blue-400/10 px-2 py-1 text-[10px] font-medium uppercase tracking-wider text-blue-300">
-          Ready
+        <p
+          className={`font-semibold ${
+            highlight ? "text-blue-50" : "text-slate-950"
+          }`}
+        >
+          {title}
+        </p>
+        <span
+          className={`shrink-0 rounded-full px-2 py-1 text-[10px] font-semibold uppercase tracking-wider ${
+            highlight
+              ? "bg-white/20 text-blue-50"
+              : "bg-brand-soft text-blue-700"
+          }`}
+        >
+          Open
         </span>
       </div>
-      <p className="mt-2 text-sm leading-6 text-blue-200/70">{description}</p>
+      <p
+        className={`mt-2 text-sm leading-6 ${
+          highlight ? "text-blue-50" : "text-slate-500"
+        }`}
+      >
+        {description}
+      </p>
     </Link>
   );
 }
@@ -448,9 +475,9 @@ function FutureTool({
   title: string;
 }) {
   return (
-    <div className="rounded-2xl border border-border bg-card p-5">
+    <div className="rounded-[1.75rem] border border-border bg-card-strong p-5">
       <div className="flex items-start justify-between gap-3">
-        <p className="font-medium text-slate-200">{title}</p>
+        <p className="font-semibold text-slate-500">{title}</p>
         <span className="shrink-0 rounded-full bg-white/5 px-2 py-1 text-[10px] font-medium uppercase tracking-wider text-slate-500">
           {phase}
         </span>

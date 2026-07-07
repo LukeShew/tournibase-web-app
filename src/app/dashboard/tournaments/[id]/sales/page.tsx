@@ -38,7 +38,7 @@ export default async function TournamentSalesPage({
     <div className="pb-12">
       <Link
         href={`/dashboard/tournaments/${tournamentId}`}
-        className="inline-flex items-center gap-2 text-sm font-medium text-slate-400 transition hover:text-white"
+        className="inline-flex items-center gap-2 text-sm font-semibold text-slate-500 transition hover:text-slate-900"
       >
         <span aria-hidden="true">←</span>
         Back to event
@@ -46,10 +46,10 @@ export default async function TournamentSalesPage({
 
       <div className="mt-6 flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
         <div>
-          <p className="text-sm font-medium text-blue-300">
+          <p className="text-sm font-semibold text-blue-700">
             {metrics.tournament.name}
           </p>
-          <h1 className="mt-2 text-3xl font-semibold tracking-[-0.035em] text-white sm:text-4xl">
+          <h1 className="mt-2 text-4xl font-semibold tracking-[-0.04em] text-slate-950">
             Sales dashboard
           </h1>
           <p className="mt-3 font-mono text-sm text-slate-400">
@@ -61,7 +61,7 @@ export default async function TournamentSalesPage({
         </div>
         <Link
           href={`/dashboard/tournaments/${tournamentId}/gate`}
-          className="inline-flex h-11 items-center justify-center rounded-xl border border-border bg-white/5 px-4 text-sm font-semibold text-slate-200 transition hover:bg-white/10 hover:text-white"
+          className="inline-flex h-11 items-center justify-center rounded-2xl border border-border bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-blue-50 hover:text-blue-700"
         >
           Gate tools
         </Link>
@@ -71,10 +71,10 @@ export default async function TournamentSalesPage({
 
       <section className="mt-8">
         <div>
-          <p className="text-xs font-medium uppercase tracking-[0.14em] text-blue-300">
+          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-blue-700">
             Sales breakdown
           </p>
-          <h2 className="mt-2 text-xl font-semibold text-white">
+          <h2 className="mt-2 text-xl font-semibold text-slate-950">
             Revenue and admissions
           </h2>
         </div>
@@ -102,9 +102,14 @@ export default async function TournamentSalesPage({
         </div>
       </section>
 
-      <section className="mt-8 rounded-2xl border border-border bg-card">
-        <div className="border-b border-border px-5 py-4">
-          <h2 className="font-semibold text-white">Manual gate sales</h2>
+      <SalesByDayChart
+        days={metrics.salesByDay}
+        totalRevenue={metrics.sales.totalEstimatedRevenue}
+      />
+
+      <section className="mt-8 overflow-hidden rounded-[2rem] border border-border bg-card shadow-sm">
+        <div className="border-b border-border bg-card-strong px-6 py-5">
+          <h2 className="font-semibold text-slate-950">Manual gate sales</h2>
           <p className="mt-1 text-sm text-slate-500">
             Payments recorded by full-access gate staff outside TourniBase
             checkout.
@@ -126,16 +131,16 @@ export default async function TournamentSalesPage({
         </dl>
       </section>
 
-      <section className="mt-8 overflow-hidden rounded-2xl border border-border bg-card">
-        <div className="border-b border-border px-5 py-4">
-          <h2 className="font-semibold text-white">Sales by ticket type</h2>
+      <section className="mt-8 overflow-hidden rounded-[2rem] border border-border bg-card shadow-sm">
+        <div className="border-b border-border bg-card-strong px-6 py-5">
+          <h2 className="font-semibold text-slate-950">Sales by ticket type</h2>
           <p className="mt-1 text-sm text-slate-500">
             Online checkout and recorded gate sales shown together.
           </p>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[760px] text-left text-sm">
-            <thead className="border-b border-border bg-white/[0.02] text-xs uppercase tracking-[0.12em] text-slate-500">
+            <thead className="border-b border-border bg-card-strong text-xs uppercase tracking-[0.12em] text-slate-500">
               <tr>
                 <th className="px-5 py-3 font-medium">Ticket</th>
                 <th className="px-5 py-3 text-right font-medium">Online</th>
@@ -159,7 +164,7 @@ export default async function TournamentSalesPage({
               ) : (
                 metrics.salesByTicketType.map((ticket) => (
                   <tr key={ticket.ticketTypeId}>
-                    <td className="px-5 py-4 font-medium text-slate-100">
+                    <td className="px-5 py-4 font-medium text-slate-950">
                       {ticket.ticketName}
                     </td>
                     <td className="px-5 py-4 text-right font-mono text-slate-300">
@@ -168,10 +173,10 @@ export default async function TournamentSalesPage({
                     <td className="px-5 py-4 text-right font-mono text-slate-300">
                       {ticket.manualAdmissions}
                     </td>
-                    <td className="px-5 py-4 text-right font-mono text-white">
+                    <td className="px-5 py-4 text-right font-mono text-slate-950">
                       {ticket.totalAdmissions}
                     </td>
-                    <td className="px-5 py-4 text-right font-mono text-white">
+                    <td className="px-5 py-4 text-right font-mono text-slate-950">
                       {formatCurrency(ticket.totalRevenue)}
                     </td>
                   </tr>
@@ -182,9 +187,9 @@ export default async function TournamentSalesPage({
         </div>
       </section>
 
-      <section className="mt-8 overflow-hidden rounded-2xl border border-border bg-card">
-        <div className="border-b border-border px-5 py-4">
-          <h2 className="font-semibold text-white">Sales by day</h2>
+      <section className="mt-8 overflow-hidden rounded-[2rem] border border-border bg-card shadow-sm">
+        <div className="border-b border-border bg-card-strong px-6 py-5">
+          <h2 className="font-semibold text-slate-950">Sales by day</h2>
           <p className="mt-1 text-sm text-slate-500">
             Sale dates use the tournament time zone.
           </p>
@@ -196,7 +201,7 @@ export default async function TournamentSalesPage({
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[700px] text-left text-sm">
-              <thead className="border-b border-border bg-white/[0.02] text-xs uppercase tracking-[0.12em] text-slate-500">
+              <thead className="border-b border-border bg-card-strong text-xs uppercase tracking-[0.12em] text-slate-500">
                 <tr>
                   <th className="px-5 py-3 font-medium">Date</th>
                   <th className="px-5 py-3 text-right font-medium">
@@ -251,9 +256,88 @@ function SummaryItem({
       <dt className="text-xs font-medium uppercase tracking-[0.14em] text-slate-500">
         {label}
       </dt>
-      <dd className="mt-2 font-mono text-2xl font-semibold text-white">
+      <dd className="mt-2 font-mono text-2xl font-semibold text-blue-700">
         {value}
       </dd>
     </div>
+  );
+}
+
+function SalesByDayChart({
+  days,
+  totalRevenue,
+}: {
+  days: Array<{
+    date: string;
+    onlineTickets: number;
+    manualAdmissions: number;
+    totalRevenue: number;
+  }>;
+  totalRevenue: number;
+}) {
+  const maxRevenue = Math.max(
+    1,
+    ...days.map((day) => Number(day.totalRevenue)),
+  );
+
+  return (
+    <section className="mt-8 rounded-[2rem] border border-border bg-card p-6 shadow-sm">
+      <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
+        <div>
+          <h2 className="font-semibold text-slate-950">Revenue trend</h2>
+          <p className="mt-1 text-sm text-slate-500">
+            Real ticket sales grouped by tournament time zone.
+          </p>
+        </div>
+        <div className="rounded-2xl bg-brand-soft px-4 py-3 text-right">
+          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-blue-700">
+            Total
+          </p>
+          <p className="mt-1 font-mono text-xl font-semibold text-blue-700">
+            {formatCurrency(totalRevenue)}
+          </p>
+        </div>
+      </div>
+
+      {days.length === 0 ? (
+        <div className="mt-6 grid h-64 place-items-center rounded-3xl bg-card-strong text-sm font-medium text-slate-500">
+          No sales data yet
+        </div>
+      ) : (
+        <div className="mt-6 flex h-72 items-end gap-3 overflow-x-auto rounded-3xl bg-card-strong px-5 py-6">
+          {days.map((day) => {
+            const height = Math.max(
+              8,
+              Math.round((Number(day.totalRevenue) / maxRevenue) * 190),
+            );
+
+            return (
+              <div
+                key={day.date}
+                className="flex min-w-20 flex-1 flex-col items-center justify-end gap-3"
+              >
+                <div className="flex h-48 items-end">
+                  <div
+                    className="w-8 rounded-full bg-blue-600 shadow-sm"
+                    style={{ height }}
+                    title={`${formatSalesDate(day.date)} · ${formatCurrency(
+                      day.totalRevenue,
+                    )}`}
+                  />
+                </div>
+                <div className="text-center">
+                  <p className="font-mono text-xs font-semibold text-slate-700">
+                    {formatCurrency(day.totalRevenue)}
+                  </p>
+                  <p className="mt-1 whitespace-nowrap text-xs text-slate-500">
+                    {formatSalesDate(day.date)}
+                  </p>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </section>
   );
 }
