@@ -339,8 +339,8 @@ number.
 
 1. Open a pass link from the success page.
 2. Confirm the event, ticket, buyer, valid date, and QR code appear.
-3. Choose **Save pass to phone**.
-4. Confirm a PNG is saved and can be opened from Photos or Files.
+3. Choose **Save for weak service**.
+4. Confirm the save page opens with a pass image plus Photos and Files options.
 5. Turn off that phone’s internet connection and confirm the saved QR remains
    visible.
 6. Keep the saved image open on one device for the scanner test.
@@ -348,7 +348,7 @@ number.
 When `EMAIL_PROVIDER=disabled`, the pass-email foundation records the order as
 pending without sending. With the verified Resend production configuration,
 the buyer receives one email containing every issued pass and a separate
-offline-download link for each pass. The success page remains the backup
+offline-save link for each pass. The success page remains the backup
 pass-delivery screen.
 
 ### 6. Create and use a scanner

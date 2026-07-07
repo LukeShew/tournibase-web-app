@@ -3,6 +3,8 @@ import {
   formatPassValidity,
   getOfflinePassFilename,
   getOfflinePassPath,
+  getOfflinePassSavePath,
+  getOfflinePassSaveUrl,
   getOfflinePassUrl,
 } from "./pass-display";
 
@@ -15,6 +17,10 @@ describe("offline pass display helpers", () => {
     );
     expect(getOfflinePassUrl("https://tournibase.com/", token)).toBe(
       `https://tournibase.com/p/${token}/offline-pass.png`,
+    );
+    expect(getOfflinePassSavePath(token)).toBe(`/p/${token}/save`);
+    expect(getOfflinePassSaveUrl("https://tournibase.com/", token)).toBe(
+      `https://tournibase.com/p/${token}/save`,
     );
   });
 

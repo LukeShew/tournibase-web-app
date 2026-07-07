@@ -103,15 +103,17 @@ export function OrderConfirmationEmail({
                 <Text style={passLabel}>
                   {pass.label} · Pass {index + 1}
                 </Text>
-                <Button href={pass.url} style={button}>
-                  Open mobile pass
-                </Button>
-                <Button href={pass.offlineUrl} style={secondaryButton}>
-                  Save pass offline
-                </Button>
+                <Section style={buttonGroup}>
+                  <Button href={pass.url} style={button}>
+                    Open mobile pass
+                  </Button>
+                  <Button href={pass.offlineUrl} style={secondaryButton}>
+                    Save for weak service
+                  </Button>
+                </Section>
                 <Text style={offlineHelp}>
-                  Save the image to Photos or Files before arriving if service
-                  at the venue may be weak.
+                  Opens a save page with a backup QR image and Photos or Files
+                  instructions.
                 </Text>
                 <Text style={fallbackText}>
                   If the button does not work, copy this link:
@@ -180,7 +182,7 @@ export function createOrderConfirmationText({
   const passLines = passes
     .map(
       (pass, index) =>
-        `${pass.label} · Pass ${index + 1}\nOpen pass: ${pass.url}\nSave offline: ${pass.offlineUrl}`,
+        `${pass.label} · Pass ${index + 1}\nOpen pass: ${pass.url}\nSave for weak service: ${pass.offlineUrl}`,
     )
     .join("\n\n");
   const itemLines = items
@@ -328,28 +330,41 @@ const passLabel: CSSProperties = {
   margin: "0 0 14px",
 };
 
+const buttonGroup: CSSProperties = {
+  margin: "0 auto",
+  textAlign: "center",
+  width: "100%",
+};
+
 const button: CSSProperties = {
   backgroundColor: "#2563eb",
   borderRadius: "9px",
+  boxSizing: "border-box",
   color: "#ffffff",
-  display: "inline-block",
+  display: "block",
   fontSize: "14px",
   fontWeight: 700,
+  margin: "0 auto",
   padding: "12px 18px",
+  textAlign: "center",
   textDecoration: "none",
+  width: "260px",
 };
 
 const secondaryButton: CSSProperties = {
   backgroundColor: "#e8f0ff",
   border: "1px solid #bfd1f5",
   borderRadius: "9px",
+  boxSizing: "border-box",
   color: "#1d4ed8",
-  display: "inline-block",
+  display: "block",
   fontSize: "14px",
   fontWeight: 700,
-  marginLeft: "8px",
+  margin: "8px auto 0",
   padding: "11px 16px",
+  textAlign: "center",
   textDecoration: "none",
+  width: "260px",
 };
 
 const offlineHelp: CSSProperties = {

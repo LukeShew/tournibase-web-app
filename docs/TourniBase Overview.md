@@ -107,7 +107,7 @@ tracker.
 3. A parent opens the public event page and pays through Stripe Checkout.
 4. A verified Stripe success event marks the order paid and creates one pass per
    admission.
-5. TourniBase emails every mobile pass and offline-download link through Resend.
+5. TourniBase emails every mobile pass and offline-save link through Resend.
 6. The buyer can open each mobile pass from the success page or save it to
    Photos or Files before arriving.
 7. Gate staff open a temporary scanner link and scan the QR.

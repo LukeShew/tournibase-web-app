@@ -124,7 +124,11 @@ export async function getPublicPass(
 
   const order = orderRow as OrderRecord;
 
-  if (order.payment_status !== "paid") {
+  if (
+    order.payment_status !== "paid" &&
+    order.payment_status !== "partial_refund" &&
+    order.payment_status !== "refunded"
+  ) {
     return null;
   }
 
@@ -140,7 +144,7 @@ export async function getPublicPass(
     orderNumber: `TB-${order.id.toString().padStart(6, "0")}`,
     organizerName: tournament.organizer_name,
     publicToken: pass.public_token,
-    status: pass.status,
+    status: order.payment_status === "refunded" ? "refunded" : pass.status,
     ticketName: ticketType.name,
     validFrom: pass.valid_from,
     validUntil: pass.valid_until,

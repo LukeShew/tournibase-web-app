@@ -2,8 +2,14 @@
 
 import { useEffect, useRef, useState } from "react";
 
-export function CopyLinkButton({ path }: { path: string }) {
-  const [label, setLabel] = useState("Copy ticket link");
+export function CopyLinkButton({
+  label = "Copy ticket link",
+  path,
+}: {
+  label?: string;
+  path: string;
+}) {
+  const [buttonLabel, setButtonLabel] = useState(label);
   const resetTimer = useRef<number | null>(null);
 
   useEffect(() => {
@@ -19,9 +25,9 @@ export function CopyLinkButton({ path }: { path: string }) {
       window.clearTimeout(resetTimer.current);
     }
 
-    setLabel(nextLabel);
+    setButtonLabel(nextLabel);
     resetTimer.current = window.setTimeout(
-      () => setLabel("Copy ticket link"),
+      () => setButtonLabel(label),
       1800,
     );
   }
@@ -41,7 +47,7 @@ export function CopyLinkButton({ path }: { path: string }) {
       onClick={copyLink}
       className="inline-flex h-11 items-center justify-center rounded-xl bg-brand-strong px-4 text-sm font-semibold text-white transition hover:bg-blue-500"
     >
-      {label}
+      {buttonLabel}
     </button>
   );
 }

@@ -31,13 +31,13 @@ const sample: OrderConfirmationEmailData = {
     {
       label: "Weekend Pass",
       offlineUrl:
-        "http://localhost:3000/p/11111111-1111-4111-8111-111111111111/offline-pass.png",
+        "http://localhost:3000/p/11111111-1111-4111-8111-111111111111/save",
       url: "http://localhost:3000/p/11111111-1111-4111-8111-111111111111",
     },
     {
       label: "One Day Pass (Saturday)",
       offlineUrl:
-        "http://localhost:3000/p/22222222-2222-4222-8222-222222222222/offline-pass.png",
+        "http://localhost:3000/p/22222222-2222-4222-8222-222222222222/save",
       url: "http://localhost:3000/p/22222222-2222-4222-8222-222222222222",
     },
   ],

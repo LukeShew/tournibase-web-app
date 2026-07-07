@@ -136,11 +136,11 @@ export default async function GateAccessPage({
         <div>
           <p className="text-sm font-medium text-blue-300">Gate access</p>
           <h1 className="mt-2 text-3xl font-semibold tracking-[-0.035em] text-white sm:text-4xl">
-            Scanner links
+            Gate setup
           </h1>
           <p className="mt-3 max-w-2xl leading-7 text-slate-400">
-            Create secure, expiring links for gate staff without giving them
-            access to the director dashboard.
+            Set up the public checkout QR for spectators and secure scanner
+            links for gate staff.
           </p>
         </div>
         <div className="rounded-xl border border-border bg-card px-4 py-3 text-right">
@@ -170,14 +170,15 @@ export default async function GateAccessPage({
         <div className="grid items-center gap-6 p-5 sm:p-6 lg:grid-cols-[1fr_auto]">
           <div>
             <p className="text-xs font-medium uppercase tracking-[0.16em] text-blue-300">
-              Parent self-checkout
+              Spectator checkout
             </p>
             <h2 className="mt-2 text-xl font-semibold text-white">
-              Public ticket QR poster
+              Public admission QR poster
             </h2>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400">
-              Put this QR code near the entrance so parents can buy admission
-              on their phones before reaching the scanner.
+              This is not a scanner link. Put this QR code near the entrance so
+              spectators can buy admission on their phones before reaching gate
+              staff.
             </p>
             <p className="mt-3 break-all font-mono text-xs text-blue-300">
               {publicUrl}
@@ -188,7 +189,7 @@ export default async function GateAccessPage({
               </p>
             ) : null}
             <div className="mt-5 flex flex-wrap gap-2">
-              <CopyLinkButton path={publicPath} />
+              <CopyLinkButton label="Copy checkout link" path={publicPath} />
               <Link
                 href={`/print/tournaments/${tournamentId}/gate-poster`}
                 className="inline-flex h-11 items-center justify-center rounded-xl border border-border bg-white/[0.04] px-4 text-sm font-semibold text-slate-200 transition hover:border-white/20 hover:text-white"

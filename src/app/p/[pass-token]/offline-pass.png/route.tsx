@@ -37,6 +37,10 @@ export async function GET(
       return unavailableResponse(404);
     }
 
+    if (pass.status === "refunded" || pass.status === "voided") {
+      return unavailableResponse(409);
+    }
+
     const qrCodeDataUrl = await QRCode.toDataURL(pass.publicToken, {
       color: {
         dark: "#07101D",
@@ -51,6 +55,10 @@ export async function GET(
       orderNumber: pass.orderNumber,
       passId: pass.id,
     });
+    const disposition =
+      new URL(request.url).searchParams.get("view") === "1"
+        ? "inline"
+        : "attachment";
 
     return new ImageResponse(
       (
@@ -266,7 +274,7 @@ export async function GET(
         height: 1200,
         headers: {
           "Cache-Control": "private, no-store, max-age=0",
-          "Content-Disposition": `attachment; filename="${filename}"`,
+          "Content-Disposition": `${disposition}; filename="${filename}"`,
           "X-Robots-Tag": "noindex, nofollow, noarchive",
         },
         width: 900,

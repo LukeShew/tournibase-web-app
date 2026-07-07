@@ -12,7 +12,7 @@ import {
   normalizeEmailSendError,
   type EmailProvider,
 } from "@/lib/email/provider";
-import { getOfflinePassUrl } from "@/lib/pass-display";
+import { getOfflinePassSaveUrl } from "@/lib/pass-display";
 import { getSiteUrl } from "@/lib/site-url";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
@@ -343,7 +343,7 @@ async function loadOrderEmail(
 
         return {
           label: itemNames.get(pass.order_item_id) ?? "Admission pass",
-          offlineUrl: getOfflinePassUrl(siteUrl, pass.public_token),
+          offlineUrl: getOfflinePassSaveUrl(siteUrl, pass.public_token),
           url: `${siteUrl}/p/${pass.public_token}`,
         };
       }),

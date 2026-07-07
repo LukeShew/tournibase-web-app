@@ -82,6 +82,7 @@ form. The browser never receives the Supabase secret key or Stripe secret keys.
 | `/share/[event-slug]` | Coach and parent sharing page |
 | `/order/success` | Payment confirmation and pass links |
 | `/p/[pass-token]` | Individual mobile pass |
+| `/p/[pass-token]/save` | Buyer-friendly offline save page |
 | `/p/[pass-token]/offline-pass.png` | Downloadable offline QR pass image |
 
 ### Director routes
@@ -179,11 +180,13 @@ The success page displays every pass link. The branded email template, delivery
 tracking, duplicate protection, and retry states are live through Resend.
 
 The success page, mobile pass page, and order email each link to
-`/p/[pass-token]/offline-pass.png`. The server verifies the paid order and
-generates a private, no-store PNG containing the same pass token as the mobile
-QR. The saved image remains available when the buyer’s phone has no internet.
-The scanner still requires internet because current pass status, validity, and
-prior use must be checked against the database.
+`/p/[pass-token]/save`. That page explains how to save the backup QR image to
+Photos or Files and keeps a direct PNG download as a fallback. The PNG endpoint
+is private, no-store, and generated only after the server verifies the order and
+confirms the pass has not been refunded or voided. The saved image remains
+available when the buyer’s phone has no internet. The scanner still requires
+internet because current pass status, validity, and prior use must be checked
+against the database.
 
 ## Scanner authorization
 

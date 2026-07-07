@@ -9,6 +9,14 @@ export function getOfflinePassUrl(siteUrl: string, token: string) {
   return `${siteUrl.replace(/\/+$/, "")}${getOfflinePassPath(token)}`;
 }
 
+export function getOfflinePassSavePath(token: string) {
+  return `/p/${encodeURIComponent(token)}/save`;
+}
+
+export function getOfflinePassSaveUrl(siteUrl: string, token: string) {
+  return `${siteUrl.replace(/\/+$/, "")}${getOfflinePassSavePath(token)}`;
+}
+
 export function getOfflinePassFilename({
   orderNumber,
   passId,

@@ -2,10 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Brand } from "@/components/brand";
 import { getOrderConfirmation } from "@/lib/orders";
-import {
-  getOfflinePassFilename,
-  getOfflinePassPath,
-} from "@/lib/pass-display";
+import { getOfflinePassSavePath } from "@/lib/pass-display";
 import { getStripeConfigurationIssues } from "@/lib/stripe";
 import { getSupabaseAdminConfigurationIssues } from "@/lib/supabase/admin";
 
@@ -155,16 +152,12 @@ export default async function OrderSuccessPage({
                   >
                     Open mobile pass
                   </Link>
-                  <a
-                    href={getOfflinePassPath(pass.publicToken)}
-                    download={getOfflinePassFilename({
-                      orderNumber: confirmation.orderNumber,
-                      passId: pass.id,
-                    })}
+                  <Link
+                    href={getOfflinePassSavePath(pass.publicToken)}
                     className="inline-flex min-h-11 items-center justify-center rounded-xl border border-blue-400/30 bg-blue-400/10 px-4 text-sm font-semibold text-blue-200 transition hover:bg-blue-400/15"
                   >
-                    Save offline
-                  </a>
+                    Save for weak service
+                  </Link>
                 </div>
               </div>
             </article>

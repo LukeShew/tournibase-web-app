@@ -61,6 +61,7 @@ Vercel environment variables for hosted deployments.
 | `/share/[event-slug]` | Parent and coach sharing page |
 | `/order/success` | Paid-order confirmation and pass links |
 | `/p/[pass-token]` | Individual mobile QR pass |
+| `/p/[pass-token]/save` | Buyer-friendly offline save page |
 | `/p/[pass-token]/offline-pass.png` | Private downloadable offline pass PNG |
 
 ### Director routes

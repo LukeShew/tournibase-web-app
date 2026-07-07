@@ -5,8 +5,7 @@ import QRCode from "qrcode";
 import { Brand } from "@/components/brand";
 import {
   formatPassValidity,
-  getOfflinePassFilename,
-  getOfflinePassPath,
+  getOfflinePassSavePath,
 } from "@/lib/pass-display";
 import { isValidPassToken } from "@/lib/pass-tokens";
 import { getPublicPass, type PublicPass } from "@/lib/public-passes";
@@ -78,6 +77,10 @@ export default async function PassPage({
     width: 320,
   });
   const passState = getPassState(pass);
+  const canSaveOffline =
+    pass.status !== "refunded" &&
+    pass.status !== "voided" &&
+    pass.status !== "expired";
 
   return (
     <main className="app-grid min-h-screen bg-background pb-10">
@@ -138,20 +141,19 @@ export default async function PassPage({
               </p>
             </div>
 
-            <a
-              href={getOfflinePassPath(pass.publicToken)}
-              download={getOfflinePassFilename({
-                orderNumber: pass.orderNumber,
-                passId: pass.id,
-              })}
-              className="mt-5 inline-flex min-h-12 w-full items-center justify-center rounded-xl bg-brand px-5 text-sm font-semibold text-white transition hover:bg-brand-strong"
-            >
-              Save pass to phone
-            </a>
-            <p className="mt-2 text-center text-xs leading-5 text-slate-500">
-              Save the image to Photos or Files before arriving. The saved QR
-              works without internet on this phone.
-            </p>
+            {canSaveOffline ? (
+              <>
+                <a
+                  href={getOfflinePassSavePath(pass.publicToken)}
+                  className="mt-5 inline-flex min-h-12 w-full items-center justify-center rounded-xl bg-brand px-5 text-sm font-semibold text-white transition hover:bg-brand-strong"
+                >
+                  Save for weak service
+                </a>
+                <p className="mt-2 text-center text-xs leading-5 text-slate-500">
+                  Opens a simple save page with Photos and Files options.
+                </p>
+              </>
+            ) : null}
 
             <div
               className={`mt-6 rounded-2xl border p-4 ${statusStyles[passState.tone]}`}
