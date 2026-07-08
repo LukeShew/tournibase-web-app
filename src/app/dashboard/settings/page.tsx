@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { ProfileAvatarPicker } from "@/components/profile-avatar-picker";
 import { requireDirector } from "@/lib/auth";
 
 export const metadata: Metadata = {
@@ -31,6 +32,8 @@ export default async function SettingsPage() {
           <SettingsItem label="Email" value={director.email} />
         </dl>
       </section>
+
+      <ProfileAvatarPicker />
 
       <section className="mt-6 rounded-[2rem] border border-border bg-card p-6 shadow-sm">
         <h2 className="font-semibold text-slate-950">Support</h2>

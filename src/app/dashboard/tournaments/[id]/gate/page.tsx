@@ -2,13 +2,17 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CreateScannerSessionForm } from "@/components/create-scanner-session-form";
+import {
+  LiveCheckInFeed,
+  type LiveCheckIn,
+} from "@/components/live-check-in-feed";
 import { RevokeScannerSessionButton } from "@/components/revoke-scanner-session-button";
 import { requireDirector } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { formatEventDateRange } from "@/lib/tournaments";
 
 export const metadata: Metadata = {
-  title: "Gate access",
+  title: "Gate tools",
 };
 
 type Tournament = {
@@ -18,6 +22,7 @@ type Tournament = {
   public_slug: string;
   start_date: string;
   status: "draft" | "published" | "closed" | "archived";
+  time_zone: string;
   venue_name: string;
 };
 
@@ -30,6 +35,23 @@ type ScannerSession = {
   permissions: string[];
   revoked_at: string | null;
   staff_label: string;
+};
+
+type CheckInFeedRow = {
+  created_at: string;
+  gate_name: string;
+  id: number;
+  passes: {
+    orders: {
+      buyer_email: string | null;
+      buyer_name: string | null;
+    } | null;
+    ticket_types: {
+      name: string;
+    } | null;
+  } | null;
+  result: "manual_check_in" | "override" | "valid";
+  source: "camera" | "manual";
 };
 
 type SessionStatus = "active" | "expired" | "revoked";
@@ -68,7 +90,7 @@ export default async function GateAccessPage({
   const { data: tournamentRow, error: tournamentError } = await supabase
     .from("tournaments")
     .select(
-      "id, name, start_date, end_date, venue_name, status, public_slug",
+      "id, name, start_date, end_date, venue_name, status, public_slug, time_zone",
     )
     .eq("id", tournamentId)
     .in("organization_id", organizationIds)
@@ -96,6 +118,24 @@ export default async function GateAccessPage({
   }
 
   const scannerSessions = (scannerRows ?? []) as ScannerSession[];
+  const { data: checkInRows, error: checkInError } = await supabase
+    .from("check_ins")
+    .select(
+      "id, created_at, result, gate_name, source, passes(ticket_types(name), orders(buyer_name, buyer_email))",
+    )
+    .eq("tournament_id", tournamentId)
+    .is("undone_at", null)
+    .in("result", ["valid", "manual_check_in", "override"])
+    .order("created_at", { ascending: false })
+    .limit(50);
+
+  if (checkInError) {
+    throw checkInError;
+  }
+
+  const liveCheckIns = mapLiveCheckIns(
+    (checkInRows ?? []) as unknown as CheckInFeedRow[],
+  );
   const activeCount = scannerSessions.filter(
     (session) => getSessionStatus(session) === "active",
   ).length;
@@ -121,7 +161,7 @@ export default async function GateAccessPage({
         <div>
           <p className="text-sm font-semibold text-blue-700">Gate access</p>
           <h1 className="mt-2 text-4xl font-semibold tracking-[-0.04em] text-slate-950">
-            Gate setup
+            Gate tools
           </h1>
           <p className="mt-3 max-w-2xl leading-7 text-slate-400">
             Review scanner access and create secure gate links when needed.
@@ -152,102 +192,128 @@ export default async function GateAccessPage({
         />
       </section>
 
-      <details className="mt-8 overflow-hidden rounded-[2rem] border border-blue-200 bg-card shadow-sm">
-        <summary className="cursor-pointer list-none bg-brand-strong px-5 py-4 text-sm font-semibold text-white transition hover:bg-blue-500">
-          <span className="flex items-center justify-center gap-2">
-            <span aria-hidden="true">+</span>
-            Create scanner link
-          </span>
-        </summary>
-        <div className="border-t border-border p-4 sm:p-5">
-          {canCreate ? (
-            <CreateScannerSessionForm
-              tournamentId={tournamentId}
-              tournamentName={tournament.name}
-            />
-          ) : (
-            <section className="rounded-2xl border border-amber-300/20 bg-card p-6">
-              <p className="text-sm font-medium text-amber-200">
-                Event {tournament.status}
-              </p>
-              <h2 className="mt-2 text-xl font-semibold text-slate-950">
-                New scanner links are disabled
-              </h2>
-              <p className="mt-2 text-sm leading-6 text-slate-400">
-                Scanner access cannot be created for a closed or archived
-                event.
-              </p>
-            </section>
-          )}
-        </div>
-      </details>
-
-      <section className="mt-8 overflow-hidden rounded-[2rem] border border-border bg-card shadow-sm">
-        <div className="border-b border-border bg-card-strong px-6 py-5">
-          <h2 className="font-semibold text-slate-950">Scanner access history</h2>
-          <p className="mt-1 text-sm text-slate-500">
-            Raw scanner links are hidden after creation and cannot be
-            recovered.
-          </p>
-        </div>
-
-        {scannerSessions.length === 0 ? (
-          <div className="px-6 py-14 text-center">
-            <div className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-brand-soft text-lg text-blue-300">
-              ↗
+      <div className="mt-8 grid gap-6 xl:grid-cols-2 xl:items-start">
+        <div className="space-y-6">
+          <details className="overflow-hidden rounded-[2rem] border border-blue-200 bg-card shadow-sm">
+            <summary className="cursor-pointer list-none bg-brand-strong px-5 py-4 text-sm font-semibold text-white transition hover:bg-blue-500">
+              <span className="flex items-center justify-center gap-2">
+                <span aria-hidden="true">+</span>
+                Create scanner link
+              </span>
+            </summary>
+            <div className="border-t border-border p-4 sm:p-5">
+              {canCreate ? (
+                <CreateScannerSessionForm
+                  tournamentId={tournamentId}
+                  tournamentName={tournament.name}
+                />
+              ) : (
+                <section className="rounded-2xl border border-amber-300/20 bg-card p-6">
+                  <p className="text-sm font-medium text-amber-200">
+                    Event {tournament.status}
+                  </p>
+                  <h2 className="mt-2 text-xl font-semibold text-slate-950">
+                    New scanner links are disabled
+                  </h2>
+                  <p className="mt-2 text-sm leading-6 text-slate-400">
+                    Scanner access cannot be created for a closed or archived
+                    event.
+                  </p>
+                </section>
+              )}
             </div>
-            <h3 className="mt-4 font-semibold text-slate-950">
-              No scanner links yet
-            </h3>
-            <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-500">
-              Create a secure link for each entrance, gate team, or shared
-              scanning device.
-            </p>
-          </div>
-        ) : (
-          <div className="divide-y divide-border">
-            {scannerSessions.map((session) => {
-              const status = getSessionStatus(session);
+          </details>
 
-              return (
-                <article
-                  key={session.id}
-                  className="flex flex-col justify-between gap-4 px-5 py-5 lg:flex-row lg:items-center"
-                >
-                  <div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h3 className="font-semibold text-slate-950">
-                        {session.gate_name}
-                      </h3>
-                      <StatusBadge status={status} />
-                    </div>
-                    <p className="mt-1 text-sm text-slate-400">
-                      {session.staff_label}
-                    </p>
-                    <p className="mt-2 text-xs leading-5 text-slate-500">
-                      {formatPermissions(session.permissions)} · Expires{" "}
-                      {formatDateTime(session.expires_at)}
-                    </p>
-                  </div>
-                  <div className="flex flex-col items-start gap-2 lg:items-end">
-                    <p className="text-xs text-slate-600">
-                      Created {formatDateTime(session.created_at)}
-                    </p>
-                    {status === "active" ? (
-                      <RevokeScannerSessionButton
-                        scannerSessionId={session.id}
-                        tournamentId={tournamentId}
-                      />
-                    ) : null}
-                  </div>
-                </article>
-              );
-            })}
-          </div>
-        )}
-      </section>
+          <section className="overflow-hidden rounded-[2rem] border border-border bg-card shadow-sm">
+            <div className="border-b border-border bg-card-strong px-6 py-5">
+              <h2 className="font-semibold text-slate-950">
+                Scanner access history
+              </h2>
+              <p className="mt-1 text-sm text-slate-500">
+                Raw scanner links are hidden after creation and cannot be
+                recovered.
+              </p>
+            </div>
+
+            {scannerSessions.length === 0 ? (
+              <div className="px-6 py-14 text-center">
+                <div className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-brand-soft text-lg text-blue-300">
+                  ↗
+                </div>
+                <h3 className="mt-4 font-semibold text-slate-950">
+                  No scanner links yet
+                </h3>
+                <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-500">
+                  Create a secure link for each entrance, gate team, or shared
+                  scanning device.
+                </p>
+              </div>
+            ) : (
+              <div className="divide-y divide-border">
+                {scannerSessions.map((session) => {
+                  const status = getSessionStatus(session);
+
+                  return (
+                    <article
+                      key={session.id}
+                      className="flex flex-col justify-between gap-4 px-5 py-5 lg:flex-row lg:items-center"
+                    >
+                      <div>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <h3 className="font-semibold text-slate-950">
+                            {session.gate_name}
+                          </h3>
+                          <StatusBadge status={status} />
+                        </div>
+                        <p className="mt-1 text-sm text-slate-400">
+                          {session.staff_label}
+                        </p>
+                        <p className="mt-2 text-xs leading-5 text-slate-500">
+                          {formatPermissions(session.permissions)} · Expires{" "}
+                          {formatDateTime(session.expires_at)}
+                        </p>
+                      </div>
+                      <div className="flex flex-col items-start gap-2 lg:items-end">
+                        <p className="text-xs text-slate-600">
+                          Created {formatDateTime(session.created_at)}
+                        </p>
+                        {status === "active" ? (
+                          <RevokeScannerSessionButton
+                            scannerSessionId={session.id}
+                            tournamentId={tournamentId}
+                          />
+                        ) : null}
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+            )}
+          </section>
+        </div>
+
+        <LiveCheckInFeed
+          checkIns={liveCheckIns}
+          timeZone={tournament.time_zone}
+        />
+      </div>
     </div>
   );
+}
+
+function mapLiveCheckIns(rows: CheckInFeedRow[]): LiveCheckIn[] {
+  return rows.map((row) => ({
+    buyerName:
+      row.passes?.orders?.buyer_name ??
+      row.passes?.orders?.buyer_email ??
+      "Unknown guest",
+    gateName: row.gate_name,
+    id: row.id,
+    result: row.result,
+    scannedAt: row.created_at,
+    source: row.source,
+    ticketName: row.passes?.ticket_types?.name ?? "Admission pass",
+  }));
 }
 
 function StatusCard({ label, value }: { label: string; value: string }) {

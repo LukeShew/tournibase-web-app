@@ -43,7 +43,7 @@ export default async function TournamentSalesPage({
         Back to event
       </Link>
 
-      <div className="mt-6 flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
+      <div className="mt-6">
         <div>
           <p className="text-sm font-semibold text-blue-700">
             {metrics.tournament.name}
@@ -58,12 +58,6 @@ export default async function TournamentSalesPage({
             )}
           </p>
         </div>
-        <Link
-          href={`/dashboard/tournaments/${tournamentId}/gate`}
-          className="inline-flex h-11 items-center justify-center rounded-2xl border border-border bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-blue-50 hover:text-blue-700"
-        >
-          Gate tools
-        </Link>
       </div>
 
       <section className="mt-8">
@@ -222,7 +216,7 @@ export default async function TournamentSalesPage({
                     <td className="px-5 py-4 text-right font-mono text-slate-300">
                       {day.manualAdmissions}
                     </td>
-                    <td className="px-5 py-4 text-right font-mono text-white">
+                    <td className="px-5 py-4 text-right font-mono text-slate-950">
                       {formatCurrency(day.totalRevenue)}
                     </td>
                   </tr>
