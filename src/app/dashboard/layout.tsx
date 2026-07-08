@@ -15,17 +15,8 @@ export default async function DashboardLayout({
   return (
     <div className="min-h-screen bg-background text-foreground">
       <div className="mx-auto grid min-h-screen w-full max-w-[1480px] lg:grid-cols-[280px_minmax(0,1fr)]">
-        <aside className="sticky top-0 z-20 hidden h-screen border-r border-border bg-card/95 px-4 py-5 shadow-sm lg:block">
+        <aside className="sticky top-0 z-20 hidden h-screen flex-col border-r border-border bg-card/95 px-4 py-5 shadow-sm lg:flex">
           <Brand />
-
-          <div className="mt-8 rounded-3xl bg-card-strong p-3">
-            <p className="truncate text-sm font-semibold text-slate-100">
-              {director.name}
-            </p>
-            <p className="mt-0.5 truncate text-xs text-slate-500">
-              {director.email}
-            </p>
-          </div>
 
           <nav aria-label="Dashboard navigation" className="mt-6 space-y-1">
             <Link
@@ -37,34 +28,37 @@ export default async function DashboardLayout({
               </span>
               Events
             </Link>
-            <Link
-              href="/dashboard/tournaments/new"
-              className="flex items-center gap-3 rounded-2xl px-3 py-3 text-sm font-medium text-slate-500 transition hover:bg-card-strong hover:text-slate-900"
-            >
-              <span className="grid h-8 w-8 place-items-center rounded-xl border border-border bg-white text-base shadow-sm">
-                +
-              </span>
-              New event
-            </Link>
+          </nav>
+
+          <div className="mt-auto space-y-3">
             <Link
               href="/support"
-              className="flex items-center gap-3 rounded-2xl px-3 py-3 text-sm font-medium text-slate-500 transition hover:bg-card-strong hover:text-slate-900"
+              className="flex items-center gap-2 rounded-2xl px-3 py-2 text-xs font-medium text-slate-500 transition hover:bg-card-strong hover:text-slate-900"
             >
-              <span className="grid h-8 w-8 place-items-center rounded-xl border border-border bg-white text-base shadow-sm">
+              <span className="grid h-7 w-7 place-items-center rounded-xl border border-border bg-white text-sm shadow-sm">
                 ?
               </span>
               Support
             </Link>
-          </nav>
 
-          <form action={logout} className="absolute bottom-5 left-4 right-4">
-            <button
-              type="submit"
-              className="flex w-full items-center justify-center rounded-2xl border border-border bg-white px-4 py-3 text-sm font-semibold text-slate-600 shadow-sm transition hover:bg-card-strong hover:text-slate-900"
-            >
-              Sign out
-            </button>
-          </form>
+            <div className="rounded-3xl bg-card-strong p-3">
+              <p className="truncate text-sm font-semibold text-slate-950">
+                {director.name}
+              </p>
+              <p className="mt-0.5 truncate text-xs text-slate-500">
+                {director.email}
+              </p>
+            </div>
+
+            <form action={logout}>
+              <button
+                type="submit"
+                className="flex w-full items-center justify-center rounded-2xl border border-border bg-white px-4 py-3 text-sm font-semibold text-slate-600 shadow-sm transition hover:bg-card-strong hover:text-slate-900"
+              >
+                Sign out
+              </button>
+            </form>
+          </div>
         </aside>
 
         <div className="min-w-0">

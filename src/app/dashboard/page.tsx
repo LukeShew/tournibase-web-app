@@ -67,6 +67,12 @@ export default async function DashboardPage() {
         new Date(first.start_date).getTime() -
         new Date(second.start_date).getTime(),
     );
+  const previousTournaments = tournaments
+    .filter((tournament) => new Date(tournament.end_date) < now)
+    .sort(
+      (first, second) =>
+        new Date(second.end_date).getTime() - new Date(first.end_date).getTime(),
+    );
   const featuredTournament = upcomingTournaments[0] ?? tournaments[0] ?? null;
 
   return (
@@ -91,7 +97,7 @@ export default async function DashboardPage() {
         </Link>
       </div>
 
-      <section className="grid gap-5 xl:grid-cols-[1.25fr_0.75fr]">
+      <section>
         <div className="overflow-hidden rounded-[2rem] border border-border bg-card shadow-sm">
           <div className="border-b border-border bg-card-strong px-6 py-5">
             <p className="text-sm font-semibold text-slate-500">
@@ -149,72 +155,20 @@ export default async function DashboardPage() {
             </div>
           )}
         </div>
-
-        <aside className="rounded-[2rem] border border-border bg-card p-5 shadow-sm">
-          <p className="text-sm font-semibold text-slate-500">Action items</p>
-          <div className="mt-4 space-y-3">
-            <ActionItem
-              href="/dashboard/tournaments/new"
-              title="Create event"
-              description="Set up dates, venue, and public admission page."
-            />
-            {featuredTournament ? (
-              <>
-                <ActionItem
-                  href={`/dashboard/tournaments/${featuredTournament.id}/tickets`}
-                  title="Manage tickets"
-                  description="Review prices and pass validity before launch."
-                />
-                <ActionItem
-                  href={`/dashboard/tournaments/${featuredTournament.id}/gate`}
-                  title="Gate tools"
-                  description="Create scanner links for staff devices."
-                />
-              </>
-            ) : null}
-          </div>
-        </aside>
       </section>
 
-      <section className="overflow-hidden rounded-[2rem] border border-border bg-card shadow-sm">
-        <div className="border-b border-border px-6 py-5">
-          <h2 className="font-semibold text-slate-950">Admission events</h2>
-          <p className="mt-1 text-sm text-slate-500">
-            Open an event to review ticket sales and gate activity.
-          </p>
-        </div>
-
-        {tournaments.length === 0 ? (
-          <div className="px-6 py-12 text-center text-sm text-slate-500">
-            No events yet.
-          </div>
-        ) : (
-          <div className="divide-y divide-border">
-            {tournaments.map((tournament) => (
-              <Link
-                key={tournament.id}
-                href={`/dashboard/tournaments/${tournament.id}`}
-                className="flex flex-col justify-between gap-3 px-6 py-4 transition hover:bg-blue-50/60 sm:flex-row sm:items-center"
-              >
-                <div>
-                  <p className="font-semibold text-slate-950">
-                    {tournament.name}
-                  </p>
-                  <p className="mt-1 font-mono text-xs text-slate-500">
-                    {formatEventDateRange(
-                      tournament.start_date,
-                      tournament.end_date,
-                    )}
-                  </p>
-                </div>
-                <span className="w-fit rounded-full border border-border bg-card-strong px-2.5 py-1 text-xs font-semibold capitalize text-slate-600">
-                  {tournament.status}
-                </span>
-              </Link>
-            ))}
-          </div>
-        )}
-      </section>
+      <div className="space-y-4">
+        <TournamentDropdown
+          emptyText="No active or upcoming tournaments."
+          title="Active / upcoming tournaments"
+          tournaments={upcomingTournaments}
+        />
+        <TournamentDropdown
+          emptyText="No previous tournaments yet."
+          title="Previous tournaments"
+          tournaments={previousTournaments}
+        />
+      </div>
     </div>
   );
 }
@@ -230,25 +184,59 @@ function DashboardStat({ label, value }: { label: string; value: number }) {
   );
 }
 
-function ActionItem({
-  description,
-  href,
+function TournamentDropdown({
+  emptyText,
   title,
+  tournaments,
 }: {
-  description: string;
-  href: string;
+  emptyText: string;
   title: string;
+  tournaments: Tournament[];
 }) {
   return (
-    <Link
-      href={href}
-      className="block rounded-3xl bg-card-strong p-4 transition hover:bg-blue-50"
-    >
-      <div className="flex items-center justify-between gap-3">
-        <p className="font-semibold text-slate-900">{title}</p>
-        <span className="text-lg text-slate-400">›</span>
-      </div>
-      <p className="mt-1 text-sm leading-6 text-slate-500">{description}</p>
-    </Link>
+    <details className="group overflow-hidden rounded-[2rem] border border-border bg-card shadow-sm">
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-6 py-5 transition hover:bg-blue-50/60 [&::-webkit-details-marker]:hidden">
+        <div>
+          <h2 className="font-semibold text-slate-950">{title}</h2>
+          <p className="mt-1 text-sm text-slate-500">
+            {tournaments.length} {tournaments.length === 1 ? "event" : "events"}
+          </p>
+        </div>
+        <span className="grid h-9 w-9 place-items-center rounded-2xl border border-border bg-white text-lg text-slate-500 transition group-open:rotate-180">
+          ⌄
+        </span>
+      </summary>
+
+      {tournaments.length === 0 ? (
+        <div className="border-t border-border px-6 py-8 text-sm text-slate-500">
+          {emptyText}
+        </div>
+      ) : (
+        <div className="divide-y divide-border border-t border-border">
+          {tournaments.map((tournament) => (
+            <Link
+              key={tournament.id}
+              href={`/dashboard/tournaments/${tournament.id}`}
+              className="flex flex-col justify-between gap-3 px-6 py-4 transition hover:bg-blue-50/60 sm:flex-row sm:items-center"
+            >
+              <div>
+                <p className="font-semibold text-slate-950">
+                  {tournament.name}
+                </p>
+                <p className="mt-1 font-mono text-xs text-slate-500">
+                  {formatEventDateRange(
+                    tournament.start_date,
+                    tournament.end_date,
+                  )}
+                </p>
+              </div>
+              <span className="w-fit rounded-full border border-border bg-card-strong px-2.5 py-1 text-xs font-semibold capitalize text-slate-600">
+                {tournament.status}
+              </span>
+            </Link>
+          ))}
+        </div>
+      )}
+    </details>
   );
 }
