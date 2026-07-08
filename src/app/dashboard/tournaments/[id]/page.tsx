@@ -4,7 +4,6 @@ import { notFound } from "next/navigation";
 import { CopyLinkButton } from "@/components/copy-link-button";
 import { DashboardMetricCard } from "@/components/dashboard-metric-card";
 import { EventPublicationControl } from "@/components/event-publication-control";
-import { TournamentDashboardNav } from "@/components/tournament-dashboard-nav";
 import { requireDirector } from "@/lib/auth";
 import {
   formatCurrency,
@@ -155,8 +154,6 @@ export default async function TournamentOverviewPage({
         </div>
         <CopyLinkButton path={publicPath} />
       </div>
-
-      <TournamentDashboardNav active="overview" tournamentId={tournamentId} />
 
       <section className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatusCard

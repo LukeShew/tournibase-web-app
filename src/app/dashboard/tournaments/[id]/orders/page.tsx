@@ -1,0 +1,246 @@
+import type { Metadata } from "next";
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { requireDirector } from "@/lib/auth";
+import { formatCurrency } from "@/lib/dashboard-metrics";
+import { createClient } from "@/lib/supabase/server";
+import { formatEventDateRange } from "@/lib/tournaments";
+
+export const metadata: Metadata = {
+  title: "Orders",
+};
+
+type OrderRecord = {
+  amount_total: number | string;
+  buyer_email: string;
+  buyer_name: string;
+  buyer_phone: string | null;
+  created_at: string;
+  id: number;
+  payment_status: "pending" | "paid" | "failed" | "refunded" | "partial_refund";
+};
+
+type TournamentRecord = {
+  end_date: string;
+  id: number;
+  name: string;
+  start_date: string;
+};
+
+export default async function EventOrdersPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams?: Promise<{ q?: string }>;
+}) {
+  const [{ id }, resolvedSearchParams] = await Promise.all([
+    params,
+    searchParams ?? Promise.resolve<{ q?: string }>({}),
+  ]);
+  const tournamentId = Number(id);
+
+  if (!Number.isSafeInteger(tournamentId) || tournamentId < 1) {
+    notFound();
+  }
+
+  const director = await requireDirector();
+  const supabase = await createClient();
+
+  const { data: organizationRows, error: organizationError } = await supabase
+    .from("organizations")
+    .select("id")
+    .eq("owner_user_id", director.id);
+
+  if (organizationError) {
+    throw organizationError;
+  }
+
+  const organizationIds = (organizationRows ?? []).map(
+    (organization) => organization.id as number,
+  );
+
+  if (organizationIds.length === 0) {
+    notFound();
+  }
+
+  const { data: tournamentRow, error: tournamentError } = await supabase
+    .from("tournaments")
+    .select("id, name, start_date, end_date")
+    .eq("id", tournamentId)
+    .in("organization_id", organizationIds)
+    .maybeSingle();
+
+  if (tournamentError) {
+    throw tournamentError;
+  }
+
+  if (!tournamentRow) {
+    notFound();
+  }
+
+  const { data: orderRows, error: orderError } = await supabase
+    .from("orders")
+    .select(
+      "id, buyer_name, buyer_email, buyer_phone, amount_total, payment_status, created_at",
+    )
+    .eq("tournament_id", tournamentId)
+    .order("created_at", { ascending: false })
+    .limit(100);
+
+  if (orderError) {
+    throw orderError;
+  }
+
+  const query = (resolvedSearchParams.q ?? "").trim();
+  const queryLower = query.toLowerCase();
+  const orders = ((orderRows ?? []) as OrderRecord[]).filter((order) => {
+    if (!queryLower) {
+      return true;
+    }
+
+    const orderNumber = getOrderNumber(order.id).toLowerCase();
+
+    return [
+      orderNumber,
+      order.buyer_name,
+      order.buyer_email,
+      order.buyer_phone ?? "",
+    ].some((value) => value.toLowerCase().includes(queryLower));
+  });
+  const tournament = tournamentRow as TournamentRecord;
+
+  return (
+    <div className="pb-12">
+      <Link
+        href={`/dashboard/tournaments/${tournamentId}`}
+        className="inline-flex items-center gap-2 text-sm font-semibold text-slate-500 transition hover:text-slate-900"
+      >
+        <span aria-hidden="true">←</span>
+        Back to event
+      </Link>
+
+      <div className="mt-6 flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
+        <div>
+          <p className="text-sm font-semibold text-blue-700">
+            {tournament.name}
+          </p>
+          <h1 className="mt-2 text-4xl font-semibold tracking-[-0.04em] text-slate-950">
+            Orders
+          </h1>
+          <p className="mt-3 font-mono text-sm text-slate-400">
+            {formatEventDateRange(tournament.start_date, tournament.end_date)}
+          </p>
+        </div>
+      </div>
+
+      <section className="mt-8 overflow-hidden rounded-[2rem] border border-border bg-card shadow-sm">
+        <div className="border-b border-border bg-card-strong px-6 py-5">
+          <h2 className="font-semibold text-slate-950">Order log</h2>
+          <p className="mt-1 text-sm text-slate-500">
+            Search recent orders by buyer name, email, phone, or order number.
+          </p>
+          <form className="mt-5 flex flex-col gap-3 sm:flex-row">
+            <input
+              className="min-h-11 flex-1 rounded-2xl border border-border bg-white px-4 text-sm text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
+              defaultValue={query}
+              name="q"
+              placeholder="Search orders"
+              type="search"
+            />
+            <button
+              type="submit"
+              className="inline-flex h-11 items-center justify-center rounded-2xl bg-brand-strong px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-500"
+            >
+              Search
+            </button>
+          </form>
+        </div>
+
+        {orders.length === 0 ? (
+          <div className="px-6 py-12 text-center">
+            <h2 className="text-lg font-semibold text-slate-950">
+              No matching orders
+            </h2>
+            <p className="mt-2 text-sm text-slate-500">
+              Try another buyer name, email, phone number, or order number.
+            </p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[860px] text-left text-sm">
+              <thead className="border-b border-border bg-card-strong text-xs uppercase tracking-[0.12em] text-slate-500">
+                <tr>
+                  <th className="px-5 py-3 font-medium">Order</th>
+                  <th className="px-5 py-3 font-medium">Buyer</th>
+                  <th className="px-5 py-3 font-medium">Contact</th>
+                  <th className="px-5 py-3 text-right font-medium">Amount</th>
+                  <th className="px-5 py-3 font-medium">Status</th>
+                  <th className="px-5 py-3 font-medium">Created</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {orders.map((order) => (
+                  <tr key={order.id} className="bg-card">
+                    <td className="px-5 py-4 font-mono text-slate-950">
+                      {getOrderNumber(order.id)}
+                    </td>
+                    <td className="px-5 py-4 font-semibold text-slate-950">
+                      {order.buyer_name}
+                    </td>
+                    <td className="px-5 py-4 text-slate-500">
+                      <p>{order.buyer_email}</p>
+                      {order.buyer_phone ? (
+                        <p className="mt-1">{order.buyer_phone}</p>
+                      ) : null}
+                    </td>
+                    <td className="px-5 py-4 text-right font-mono text-slate-950">
+                      {formatCurrency(Number(order.amount_total))}
+                    </td>
+                    <td className="px-5 py-4">
+                      <OrderStatusBadge status={order.payment_status} />
+                    </td>
+                    <td className="px-5 py-4 font-mono text-xs text-slate-500">
+                      {formatOrderDate(order.created_at)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+    </div>
+  );
+}
+
+function OrderStatusBadge({ status }: { status: OrderRecord["payment_status"] }) {
+  const className =
+    status === "paid"
+      ? "bg-emerald-50 text-emerald-700"
+      : status === "refunded" || status === "partial_refund"
+        ? "bg-amber-50 text-amber-700"
+        : status === "failed"
+          ? "bg-rose-50 text-rose-700"
+          : "bg-slate-100 text-slate-600";
+
+  return (
+    <span
+      className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold capitalize ${className}`}
+    >
+      {status.replace("_", " ")}
+    </span>
+  );
+}
+
+function formatOrderDate(value: string) {
+  return new Intl.DateTimeFormat("en-US", {
+    dateStyle: "medium",
+    timeStyle: "short",
+    timeZone: "America/New_York",
+  }).format(new Date(value));
+}
+
+function getOrderNumber(orderId: number) {
+  return `TB-${orderId.toString().padStart(6, "0")}`;
+}

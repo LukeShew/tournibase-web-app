@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { DashboardMetricCard } from "@/components/dashboard-metric-card";
-import { TournamentDashboardNav } from "@/components/tournament-dashboard-nav";
 import { requireDirector } from "@/lib/auth";
 import {
   formatCurrency,
@@ -66,8 +65,6 @@ export default async function TournamentSalesPage({
           Gate tools
         </Link>
       </div>
-
-      <TournamentDashboardNav active="sales" tournamentId={tournamentId} />
 
       <section className="mt-8">
         <div>

@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { DashboardMetricCard } from "@/components/dashboard-metric-card";
-import { TournamentDashboardNav } from "@/components/tournament-dashboard-nav";
 import { requireDirector } from "@/lib/auth";
 import {
   formatCurrency,
@@ -77,8 +76,6 @@ export default async function TournamentScansPage({
           Manage scanner links
         </Link>
       </div>
-
-      <TournamentDashboardNav active="scans" tournamentId={tournamentId} />
 
       <section className="mt-8 rounded-[2rem] border border-blue-100 bg-card p-6 shadow-sm">
         <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
