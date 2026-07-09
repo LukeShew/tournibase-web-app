@@ -193,29 +193,36 @@ export default async function GateAccessPage({
       </section>
 
       <div className="mt-8 grid gap-6 xl:grid-cols-2 xl:items-start">
-        <div className="space-y-6">
-          <details className="overflow-hidden rounded-[2rem] border border-blue-200 bg-card shadow-sm">
-            <summary className="cursor-pointer list-none bg-brand-strong px-5 py-4 text-sm font-semibold text-white transition hover:bg-blue-500">
-              <span className="flex items-center justify-center gap-2">
-                <span aria-hidden="true">+</span>
-                Create scanner link
+        <section className="overflow-hidden rounded-[2rem] border border-border bg-card shadow-sm">
+          <details className="group/create">
+            <summary className="flex cursor-pointer list-none flex-col justify-between gap-4 border-b border-border bg-card-strong px-6 py-5 transition hover:bg-blue-50/70 sm:flex-row sm:items-start [&::-webkit-details-marker]:hidden">
+              <div>
+                <h2 className="font-semibold text-slate-950">
+                  Scanner access history
+                </h2>
+                <p className="mt-1 text-sm text-slate-500">
+                  Scanner links are shown once after creation.
+                </p>
+              </div>
+              <span className="inline-flex h-10 shrink-0 items-center justify-center rounded-2xl bg-brand-strong px-4 text-sm font-semibold text-white shadow-sm transition group-open/create:bg-blue-700 group-hover/create:bg-blue-500">
+                + Create scanner link
               </span>
             </summary>
-            <div className="border-t border-border p-4 sm:p-5">
+            <div className="border-b border-border p-4 sm:p-5">
               {canCreate ? (
                 <CreateScannerSessionForm
                   tournamentId={tournamentId}
                   tournamentName={tournament.name}
                 />
               ) : (
-                <section className="rounded-2xl border border-amber-300/20 bg-card p-6">
-                  <p className="text-sm font-medium text-amber-200">
+                <section className="rounded-2xl border border-amber-200 bg-amber-50 p-6">
+                  <p className="text-sm font-medium text-amber-700">
                     Event {tournament.status}
                   </p>
                   <h2 className="mt-2 text-xl font-semibold text-slate-950">
                     New scanner links are disabled
                   </h2>
-                  <p className="mt-2 text-sm leading-6 text-slate-400">
+                  <p className="mt-2 text-sm leading-6 text-slate-500">
                     Scanner access cannot be created for a closed or archived
                     event.
                   </p>
@@ -224,73 +231,61 @@ export default async function GateAccessPage({
             </div>
           </details>
 
-          <section className="overflow-hidden rounded-[2rem] border border-border bg-card shadow-sm">
-            <div className="border-b border-border bg-card-strong px-6 py-5">
-              <h2 className="font-semibold text-slate-950">
-                Scanner access history
-              </h2>
-              <p className="mt-1 text-sm text-slate-500">
-                Raw scanner links are hidden after creation and cannot be
-                recovered.
+          {scannerSessions.length === 0 ? (
+            <div className="px-6 py-14 text-center">
+              <div className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-brand-soft text-lg text-blue-700">
+                ↗
+              </div>
+              <h3 className="mt-4 font-semibold text-slate-950">
+                No scanner links yet
+              </h3>
+              <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-500">
+                Create a secure link for each entrance, gate team, or shared
+                scanning device.
               </p>
             </div>
+          ) : (
+            <div className="divide-y divide-border">
+              {scannerSessions.map((session) => {
+                const status = getSessionStatus(session);
 
-            {scannerSessions.length === 0 ? (
-              <div className="px-6 py-14 text-center">
-                <div className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-brand-soft text-lg text-blue-300">
-                  ↗
-                </div>
-                <h3 className="mt-4 font-semibold text-slate-950">
-                  No scanner links yet
-                </h3>
-                <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-500">
-                  Create a secure link for each entrance, gate team, or shared
-                  scanning device.
-                </p>
-              </div>
-            ) : (
-              <div className="divide-y divide-border">
-                {scannerSessions.map((session) => {
-                  const status = getSessionStatus(session);
-
-                  return (
-                    <article
-                      key={session.id}
-                      className="flex flex-col justify-between gap-4 px-5 py-5 lg:flex-row lg:items-center"
-                    >
-                      <div>
-                        <div className="flex flex-wrap items-center gap-2">
-                          <h3 className="font-semibold text-slate-950">
-                            {session.gate_name}
-                          </h3>
-                          <StatusBadge status={status} />
-                        </div>
-                        <p className="mt-1 text-sm text-slate-400">
-                          {session.staff_label}
-                        </p>
-                        <p className="mt-2 text-xs leading-5 text-slate-500">
-                          {formatPermissions(session.permissions)} · Expires{" "}
-                          {formatDateTime(session.expires_at)}
-                        </p>
+                return (
+                  <article
+                    key={session.id}
+                    className="flex flex-col justify-between gap-4 px-5 py-5 lg:flex-row lg:items-center"
+                  >
+                    <div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h3 className="font-semibold text-slate-950">
+                          {session.gate_name}
+                        </h3>
+                        <StatusBadge status={status} />
                       </div>
-                      <div className="flex flex-col items-start gap-2 lg:items-end">
-                        <p className="text-xs text-slate-600">
-                          Created {formatDateTime(session.created_at)}
-                        </p>
-                        {status === "active" ? (
-                          <RevokeScannerSessionButton
-                            scannerSessionId={session.id}
-                            tournamentId={tournamentId}
-                          />
-                        ) : null}
-                      </div>
-                    </article>
-                  );
-                })}
-              </div>
-            )}
-          </section>
-        </div>
+                      <p className="mt-1 text-sm text-slate-400">
+                        {session.staff_label}
+                      </p>
+                      <p className="mt-2 text-xs leading-5 text-slate-500">
+                        {formatPermissions(session.permissions)} · Expires{" "}
+                        {formatDateTime(session.expires_at)}
+                      </p>
+                    </div>
+                    <div className="flex flex-col items-start gap-2 lg:items-end">
+                      <p className="text-xs text-slate-600">
+                        Created {formatDateTime(session.created_at)}
+                      </p>
+                      {status === "active" ? (
+                        <RevokeScannerSessionButton
+                          scannerSessionId={session.id}
+                          tournamentId={tournamentId}
+                        />
+                      ) : null}
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          )}
+        </section>
 
         <LiveCheckInFeed
           checkIns={liveCheckIns}

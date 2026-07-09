@@ -24,7 +24,7 @@ type EventDetailsEditFormProps = {
 };
 
 const inputClassName =
-  "mt-2 h-12 w-full rounded-xl border border-border bg-black/20 px-4 text-base text-white placeholder:text-slate-600 focus:border-brand focus:outline-none focus:ring-4 focus:ring-brand/10 disabled:cursor-wait disabled:opacity-70";
+  "mt-2 h-12 w-full rounded-xl border border-border bg-black/20 px-4 text-base text-white placeholder:text-slate-600 focus:border-brand focus:outline-none focus:ring-4 focus:ring-brand/10 disabled:cursor-not-allowed disabled:opacity-70";
 
 export function EventDetailsEditForm({
   tournament,
@@ -114,7 +114,7 @@ export function EventDetailsEditForm({
                 state.errors.description ? "description-error" : undefined
               }
               disabled={pending}
-              className="mt-2 w-full resize-y rounded-xl border border-border bg-black/20 px-4 py-3 text-base leading-6 text-white placeholder:text-slate-600 focus:border-brand focus:outline-none focus:ring-4 focus:ring-brand/10 disabled:cursor-wait disabled:opacity-70"
+              className="mt-2 w-full resize-y rounded-xl border border-border bg-black/20 px-4 py-3 text-base leading-6 text-white placeholder:text-slate-600 focus:border-brand focus:outline-none focus:ring-4 focus:ring-brand/10 disabled:cursor-not-allowed disabled:opacity-70"
               placeholder="A short description parents will see on the public admission page."
             />
           </FormField>
@@ -301,7 +301,7 @@ export function EventDetailsEditForm({
           <button
             type="submit"
             disabled={pending}
-            className="inline-flex h-12 shrink-0 items-center justify-center rounded-xl bg-brand-strong px-5 text-sm font-semibold text-white transition hover:bg-blue-500 disabled:cursor-wait disabled:opacity-70"
+            className="inline-flex h-12 shrink-0 items-center justify-center rounded-xl bg-brand-strong px-5 text-sm font-semibold text-white transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-70"
           >
             {pending ? "Saving event…" : "Save event"}
           </button>

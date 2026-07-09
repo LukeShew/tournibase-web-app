@@ -108,6 +108,29 @@ export default async function EditTournamentPage({
         </div>
       </div>
 
+      <section className="mt-8 rounded-[2rem] border border-border bg-card p-6 shadow-sm">
+        <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-blue-700">
+              Ticket details
+            </p>
+            <h2 className="mt-2 text-xl font-semibold text-slate-950">
+              Edit admission options
+            </h2>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
+              Change ticket names, prices, quantities, valid dates, and active
+              status from the ticket editor.
+            </p>
+          </div>
+          <Link
+            href={`/dashboard/tournaments/${tournamentId}/tickets`}
+            className="inline-flex h-11 shrink-0 items-center justify-center rounded-2xl bg-brand-strong px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-500"
+          >
+            Edit ticket details
+          </Link>
+        </div>
+      </section>
+
       <EventDetailsEditForm tournament={tournament} />
     </div>
   );

@@ -372,9 +372,9 @@ export default async function TournamentOverviewPage({
             description="Track live admissions and scanner activity."
           />
           <ActiveTool
-            href={`/dashboard/tournaments/${tournamentId}/sales`}
-            title="Open sales dashboard"
-            description="Review online and manual admission sales."
+            href={`/dashboard/tournaments/${tournamentId}/orders`}
+            title="Open orders"
+            description="Review orders, revenue, and admissions."
           />
         </div>
       </section>

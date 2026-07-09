@@ -69,12 +69,6 @@ export default async function TournamentScansPage({
             )}
           </p>
         </div>
-        <Link
-          href={`/dashboard/tournaments/${tournamentId}/gate`}
-          className="inline-flex h-11 items-center justify-center rounded-2xl bg-brand-strong px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-500"
-        >
-          Manage scanner links
-        </Link>
       </div>
 
       <section className="mt-8 rounded-[2rem] border border-blue-100 bg-card p-6 shadow-sm">

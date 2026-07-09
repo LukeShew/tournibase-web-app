@@ -1,8 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { DashboardMetricCard } from "@/components/dashboard-metric-card";
+import { RevenueTrendCard } from "@/components/revenue-trend-card";
 import { requireDirector } from "@/lib/auth";
-import { formatCurrency } from "@/lib/dashboard-metrics";
+import {
+  formatCurrency,
+  getTournamentDashboardMetrics,
+} from "@/lib/dashboard-metrics";
 import { createClient } from "@/lib/supabase/server";
 import { formatEventDateRange } from "@/lib/tournaments";
 
@@ -79,6 +84,12 @@ export default async function EventOrdersPage({
     notFound();
   }
 
+  const metrics = await getTournamentDashboardMetrics(tournamentId);
+
+  if (!metrics) {
+    notFound();
+  }
+
   const { data: orderRows, error: orderError } = await supabase
     .from("orders")
     .select(
@@ -133,6 +144,46 @@ export default async function EventOrdersPage({
           </p>
         </div>
       </div>
+
+      <section className="mt-8 grid gap-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(360px,0.9fr)] xl:items-stretch">
+        <RevenueTrendCard
+          days={metrics.salesByDay}
+          totalRevenue={metrics.sales.totalEstimatedRevenue}
+        />
+
+        <section className="rounded-[2rem] border border-border bg-card p-6 shadow-sm">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-blue-700">
+              Sales breakdown
+            </p>
+            <h2 className="mt-2 text-xl font-semibold text-slate-950">
+              Revenue and admissions
+            </h2>
+          </div>
+          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+            <DashboardMetricCard
+              detail={`${metrics.sales.onlineOrderCount} captured online orders`}
+              label="Gross online sales"
+              value={formatCurrency(metrics.sales.grossOnlineSales)}
+            />
+            <DashboardMetricCard
+              detail={`After ${formatCurrency(metrics.sales.estimatedStripeFees)} in estimated processing fees`}
+              label="Estimated net payout"
+              value={formatCurrency(metrics.sales.estimatedNetPayout)}
+            />
+            <DashboardMetricCard
+              detail="Paid online admission passes"
+              label="Online tickets sold"
+              value={metrics.sales.onlineTicketsSold}
+            />
+            <DashboardMetricCard
+              detail="Online and recorded gate revenue"
+              label="Estimated total revenue"
+              value={formatCurrency(metrics.sales.totalEstimatedRevenue)}
+            />
+          </div>
+        </section>
+      </section>
 
       <section className="mt-8 overflow-hidden rounded-[2rem] border border-border bg-card shadow-sm">
         <div className="border-b border-border bg-card-strong px-6 py-5">

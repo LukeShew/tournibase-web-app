@@ -203,26 +203,26 @@ export function CreateScannerSessionForm({
       </form>
 
       {state.scannerUrl ? (
-        <section className="rounded-2xl border border-emerald-300/25 bg-emerald-300/[0.06] p-5 sm:p-6">
-          <p className="text-xs font-medium uppercase tracking-[0.16em] text-emerald-300">
+        <section className="rounded-2xl border border-emerald-300 bg-emerald-100 p-5 shadow-sm sm:p-6">
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-800">
             Scanner link created
           </p>
-          <h2 className="mt-2 text-xl font-semibold text-white">
+          <h2 className="mt-2 text-xl font-semibold text-emerald-950">
             Copy this link now
           </h2>
-          <p className="mt-2 text-sm leading-6 text-slate-400">
+          <p className="mt-2 text-sm leading-6 text-emerald-900">
             For security, TourniBase stores only a hash and cannot show this
             exact link again after you leave or refresh this page.
           </p>
-          <div className="mt-4 rounded-xl border border-white/10 bg-black/20 p-3">
-            <p className="break-all font-mono text-xs leading-6 text-emerald-200">
+          <div className="mt-4 rounded-xl border border-emerald-300 bg-white p-3">
+            <p className="break-all font-mono text-xs leading-6 text-emerald-950">
               {state.scannerUrl}
             </p>
           </div>
           <button
             type="button"
             onClick={copyScannerLink}
-            className="mt-4 inline-flex h-11 items-center justify-center rounded-xl bg-emerald-400 px-4 text-sm font-semibold text-emerald-950 transition hover:bg-emerald-300"
+            className="mt-4 inline-flex h-11 items-center justify-center rounded-xl bg-emerald-700 px-4 text-sm font-semibold text-[#ffffff] transition hover:bg-emerald-600"
           >
             {copyLabel}
           </button>

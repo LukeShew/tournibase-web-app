@@ -37,7 +37,7 @@ export function RevokeScannerSessionButton({
               event.preventDefault();
             }
           }}
-          className="inline-flex h-9 items-center justify-center rounded-lg border border-red-300/20 bg-red-300/[0.06] px-3 text-xs font-semibold text-red-200 transition hover:bg-red-300/10 disabled:cursor-wait disabled:opacity-60"
+          className="inline-flex h-9 items-center justify-center rounded-lg border border-red-200 bg-red-50 px-3 text-xs font-semibold text-red-700 transition hover:border-red-300 hover:bg-red-100 disabled:cursor-wait disabled:opacity-60"
         >
           {pending ? "Revoking…" : "Revoke link"}
         </button>

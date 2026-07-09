@@ -19,8 +19,8 @@ type DashboardSidebarProps = {
 };
 
 type IconName =
+  | "activity"
   | "details"
-  | "dollar"
   | "event"
   | "home"
   | "orders"
@@ -77,17 +77,17 @@ export function DashboardSidebar({
     },
     {
       disabledMessage: hasSelectedEvent ? undefined : selectEventMessage,
+      href: eventBaseHref ? `${eventBaseHref}/scans` : undefined,
+      icon: "activity",
+      isActive: pathname === `${eventBaseHref}/scans`,
+      label: "Gate activity",
+    },
+    {
+      disabledMessage: hasSelectedEvent ? undefined : selectEventMessage,
       href: eventBaseHref ? `${eventBaseHref}/orders` : undefined,
       icon: "orders",
       isActive: pathname === `${eventBaseHref}/orders`,
       label: "Orders",
-    },
-    {
-      disabledMessage: hasSelectedEvent ? undefined : selectEventMessage,
-      href: eventBaseHref ? `${eventBaseHref}/sales` : undefined,
-      icon: "dollar",
-      isActive: pathname === `${eventBaseHref}/sales`,
-      label: "Sales",
     },
     {
       disabledMessage: hasSelectedEvent ? undefined : selectEventMessage,
@@ -142,28 +142,39 @@ export function DashboardSidebar({
         </div>
 
         {confirmingSignOut ? (
-          <div className="rounded-2xl border border-border bg-white p-2 shadow-sm">
-            <p className="hidden px-2 pb-2 text-xs font-medium text-slate-500 group-hover/sidebar:block group-focus-within/sidebar:block">
-              Sign out of this director account?
-            </p>
-            <div className="grid gap-2 group-hover/sidebar:grid-cols-2 group-focus-within/sidebar:grid-cols-2">
-              <button
-                type="button"
-                className="flex h-10 items-center justify-center rounded-xl bg-card-strong px-3 text-xs font-semibold text-slate-600 transition hover:bg-slate-200 hover:text-slate-950"
-                onClick={() => setConfirmingSignOut(false)}
-              >
-                Cancel
-              </button>
-              <form action={logoutAction}>
+          <>
+            <button
+              type="button"
+              className="flex w-full items-center gap-3 rounded-2xl border border-border bg-white px-2 py-2.5 text-sm font-semibold text-slate-600 shadow-sm transition hover:bg-card-strong hover:text-slate-950 group-hover/sidebar:hidden group-focus-within/sidebar:hidden"
+              aria-label="Sign out"
+              onClick={() => setConfirmingSignOut(false)}
+            >
+              <SidebarIcon icon="signOut" />
+              <span className="sr-only">Sign out</span>
+            </button>
+            <div className="hidden rounded-2xl border border-border bg-white p-3 shadow-sm group-hover/sidebar:block group-focus-within/sidebar:block">
+              <p className="px-1 pb-3 text-sm font-semibold text-slate-600">
+                Sign out of this director account?
+              </p>
+              <div className="grid grid-cols-2 gap-2">
                 <button
-                  type="submit"
-                  className="flex h-10 w-full items-center justify-center rounded-xl bg-slate-950 px-3 text-xs font-semibold text-white transition hover:bg-slate-800"
+                  type="button"
+                  className="flex h-11 items-center justify-center rounded-xl bg-card-strong px-3 text-sm font-semibold text-slate-600 transition hover:bg-slate-200 hover:text-slate-950"
+                  onClick={() => setConfirmingSignOut(false)}
                 >
-                  Sign out
+                  Cancel
                 </button>
-              </form>
+                <form action={logoutAction}>
+                  <button
+                    type="submit"
+                    className="flex h-11 w-full items-center justify-center rounded-xl bg-brand-strong px-3 text-sm font-semibold text-white transition hover:bg-blue-500"
+                  >
+                    Sign out
+                  </button>
+                </form>
+              </div>
             </div>
-          </div>
+          </>
         ) : (
           <button
             type="button"
@@ -180,7 +191,7 @@ export function DashboardSidebar({
 
         <div className="grid grid-cols-1 gap-2 group-hover/sidebar:grid-cols-2 group-focus-within/sidebar:grid-cols-2">
           <BottomLink href="/dashboard/settings" icon="settings" label="Settings" />
-          <BottomLink href="/support" icon="support" label="Support" />
+          <BottomLink href="/support" icon="support" label="Support" expandedOnly />
         </div>
       </div>
     </aside>
@@ -191,7 +202,7 @@ function SidebarNavItem({ item }: { item: NavItem }) {
   const className = item.isActive
     ? "bg-brand-soft text-blue-700"
     : item.disabledMessage
-      ? "cursor-not-allowed border border-slate-200 bg-slate-50 text-slate-300 opacity-70"
+      ? "cursor-not-allowed text-slate-300 opacity-55"
       : "text-slate-500 hover:bg-card-strong hover:text-slate-950";
 
   if (item.href && !item.disabledMessage) {
@@ -225,10 +236,12 @@ function SidebarNavItem({ item }: { item: NavItem }) {
 }
 
 function BottomLink({
+  expandedOnly = false,
   href,
   icon,
   label,
 }: {
+  expandedOnly?: boolean;
   href: string;
   icon: IconName;
   label: string;
@@ -236,7 +249,7 @@ function BottomLink({
   return (
     <Link
       href={href}
-      className="flex items-center gap-2 rounded-2xl px-2 py-2 text-xs font-semibold text-slate-500 transition hover:bg-card-strong hover:text-slate-950"
+      className={`${expandedOnly ? "hidden group-hover/sidebar:flex group-focus-within/sidebar:flex" : "flex"} items-center gap-2 rounded-2xl px-2 py-2 text-xs font-semibold text-slate-500 transition hover:bg-card-strong hover:text-slate-950`}
       aria-label={label}
     >
       <SidebarIcon icon={icon} size="sm" />
@@ -278,6 +291,24 @@ function SidebarIcon({
 function NavIcon({ icon }: { icon: IconName }) {
   const className = "h-4 w-4";
 
+  if (icon === "activity") {
+    return (
+      <svg
+        aria-hidden="true"
+        className={className}
+        fill="none"
+        viewBox="0 0 24 24"
+      >
+        <path
+          d="M4 17h16M7 14v3M12 9v8M17 5v12"
+          stroke="currentColor"
+          strokeLinecap="round"
+          strokeWidth="2"
+        />
+      </svg>
+    );
+  }
+
   if (icon === "overview") {
     return (
       <svg
@@ -310,14 +341,14 @@ function NavIcon({ icon }: { icon: IconName }) {
         aria-hidden="true"
         className={className}
         fill="none"
-        viewBox="0 0 24 24"
+        viewBox="0 0 28 28"
       >
         <path
-          d="M14.5 6.2a5 5 0 0 0 6 6L12 20.7a3 3 0 0 1-4.2-4.2l8.5-8.5a5 5 0 0 1-1.8-1.8Z"
+          d="M17.8 5.4a5.7 5.7 0 0 0 6.8 6.8L13.5 23.3a3.6 3.6 0 0 1-5.1-5.1L19.5 7.1a5.8 5.8 0 0 1-1.7-1.7Z"
           stroke="currentColor"
           strokeLinecap="round"
           strokeLinejoin="round"
-          strokeWidth="2"
+          strokeWidth="2.1"
         />
       </svg>
     );
@@ -342,40 +373,25 @@ function NavIcon({ icon }: { icon: IconName }) {
     );
   }
 
-  if (icon === "dollar") {
-    return (
-      <svg
-        aria-hidden="true"
-        className={className}
-        fill="none"
-        viewBox="0 0 24 24"
-      >
-        <path
-          d="M12 3v18M16.5 7.2A4.8 4.8 0 0 0 12.6 6C10.1 6 8.5 7.1 8.5 8.9c0 3.6 8 1.7 8 6.2 0 1.9-1.7 3.1-4.2 3.1a6 6 0 0 1-4.8-2.1"
-          stroke="currentColor"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth="2"
-        />
-      </svg>
-    );
-  }
-
   if (icon === "details") {
     return (
       <svg
         aria-hidden="true"
         className={className}
-        fill="none"
         viewBox="0 0 24 24"
       >
         <path
-          d="M5 5h14v14H5V5Z"
+          d="M5 6h14a2 2 0 0 1 0 4H5a2 2 0 0 1 0-4Z"
+          fill="none"
           stroke="currentColor"
-          strokeLinejoin="round"
           strokeWidth="2"
         />
-        <path d="M8 9h8M8 13h8M8 17h5" stroke="currentColor" strokeLinecap="round" strokeWidth="2" />
+        <circle cx="8" cy="8" r="1.7" fill="currentColor" />
+        <path
+          d="M5 14h14a2 2 0 0 1 0 4H5a2 2 0 0 1 0-4Z"
+          fill="currentColor"
+        />
+        <circle cx="16" cy="16" r="1.8" fill="white" />
       </svg>
     );
   }
