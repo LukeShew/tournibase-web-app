@@ -127,7 +127,7 @@ export function DashboardSidebar({
       <div className="mt-auto space-y-3">
         <div className="flex items-center gap-3 rounded-3xl bg-card-strong p-2">
           <div
-            className={`grid h-10 w-10 shrink-0 place-items-center rounded-2xl ${selectedAvatar.bgClass} ${selectedAvatar.textClass}`}
+            className={`grid h-9 w-9 shrink-0 place-items-center rounded-2xl ${selectedAvatar.bgClass} ${selectedAvatar.textClass}`}
           >
             <ProfileAvatarIcon icon={selectedAvatar.icon} />
           </div>
@@ -202,7 +202,7 @@ function SidebarNavItem({ item }: { item: NavItem }) {
   const className = item.isActive
     ? "bg-brand-soft text-blue-700"
     : item.disabledMessage
-      ? "cursor-not-allowed text-slate-300 opacity-55"
+      ? "cursor-not-allowed text-slate-300 opacity-45"
       : "text-slate-500 hover:bg-card-strong hover:text-slate-950";
 
   if (item.href && !item.disabledMessage) {
@@ -249,10 +249,10 @@ function BottomLink({
   return (
     <Link
       href={href}
-      className={`${expandedOnly ? "hidden group-hover/sidebar:flex group-focus-within/sidebar:flex" : "flex"} items-center gap-2 rounded-2xl px-2 py-2 text-xs font-semibold text-slate-500 transition hover:bg-card-strong hover:text-slate-950`}
+      className={`${expandedOnly ? "hidden group-hover/sidebar:flex group-focus-within/sidebar:flex" : "flex"} items-center gap-3 rounded-2xl px-2 py-2.5 text-sm font-semibold text-slate-500 transition hover:bg-card-strong hover:text-slate-950`}
       aria-label={label}
     >
-      <SidebarIcon icon={icon} size="sm" />
+      <SidebarIcon icon={icon} />
       <span className="whitespace-nowrap opacity-0 transition-opacity duration-150 group-hover/sidebar:opacity-100 group-focus-within/sidebar:opacity-100">
         {label}
       </span>
@@ -341,14 +341,14 @@ function NavIcon({ icon }: { icon: IconName }) {
         aria-hidden="true"
         className={className}
         fill="none"
-        viewBox="0 0 28 28"
+        viewBox="0 0 24 24"
       >
         <path
-          d="M17.8 5.4a5.7 5.7 0 0 0 6.8 6.8L13.5 23.3a3.6 3.6 0 0 1-5.1-5.1L19.5 7.1a5.8 5.8 0 0 1-1.7-1.7Z"
+          d="M15.6 5.6a5 5 0 0 1 5.1-1.2l-3.1 3.1 2.9 2.9 3.1-3.1a5 5 0 0 1-6.3 6.3l-7.6 7.6a3 3 0 0 1-4.2-4.2l7.6-7.6a5 5 0 0 1 2.5-3.8Z"
           stroke="currentColor"
           strokeLinecap="round"
           strokeLinejoin="round"
-          strokeWidth="2.1"
+          strokeWidth="1.8"
         />
       </svg>
     );

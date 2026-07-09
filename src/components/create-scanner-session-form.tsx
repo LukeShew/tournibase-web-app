@@ -65,13 +65,13 @@ export function CreateScannerSessionForm({
       <form
         ref={formRef}
         action={action}
-        className="rounded-2xl border border-border bg-card p-5 sm:p-6"
+        className="rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-6"
       >
         <div className="border-b border-border pb-5">
-          <p className="text-xs font-medium uppercase tracking-[0.16em] text-blue-300">
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-blue-700">
             New scanner access
           </p>
-          <h2 className="mt-2 text-xl font-semibold text-white">
+          <h2 className="mt-2 text-xl font-semibold text-slate-950">
             Create a gate link
           </h2>
           <p className="mt-2 text-sm leading-6 text-slate-500">
@@ -181,7 +181,7 @@ export function CreateScannerSessionForm({
             {state.message ? (
               <p
                 className={`text-sm ${
-                  state.success ? "text-emerald-300" : "text-red-300"
+                  state.success ? "text-emerald-700" : "text-red-600"
                 }`}
               >
                 {state.message}
@@ -203,7 +203,7 @@ export function CreateScannerSessionForm({
       </form>
 
       {state.scannerUrl ? (
-        <section className="rounded-2xl border border-emerald-300 bg-emerald-100 p-5 shadow-sm sm:p-6">
+        <section className="rounded-2xl border border-emerald-300 bg-emerald-50 p-5 shadow-sm sm:p-6">
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-800">
             Scanner link created
           </p>
@@ -222,7 +222,7 @@ export function CreateScannerSessionForm({
           <button
             type="button"
             onClick={copyScannerLink}
-            className="mt-4 inline-flex h-11 items-center justify-center rounded-xl bg-emerald-700 px-4 text-sm font-semibold text-[#ffffff] transition hover:bg-emerald-600"
+            className="mt-4 inline-flex h-11 items-center justify-center rounded-xl bg-emerald-700 px-4 text-sm font-semibold text-white transition hover:bg-emerald-600"
           >
             {copyLabel}
           </button>
@@ -249,13 +249,13 @@ function Field({
     <div>
       <label
         htmlFor={htmlFor}
-        className="text-sm font-medium text-slate-200"
+        className="text-sm font-medium text-slate-700"
       >
         {label}
       </label>
       <div className="mt-2">{children}</div>
       {error ? (
-        <p className="mt-2 text-sm text-red-300">{error}</p>
+        <p className="mt-2 text-sm text-red-600">{error}</p>
       ) : help ? (
         <p className="mt-2 text-xs leading-5 text-slate-500">{help}</p>
       ) : null}
@@ -265,18 +265,18 @@ function Field({
 
 function PermissionGuide() {
   return (
-    <div className="rounded-xl border border-border bg-black/10 p-4">
-      <p className="text-sm font-medium text-slate-200">Permission guide</p>
+    <div className="rounded-xl border border-border bg-card-strong p-4">
+      <p className="text-sm font-medium text-slate-950">Permission guide</p>
       <ul className="mt-2 space-y-1.5 text-xs leading-5 text-slate-500">
         <li>
-          <span className="text-slate-300">Scan only:</span> validates passes.
+          <span className="text-slate-700">Scan only:</span> validates passes.
         </li>
         <li>
-          <span className="text-slate-300">Standard gate:</span> adds manual
+          <span className="text-slate-700">Standard gate:</span> adds manual
           lookup and recent scan history.
         </li>
         <li>
-          <span className="text-slate-300">Full gate access:</span> also allows
+          <span className="text-slate-700">Full gate access:</span> also allows
           recording gate sales.
         </li>
       </ul>
@@ -285,7 +285,7 @@ function PermissionGuide() {
 }
 
 const inputClass =
-  "h-11 w-full rounded-xl border border-border bg-black/20 px-3 text-sm text-white outline-none transition placeholder:text-slate-600 focus:border-brand focus:ring-4 focus:ring-brand/10 disabled:cursor-wait disabled:opacity-70";
+  "h-11 w-full rounded-xl border border-border bg-white px-3 text-sm text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-blue-400 focus:ring-4 focus:ring-blue-100 disabled:cursor-wait disabled:opacity-70";
 
 const readOnlyInputClass =
-  "h-11 w-full rounded-xl border border-border bg-white/[0.025] px-3 text-sm text-slate-400 outline-none";
+  "h-11 w-full rounded-xl border border-border bg-card-strong px-3 text-sm text-slate-500 outline-none";

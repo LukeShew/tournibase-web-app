@@ -2,6 +2,10 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { DashboardMetricCard } from "@/components/dashboard-metric-card";
+import {
+  OrderLogClient,
+  type OrderLogOrder,
+} from "@/components/order-log-client";
 import { RevenueTrendCard } from "@/components/revenue-trend-card";
 import { requireDirector } from "@/lib/auth";
 import {
@@ -13,16 +17,6 @@ import { formatEventDateRange } from "@/lib/tournaments";
 
 export const metadata: Metadata = {
   title: "Orders",
-};
-
-type OrderRecord = {
-  amount_total: number | string;
-  buyer_email: string;
-  buyer_name: string;
-  buyer_phone: string | null;
-  created_at: string;
-  id: number;
-  payment_status: "pending" | "paid" | "failed" | "refunded" | "partial_refund";
 };
 
 type TournamentRecord = {
@@ -93,7 +87,7 @@ export default async function EventOrdersPage({
   const { data: orderRows, error: orderError } = await supabase
     .from("orders")
     .select(
-      "id, buyer_name, buyer_email, buyer_phone, amount_total, payment_status, created_at",
+      "id, buyer_name, buyer_email, buyer_phone, amount_total, payment_status, created_at, stripe_checkout_id, order_items(id, ticket_name, unit_amount_cents, quantity, valid_from, valid_until), passes(id, public_token, status, sequence_number, ticket_types(name))",
     )
     .eq("tournament_id", tournamentId)
     .order("created_at", { ascending: false })
@@ -105,7 +99,14 @@ export default async function EventOrdersPage({
 
   const query = (resolvedSearchParams.q ?? "").trim();
   const queryLower = query.toLowerCase();
-  const orders = ((orderRows ?? []) as OrderRecord[]).filter((order) => {
+  const allOrders = ((orderRows ?? []) as unknown as OrderLogOrder[]).map(
+    (order) => ({
+      ...order,
+      order_items: order.order_items ?? [],
+      passes: order.passes ?? [],
+    }),
+  );
+  const orders = allOrders.filter((order) => {
     if (!queryLower) {
       return true;
     }
@@ -208,88 +209,10 @@ export default async function EventOrdersPage({
           </form>
         </div>
 
-        {orders.length === 0 ? (
-          <div className="px-6 py-12 text-center">
-            <h2 className="text-lg font-semibold text-slate-950">
-              No matching orders
-            </h2>
-            <p className="mt-2 text-sm text-slate-500">
-              Try another buyer name, email, phone number, or order number.
-            </p>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[860px] text-left text-sm">
-              <thead className="border-b border-border bg-card-strong text-xs uppercase tracking-[0.12em] text-slate-500">
-                <tr>
-                  <th className="px-5 py-3 font-medium">Order</th>
-                  <th className="px-5 py-3 font-medium">Buyer</th>
-                  <th className="px-5 py-3 font-medium">Contact</th>
-                  <th className="px-5 py-3 text-right font-medium">Amount</th>
-                  <th className="px-5 py-3 font-medium">Status</th>
-                  <th className="px-5 py-3 font-medium">Created</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {orders.map((order) => (
-                  <tr key={order.id} className="bg-card">
-                    <td className="px-5 py-4 font-mono text-slate-950">
-                      {getOrderNumber(order.id)}
-                    </td>
-                    <td className="px-5 py-4 font-semibold text-slate-950">
-                      {order.buyer_name}
-                    </td>
-                    <td className="px-5 py-4 text-slate-500">
-                      <p>{order.buyer_email}</p>
-                      {order.buyer_phone ? (
-                        <p className="mt-1">{order.buyer_phone}</p>
-                      ) : null}
-                    </td>
-                    <td className="px-5 py-4 text-right font-mono text-slate-950">
-                      {formatCurrency(Number(order.amount_total))}
-                    </td>
-                    <td className="px-5 py-4">
-                      <OrderStatusBadge status={order.payment_status} />
-                    </td>
-                    <td className="px-5 py-4 font-mono text-xs text-slate-500">
-                      {formatOrderDate(order.created_at)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+        <OrderLogClient orders={orders} tournamentId={tournamentId} />
       </section>
     </div>
   );
-}
-
-function OrderStatusBadge({ status }: { status: OrderRecord["payment_status"] }) {
-  const className =
-    status === "paid"
-      ? "bg-emerald-50 text-emerald-700"
-      : status === "refunded" || status === "partial_refund"
-        ? "bg-amber-50 text-amber-700"
-        : status === "failed"
-          ? "bg-rose-50 text-rose-700"
-          : "bg-slate-100 text-slate-600";
-
-  return (
-    <span
-      className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold capitalize ${className}`}
-    >
-      {status.replace("_", " ")}
-    </span>
-  );
-}
-
-function formatOrderDate(value: string) {
-  return new Intl.DateTimeFormat("en-US", {
-    dateStyle: "medium",
-    timeStyle: "short",
-    timeZone: "America/New_York",
-  }).format(new Date(value));
 }
 
 function getOrderNumber(orderId: number) {

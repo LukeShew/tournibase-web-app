@@ -52,7 +52,7 @@ export function EventPublicationControl({
             disabled={pending || !canPublish}
             className={`inline-flex h-11 w-full items-center justify-center rounded-xl px-4 text-sm font-semibold transition sm:w-auto ${
               status === "published"
-                ? "border border-border bg-white/5 text-slate-200 hover:bg-white/10"
+                ? "border border-border bg-white text-slate-700 shadow-sm hover:bg-slate-100 hover:text-slate-950"
                 : "bg-brand-strong text-white hover:bg-blue-500"
             } disabled:cursor-not-allowed disabled:opacity-50`}
           >
@@ -66,7 +66,7 @@ export function EventPublicationControl({
         {status === "published" ? (
           <Link
             href={publicPath}
-            className="inline-flex h-11 items-center justify-center rounded-xl border border-brand/30 bg-brand-soft px-4 text-sm font-semibold text-blue-200 transition hover:bg-blue-500/20"
+            className="inline-flex h-11 items-center justify-center rounded-xl border border-blue-100 bg-brand-soft px-4 text-sm font-semibold text-blue-700 transition hover:bg-blue-50"
           >
             View public page
           </Link>
@@ -77,13 +77,13 @@ export function EventPublicationControl({
         {state.message ? (
           <p
             className={`text-sm ${
-              state.success ? "text-emerald-300" : "text-red-300"
+              state.success ? "text-emerald-700" : "text-red-600"
             }`}
           >
             {state.message}
           </p>
         ) : status === "draft" && activeTicketCount === 0 ? (
-          <p className="text-sm text-amber-300">
+          <p className="text-sm text-amber-700">
             Add an active ticket before publishing.
           </p>
         ) : status === "draft" ? (
@@ -92,11 +92,11 @@ export function EventPublicationControl({
             visible.
           </p>
         ) : checkoutConfigured ? (
-          <p className="text-sm text-emerald-300">
+          <p className="text-sm text-emerald-700">
             Stripe Checkout is connected and ready for buyers.
           </p>
         ) : (
-          <p className="text-sm text-amber-300">
+          <p className="text-sm text-amber-700">
             The page is public, but payment environment variables are still
             missing.
           </p>

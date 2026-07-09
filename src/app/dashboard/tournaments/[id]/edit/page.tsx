@@ -2,7 +2,10 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { EventDetailsEditForm } from "@/components/event-details-edit-form";
+import { EventPublicationControl } from "@/components/event-publication-control";
 import { requireDirector } from "@/lib/auth";
+import { getStripeConfigurationIssues } from "@/lib/stripe";
+import { getSupabaseAdminConfigurationIssues } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { formatEventDateRange } from "@/lib/tournaments";
 
@@ -73,6 +76,21 @@ export default async function EditTournamentPage({
   }
 
   const tournament = tournamentRow as EditableTournament;
+  const { count: activeTicketCount, error: activeTicketError } = await supabase
+    .from("ticket_types")
+    .select("id", { count: "exact", head: true })
+    .eq("tournament_id", tournamentId)
+    .eq("status", "active");
+
+  if (activeTicketError) {
+    throw activeTicketError;
+  }
+
+  const checkoutConfigured =
+    getStripeConfigurationIssues({
+      includePublishableKey: true,
+      includeWebhookSecret: true,
+    }).length === 0 && getSupabaseAdminConfigurationIssues().length === 0;
 
   return (
     <div className="pb-12">
@@ -128,6 +146,32 @@ export default async function EditTournamentPage({
           >
             Edit ticket details
           </Link>
+        </div>
+      </section>
+
+      <section className="mt-6 rounded-[2rem] border border-border bg-card p-6 shadow-sm">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-blue-700">
+              Public ticket page
+            </p>
+            <h2 className="mt-2 text-xl font-semibold text-slate-950">
+              Publish controls
+            </h2>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
+              Publish when ticket details are ready. Unpublish if the event
+              should stop accepting public buyers.
+            </p>
+          </div>
+          <div className="w-full max-w-md">
+            <EventPublicationControl
+              activeTicketCount={activeTicketCount ?? 0}
+              checkoutConfigured={checkoutConfigured}
+              publicPath={`/e/${tournament.public_slug}`}
+              status={tournament.status}
+              tournamentId={tournamentId}
+            />
+          </div>
         </div>
       </section>
 

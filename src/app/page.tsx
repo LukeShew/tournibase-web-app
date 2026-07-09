@@ -15,69 +15,139 @@ export default async function Home() {
   }
 
   return (
-    <main className="app-grid flex min-h-full flex-col">
+    <main className="min-h-full bg-[#f7f8fb] text-slate-950">
       <header className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-6 lg:px-8">
-        <Brand />
-        <Link
-          href="/login"
-          className="rounded-full border border-border bg-white/5 px-4 py-2 text-sm font-medium text-slate-100 transition hover:border-white/25 hover:bg-white/10"
-        >
-          Director sign in
-        </Link>
+        <Brand tone="light" />
+        <div className="flex items-center gap-3">
+          <Link
+            href="/login"
+            className="rounded-full border border-border bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700"
+          >
+            Sign in
+          </Link>
+          <Link
+            href="/support"
+            className="rounded-full bg-brand-strong px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-500"
+          >
+            Get started
+          </Link>
+        </div>
       </header>
 
-      <section className="mx-auto grid w-full max-w-6xl flex-1 items-center gap-12 px-6 py-16 lg:grid-cols-[1.2fr_0.8fr] lg:px-8">
+      <section className="mx-auto grid w-full max-w-6xl items-center gap-12 px-6 py-14 lg:grid-cols-[1.05fr_0.95fr] lg:px-8 lg:py-20">
         <div>
-          <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-brand/25 bg-brand-soft px-3 py-1.5 text-sm font-medium text-blue-200">
+          <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-blue-100 bg-blue-50 px-3 py-1.5 text-sm font-semibold text-blue-700">
             <span className="h-2 w-2 rounded-full bg-brand" />
-            Digital gate system
+            Youth basketball admission control
           </div>
-          <h1 className="max-w-3xl text-5xl font-semibold tracking-[-0.045em] text-white sm:text-6xl">
+          <h1 className="max-w-3xl text-5xl font-semibold tracking-[-0.045em] text-slate-950 sm:text-6xl">
             {DIRECTOR_PROMISE}
           </h1>
-          <p className="mt-6 max-w-2xl text-lg leading-8 text-slate-300">
+          <p className="mt-6 max-w-2xl text-lg leading-8 text-slate-600">
             {PRODUCT_POSITIONING}
           </p>
           <div className="mt-9 flex flex-col gap-3 sm:flex-row">
             <Link
-              href="/login"
-              className="inline-flex min-h-12 items-center justify-center rounded-xl bg-brand-strong px-5 text-sm font-semibold text-white transition hover:bg-blue-500"
+              href="/support"
+              className="inline-flex min-h-12 items-center justify-center rounded-2xl bg-brand-strong px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-500"
             >
-              Open director dashboard
+              Get started
             </Link>
-            <span className="inline-flex min-h-12 items-center justify-center px-4 text-sm text-slate-400">
-              Director access is available by invitation.
-            </span>
+            <Link
+              href="/login"
+              className="inline-flex min-h-12 items-center justify-center rounded-2xl border border-border bg-white px-5 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700"
+            >
+              Sign in
+            </Link>
           </div>
         </div>
 
-        <div className="rounded-3xl border border-border bg-card/90 p-5 shadow-2xl shadow-black/25 backdrop-blur">
-          <div className="flex items-center justify-between border-b border-border pb-4">
-            <div>
-              <p className="text-xs font-medium uppercase tracking-[0.18em] text-slate-500">
-                Gate status
-              </p>
-              <p className="mt-1 font-semibold text-white">Saturday admission</p>
+        <div className="rounded-[2rem] border border-border bg-white p-5 shadow-sm">
+          <div className="rounded-[1.5rem] bg-card-strong p-5">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-blue-700">
+                  Gate status
+                </p>
+                <p className="mt-1 text-xl font-semibold text-slate-950">
+                  Saturday admission
+                </p>
+              </div>
+              <span className="rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700">
+                Ready
+              </span>
             </div>
-            <span className="rounded-full bg-emerald-400/10 px-2.5 py-1 text-xs font-medium text-emerald-300">
-              Ready
-            </span>
-          </div>
-          <div className="grid grid-cols-2 gap-3 py-5">
-            <div className="rounded-2xl bg-card-strong p-4">
-              <p className="text-sm text-slate-400">Passes sold</p>
-              <p className="mt-2 font-mono text-3xl font-semibold text-white">—</p>
+            <div className="mt-6 grid grid-cols-2 gap-3">
+              <DemoMetric label="Passes sold" value="128" />
+              <DemoMetric label="Checked in" value="91" />
             </div>
-            <div className="rounded-2xl bg-card-strong p-4">
-              <p className="text-sm text-slate-400">Checked in</p>
-              <p className="mt-2 font-mono text-3xl font-semibold text-white">—</p>
+            <div className="mt-5 rounded-3xl bg-white p-4">
+              <div className="flex items-center justify-between text-sm">
+                <span className="font-medium text-slate-600">
+                  Admission progress
+                </span>
+                <span className="font-mono font-semibold text-blue-700">
+                  71%
+                </span>
+              </div>
+              <div className="mt-3 h-3 overflow-hidden rounded-full bg-slate-100">
+                <div className="h-full w-[71%] rounded-full bg-blue-600" />
+              </div>
             </div>
-          </div>
-          <div className="rounded-2xl border border-dashed border-white/15 px-4 py-5 text-center text-sm leading-6 text-slate-400">
-            Create or select an admission event to view live gate activity.
           </div>
         </div>
       </section>
+
+      <section className="mx-auto grid w-full max-w-6xl gap-4 px-6 pb-16 lg:grid-cols-3 lg:px-8">
+        <ValueCard
+          title="Shorter lines"
+          body="Spectators can buy and open passes on their phones before they reach gate staff."
+        />
+        <ValueCard
+          title="Cleaner scanning"
+          body="Gate teams get secure scanner links for validating passes at each entrance."
+        />
+        <ValueCard
+          title="Less leakage"
+          body="Refunded, reused, duplicate, and wrong-day passes are flagged when scanned."
+        />
+      </section>
+
+      <section className="mx-auto w-full max-w-6xl px-6 pb-20 lg:px-8">
+        <div className="rounded-[2rem] border border-border bg-white p-6 shadow-sm sm:p-8">
+          <p className="text-sm font-semibold text-blue-700">
+            Built for the current wedge
+          </p>
+          <h2 className="mt-2 text-3xl font-semibold tracking-[-0.035em] text-slate-950">
+            Start with tournament-day admissions.
+          </h2>
+          <p className="mt-4 max-w-3xl leading-7 text-slate-600">
+            TourniBase is focused on youth basketball tournament admission
+            control first: online passes, pass emails, offline backups, scanner
+            links, order lookup, refunds, and gate activity.
+          </p>
+        </div>
+      </section>
     </main>
+  );
+}
+
+function DemoMetric({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-3xl bg-white p-4">
+      <p className="text-sm text-slate-500">{label}</p>
+      <p className="mt-2 font-mono text-3xl font-semibold text-blue-700">
+        {value}
+      </p>
+    </div>
+  );
+}
+
+function ValueCard({ body, title }: { body: string; title: string }) {
+  return (
+    <div className="rounded-[2rem] border border-border bg-white p-6 shadow-sm">
+      <h2 className="text-xl font-semibold text-slate-950">{title}</h2>
+      <p className="mt-3 leading-7 text-slate-600">{body}</p>
+    </div>
   );
 }

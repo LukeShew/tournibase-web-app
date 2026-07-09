@@ -11,11 +11,11 @@ export function LoginForm() {
   const [state, action, pending] = useActionState(login, initialLoginState);
 
   return (
-    <form action={action} className="mt-8 space-y-5">
+    <form action={action} className="space-y-5">
       <div>
         <label
           htmlFor="email"
-          className="mb-2 block text-sm font-medium text-slate-200"
+          className="mb-2 block text-sm font-medium text-slate-700"
         >
           Email address
         </label>
@@ -26,14 +26,14 @@ export function LoginForm() {
           autoComplete="email"
           required
           disabled={pending}
-          className="h-12 w-full rounded-xl border border-border bg-black/20 px-4 text-base text-white placeholder:text-slate-600 focus:border-brand focus:outline-none focus:ring-4 focus:ring-brand/10 disabled:cursor-wait disabled:opacity-70"
+          className="h-12 w-full rounded-xl border border-border bg-white px-4 text-base text-slate-950 placeholder:text-slate-400 focus:border-blue-400 focus:outline-none focus:ring-4 focus:ring-blue-100 disabled:cursor-wait disabled:opacity-70"
           placeholder="director@example.com"
         />
       </div>
       <div>
         <label
           htmlFor="password"
-          className="mb-2 block text-sm font-medium text-slate-200"
+          className="mb-2 block text-sm font-medium text-slate-700"
         >
           Password
         </label>
@@ -44,14 +44,14 @@ export function LoginForm() {
           autoComplete="current-password"
           required
           disabled={pending}
-          className="h-12 w-full rounded-xl border border-border bg-black/20 px-4 text-base text-white placeholder:text-slate-600 focus:border-brand focus:outline-none focus:ring-4 focus:ring-brand/10 disabled:cursor-wait disabled:opacity-70"
+          className="h-12 w-full rounded-xl border border-border bg-white px-4 text-base text-slate-950 placeholder:text-slate-400 focus:border-blue-400 focus:outline-none focus:ring-4 focus:ring-blue-100 disabled:cursor-wait disabled:opacity-70"
           placeholder="Your password"
         />
       </div>
 
       <div aria-live="polite" className="min-h-6">
         {state.message ? (
-          <p className="text-sm text-red-300">{state.message}</p>
+          <p className="text-sm text-red-600">{state.message}</p>
         ) : null}
       </div>
 

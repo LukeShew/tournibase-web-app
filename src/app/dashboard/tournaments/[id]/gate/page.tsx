@@ -324,9 +324,9 @@ function StatusCard({ label, value }: { label: string; value: string }) {
 
 function StatusBadge({ status }: { status: SessionStatus }) {
   const styles = {
-    active: "bg-emerald-300/10 text-emerald-300",
-    expired: "bg-white/5 text-slate-400",
-    revoked: "bg-red-300/10 text-red-300",
+    active: "bg-emerald-50 text-emerald-700",
+    expired: "bg-slate-100 text-slate-500",
+    revoked: "bg-red-50 text-red-700",
   } satisfies Record<SessionStatus, string>;
 
   return (

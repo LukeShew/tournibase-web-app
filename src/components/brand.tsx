@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 
-export function Brand() {
+export function Brand({ tone = "dark" }: { tone?: "dark" | "light" }) {
   return (
     <Link
       href="/"
@@ -15,7 +15,11 @@ export function Brand() {
         height={38}
         priority
       />
-      <span className="text-lg font-semibold tracking-[-0.025em] text-white">
+      <span
+        className={`text-lg font-semibold tracking-[-0.025em] ${
+          tone === "light" ? "text-slate-950" : "text-white"
+        }`}
+      >
         TourniBase
       </span>
     </Link>

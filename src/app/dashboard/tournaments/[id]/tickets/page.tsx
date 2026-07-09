@@ -90,11 +90,11 @@ export default async function TicketTypesPage({
   return (
     <div className="pb-12">
       <Link
-        href={`/dashboard/tournaments/${tournamentId}`}
+        href={`/dashboard/tournaments/${tournamentId}/edit`}
         className="inline-flex items-center gap-2 text-sm font-semibold text-slate-500 transition hover:text-slate-900"
       >
         <span aria-hidden="true">←</span>
-        Back to event overview
+        Back to event details
       </Link>
 
       <div className="mt-6 flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
