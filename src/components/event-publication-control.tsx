@@ -4,19 +4,24 @@ import Link from "next/link";
 import { useActionState } from "react";
 import { setTournamentPublication } from "@/app/dashboard/tournaments/[id]/actions";
 import { initialPublicationState } from "@/lib/form-states";
+import { getIdlePublicationMessage } from "@/lib/publication-message";
 
 type TournamentStatus = "draft" | "published" | "closed" | "archived";
 
 export function EventPublicationControl({
   activeTicketCount,
+  align = "start",
   checkoutConfigured,
   publicPath,
+  showIdleMessage = true,
   status,
   tournamentId,
 }: {
   activeTicketCount: number;
+  align?: "end" | "start";
   checkoutConfigured: boolean;
   publicPath: string;
+  showIdleMessage?: boolean;
   status: TournamentStatus;
   tournamentId: number;
 }) {
@@ -36,16 +41,38 @@ export function EventPublicationControl({
 
   if (status === "closed" || status === "archived") {
     return (
-      <p className="text-sm leading-6 text-slate-500">
+      <p
+        className={`text-sm leading-6 text-slate-500 ${
+          align === "end" ? "sm:text-right" : ""
+        }`}
+      >
         This event is {status}. Public ticket sales and publishing controls are
         unavailable.
       </p>
     );
   }
 
+  const idleMessage = getIdlePublicationMessage({
+    activeTicketCount,
+    checkoutConfigured,
+    status,
+  });
+  const visibleMessage = state.message
+    ? {
+        className: state.success ? "text-emerald-700" : "text-red-600",
+        text: state.message,
+      }
+    : showIdleMessage
+      ? idleMessage
+      : null;
+
   return (
     <div>
-      <div className="flex flex-col gap-3 sm:flex-row">
+      <div
+        className={`flex flex-col gap-3 sm:flex-row ${
+          align === "end" ? "sm:justify-end" : ""
+        }`}
+      >
         <form action={action}>
           <button
             type="submit"
@@ -73,35 +100,16 @@ export function EventPublicationControl({
         ) : null}
       </div>
 
-      <div aria-live="polite" className="mt-3 min-h-5">
-        {state.message ? (
-          <p
-            className={`text-sm ${
-              state.success ? "text-emerald-700" : "text-red-600"
-            }`}
-          >
-            {state.message}
+      {visibleMessage ? (
+        <div
+          aria-live="polite"
+          className={`mt-3 min-h-5 ${align === "end" ? "sm:text-right" : ""}`}
+        >
+          <p className={`text-sm ${visibleMessage.className}`}>
+            {visibleMessage.text}
           </p>
-        ) : status === "draft" && activeTicketCount === 0 ? (
-          <p className="text-sm text-amber-700">
-            Add an active ticket before publishing.
-          </p>
-        ) : status === "draft" ? (
-          <p className="text-sm text-slate-500">
-            Publishing makes the event and active ticket types publicly
-            visible.
-          </p>
-        ) : checkoutConfigured ? (
-          <p className="text-sm text-emerald-700">
-            Stripe Checkout is connected and ready for buyers.
-          </p>
-        ) : (
-          <p className="text-sm text-amber-700">
-            The page is public, but payment environment variables are still
-            missing.
-          </p>
-        )}
-      </div>
+        </div>
+      ) : null}
     </div>
   );
 }

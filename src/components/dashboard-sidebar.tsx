@@ -100,7 +100,10 @@ export function DashboardSidebar({
   const selectedAvatar = getProfileAvatarOption(avatarId);
 
   return (
-    <aside className="group/sidebar sticky top-0 z-30 hidden h-screen w-20 flex-col overflow-hidden border-r border-border bg-white/95 px-3 py-4 shadow-sm backdrop-blur-xl transition-[width] duration-200 ease-out hover:w-72 focus-within:w-72 lg:flex">
+    <aside
+      className="group/sidebar sticky top-0 z-30 hidden h-screen w-20 flex-col overflow-hidden border-r border-border bg-white/95 px-3 py-4 shadow-sm backdrop-blur-xl transition-[width] duration-200 ease-out hover:w-72 lg:flex 2xl:w-72"
+      onMouseLeave={() => setConfirmingSignOut(false)}
+    >
       <Link
         href="/dashboard"
         className="flex h-11 items-center gap-3 rounded-2xl px-1.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-blue-600"
@@ -113,7 +116,7 @@ export function DashboardSidebar({
           height={38}
           priority
         />
-        <span className="whitespace-nowrap text-lg font-semibold tracking-[-0.025em] text-slate-950 opacity-0 transition-opacity duration-150 group-hover/sidebar:opacity-100 group-focus-within/sidebar:opacity-100">
+        <span className="whitespace-nowrap text-lg font-semibold tracking-[-0.025em] text-slate-950 opacity-0 transition-opacity duration-150 group-hover/sidebar:opacity-100 2xl:opacity-100">
           TourniBase
         </span>
       </Link>
@@ -131,7 +134,7 @@ export function DashboardSidebar({
           >
             <ProfileAvatarIcon icon={selectedAvatar.icon} />
           </div>
-          <div className="min-w-0 opacity-0 transition-opacity duration-150 group-hover/sidebar:opacity-100 group-focus-within/sidebar:opacity-100">
+          <div className="min-w-0 opacity-0 transition-opacity duration-150 group-hover/sidebar:opacity-100 2xl:opacity-100">
             <p className="truncate text-sm font-semibold text-slate-950">
               {director.name}
             </p>
@@ -145,14 +148,14 @@ export function DashboardSidebar({
           <>
             <button
               type="button"
-              className="flex w-full items-center gap-3 rounded-2xl border border-border bg-white px-2 py-2.5 text-sm font-semibold text-slate-600 shadow-sm transition hover:bg-card-strong hover:text-slate-950 group-hover/sidebar:hidden group-focus-within/sidebar:hidden"
+              className="flex w-full items-center gap-3 rounded-2xl border border-border bg-white px-2 py-2.5 text-sm font-semibold text-slate-600 shadow-sm transition hover:bg-card-strong hover:text-slate-950 group-hover/sidebar:hidden 2xl:hidden"
               aria-label="Sign out"
               onClick={() => setConfirmingSignOut(false)}
             >
               <SidebarIcon icon="signOut" />
               <span className="sr-only">Sign out</span>
             </button>
-            <div className="hidden rounded-2xl border border-border bg-white p-3 shadow-sm group-hover/sidebar:block group-focus-within/sidebar:block">
+            <div className="hidden rounded-2xl border border-border bg-white p-3 shadow-sm group-hover/sidebar:block 2xl:block">
               <p className="px-1 pb-3 text-sm font-semibold text-slate-600">
                 Sign out of this director account?
               </p>
@@ -183,13 +186,13 @@ export function DashboardSidebar({
             onClick={() => setConfirmingSignOut(true)}
           >
             <SidebarIcon icon="signOut" />
-            <span className="whitespace-nowrap opacity-0 transition-opacity duration-150 group-hover/sidebar:opacity-100 group-focus-within/sidebar:opacity-100">
+            <span className="whitespace-nowrap opacity-0 transition-opacity duration-150 group-hover/sidebar:opacity-100 2xl:opacity-100">
               Sign out
             </span>
           </button>
         )}
 
-        <div className="grid grid-cols-1 gap-2 group-hover/sidebar:grid-cols-2 group-focus-within/sidebar:grid-cols-2">
+        <div className="grid grid-cols-1 gap-2 group-hover/sidebar:grid-cols-2 2xl:grid-cols-2">
           <BottomLink href="/dashboard/settings" icon="settings" label="Settings" />
           <BottomLink href="/support" icon="support" label="Support" expandedOnly />
         </div>
@@ -212,7 +215,7 @@ function SidebarNavItem({ item }: { item: NavItem }) {
         className={`flex items-center gap-3 rounded-2xl px-2 py-2.5 text-sm font-semibold transition ${className}`}
       >
         <SidebarIcon icon={item.icon} isActive={item.isActive} />
-        <span className="whitespace-nowrap opacity-0 transition-opacity duration-150 group-hover/sidebar:opacity-100 group-focus-within/sidebar:opacity-100">
+        <span className="whitespace-nowrap opacity-0 transition-opacity duration-150 group-hover/sidebar:opacity-100 2xl:opacity-100">
           {item.label}
         </span>
       </Link>
@@ -228,7 +231,7 @@ function SidebarNavItem({ item }: { item: NavItem }) {
       }}
     >
       <SidebarIcon icon={item.icon} isDisabled={Boolean(item.disabledMessage)} />
-      <span className="whitespace-nowrap opacity-0 transition-opacity duration-150 group-hover/sidebar:opacity-100 group-focus-within/sidebar:opacity-100">
+      <span className="whitespace-nowrap opacity-0 transition-opacity duration-150 group-hover/sidebar:opacity-100 2xl:opacity-100">
         {item.label}
       </span>
     </button>
@@ -249,11 +252,11 @@ function BottomLink({
   return (
     <Link
       href={href}
-      className={`${expandedOnly ? "hidden group-hover/sidebar:flex group-focus-within/sidebar:flex" : "flex"} items-center gap-3 rounded-2xl px-2 py-2.5 text-sm font-semibold text-slate-500 transition hover:bg-card-strong hover:text-slate-950`}
+      className={`${expandedOnly ? "hidden group-hover/sidebar:flex 2xl:flex" : "flex"} items-center gap-3 rounded-2xl px-2 py-2.5 text-sm font-semibold text-slate-500 transition hover:bg-card-strong hover:text-slate-950`}
       aria-label={label}
     >
       <SidebarIcon icon={icon} />
-      <span className="whitespace-nowrap opacity-0 transition-opacity duration-150 group-hover/sidebar:opacity-100 group-focus-within/sidebar:opacity-100">
+      <span className="whitespace-nowrap opacity-0 transition-opacity duration-150 group-hover/sidebar:opacity-100 2xl:opacity-100">
         {label}
       </span>
     </Link>
@@ -344,7 +347,7 @@ function NavIcon({ icon }: { icon: IconName }) {
         viewBox="0 0 24 24"
       >
         <path
-          d="M15.6 5.6a5 5 0 0 1 5.1-1.2l-3.1 3.1 2.9 2.9 3.1-3.1a5 5 0 0 1-6.3 6.3l-7.6 7.6a3 3 0 0 1-4.2-4.2l7.6-7.6a5 5 0 0 1 2.5-3.8Z"
+          d="M14.8 5.4a4.5 4.5 0 0 1 4.9-.9l-2.8 2.8 2.1 2.1 2.8-2.8a4.5 4.5 0 0 1-5.7 5.7l-7 7a2.5 2.5 0 0 1-3.5-3.5l7-7a4.5 4.5 0 0 1 2.2-3.4Z"
           stroke="currentColor"
           strokeLinecap="round"
           strokeLinejoin="round"

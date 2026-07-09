@@ -1,3 +1,4 @@
+import { BackNavigationButton } from "@/components/back-navigation-button";
 import { Brand } from "@/components/brand";
 
 export function LegalPageShell({
@@ -26,6 +27,9 @@ export function LegalPageShell({
         </h1>
         <div className="mt-8 space-y-8 rounded-3xl border border-border bg-card/90 p-6 leading-7 text-slate-300 sm:p-8">
           {children}
+        </div>
+        <div className="mt-8">
+          <BackNavigationButton />
         </div>
       </article>
     </main>

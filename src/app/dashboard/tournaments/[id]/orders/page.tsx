@@ -121,6 +121,10 @@ export default async function EventOrdersPage({
     ].some((value) => value.toLowerCase().includes(queryLower));
   });
   const tournament = tournamentRow as TournamentRecord;
+  const averageOnlineOrder =
+    metrics.sales.onlineOrderCount > 0
+      ? metrics.sales.grossOnlineSales / metrics.sales.onlineOrderCount
+      : 0;
 
   return (
     <div className="pb-12">
@@ -178,9 +182,9 @@ export default async function EventOrdersPage({
               value={metrics.sales.onlineTicketsSold}
             />
             <DashboardMetricCard
-              detail="Online and recorded gate revenue"
-              label="Estimated total revenue"
-              value={formatCurrency(metrics.sales.totalEstimatedRevenue)}
+              detail="Across captured online orders"
+              label="Average online order"
+              value={formatCurrency(averageOnlineOrder)}
             />
           </div>
         </section>

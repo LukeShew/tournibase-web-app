@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { EventDetailsEditForm } from "@/components/event-details-edit-form";
 import { EventPublicationControl } from "@/components/event-publication-control";
 import { requireDirector } from "@/lib/auth";
+import { getIdlePublicationMessage } from "@/lib/publication-message";
 import { getStripeConfigurationIssues } from "@/lib/stripe";
 import { getSupabaseAdminConfigurationIssues } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
@@ -91,6 +92,11 @@ export default async function EditTournamentPage({
       includePublishableKey: true,
       includeWebhookSecret: true,
     }).length === 0 && getSupabaseAdminConfigurationIssues().length === 0;
+  const publicationMessage = getIdlePublicationMessage({
+    activeTicketCount: activeTicketCount ?? 0,
+    checkoutConfigured,
+    status: tournament.status,
+  });
 
   return (
     <div className="pb-12">
@@ -127,6 +133,35 @@ export default async function EditTournamentPage({
       </div>
 
       <section className="mt-8 rounded-[2rem] border border-border bg-card p-6 shadow-sm">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-blue-700">
+              Public ticket page
+            </p>
+            <h2 className="mt-2 text-xl font-semibold text-slate-950">
+              Publish controls
+            </h2>
+            <p
+              className={`mt-2 max-w-2xl text-sm leading-6 ${publicationMessage.className}`}
+            >
+              {publicationMessage.text}
+            </p>
+          </div>
+          <div className="w-full max-w-md">
+            <EventPublicationControl
+              activeTicketCount={activeTicketCount ?? 0}
+              align="end"
+              checkoutConfigured={checkoutConfigured}
+              publicPath={`/e/${tournament.public_slug}`}
+              showIdleMessage={false}
+              status={tournament.status}
+              tournamentId={tournamentId}
+            />
+          </div>
+        </div>
+      </section>
+
+      <section className="mt-6 rounded-[2rem] border border-border bg-card p-6 shadow-sm">
         <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.14em] text-blue-700">
@@ -146,32 +181,6 @@ export default async function EditTournamentPage({
           >
             Edit ticket details
           </Link>
-        </div>
-      </section>
-
-      <section className="mt-6 rounded-[2rem] border border-border bg-card p-6 shadow-sm">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-blue-700">
-              Public ticket page
-            </p>
-            <h2 className="mt-2 text-xl font-semibold text-slate-950">
-              Publish controls
-            </h2>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
-              Publish when ticket details are ready. Unpublish if the event
-              should stop accepting public buyers.
-            </p>
-          </div>
-          <div className="w-full max-w-md">
-            <EventPublicationControl
-              activeTicketCount={activeTicketCount ?? 0}
-              checkoutConfigured={checkoutConfigured}
-              publicPath={`/e/${tournament.public_slug}`}
-              status={tournament.status}
-              tournamentId={tournamentId}
-            />
-          </div>
         </div>
       </section>
 

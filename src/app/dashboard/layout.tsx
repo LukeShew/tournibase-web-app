@@ -15,7 +15,7 @@ export default async function DashboardLayout({
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <div className="mx-auto grid min-h-screen w-full max-w-[1480px] lg:grid-cols-[80px_minmax(0,1fr)]">
+      <div className="grid min-h-screen w-full lg:grid-cols-[80px_minmax(0,1fr)] 2xl:grid-cols-[288px_minmax(0,1fr)]">
         <DashboardSidebar director={director} logoutAction={logout} />
 
         <div className="min-w-0">
@@ -31,7 +31,7 @@ export default async function DashboardLayout({
             </div>
           </header>
 
-          <main className="px-5 py-6 sm:px-8 lg:px-10 lg:py-10">
+          <main className="mx-auto w-full max-w-[1480px] px-5 py-6 sm:px-8 lg:px-10 lg:py-10">
             {children}
           </main>
         </div>

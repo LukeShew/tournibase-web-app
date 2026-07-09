@@ -35,6 +35,8 @@ export type OrderLogOrder = {
   stripe_checkout_id: string | null;
 };
 
+const ORDERS_PER_PAGE = 20;
+
 export function OrderLogClient({
   orders,
   tournamentId,
@@ -44,6 +46,11 @@ export function OrderLogClient({
 }) {
   const [activeOrder, setActiveOrder] = useState<OrderLogOrder | null>(null);
   const [openActionsId, setOpenActionsId] = useState<number | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const totalPages = Math.max(1, Math.ceil(orders.length / ORDERS_PER_PAGE));
+  const safePage = Math.min(currentPage, totalPages);
+  const pageStart = (safePage - 1) * ORDERS_PER_PAGE;
+  const visibleOrders = orders.slice(pageStart, pageStart + ORDERS_PER_PAGE);
 
   if (orders.length === 0) {
     return (
@@ -61,7 +68,7 @@ export function OrderLogClient({
   return (
     <>
       <div className="divide-y divide-border">
-        {orders.map((order) => (
+        {visibleOrders.map((order) => (
           <article
             key={order.id}
             className="relative flex flex-col gap-4 bg-card px-5 py-5 transition hover:bg-blue-50/40 lg:flex-row lg:items-center lg:justify-between"
@@ -158,6 +165,39 @@ export function OrderLogClient({
           </article>
         ))}
       </div>
+
+      {orders.length > ORDERS_PER_PAGE ? (
+        <div className="flex flex-col gap-3 border-t border-border bg-card-strong px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-sm text-slate-500">
+            Showing {pageStart + 1}–
+            {Math.min(pageStart + ORDERS_PER_PAGE, orders.length)} of{" "}
+            {orders.length} orders
+          </p>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              className="inline-flex h-10 items-center justify-center rounded-2xl border border-border bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-blue-50 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+              disabled={safePage === 1}
+              onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+            >
+              Previous
+            </button>
+            <span className="min-w-24 text-center text-sm font-semibold text-slate-500">
+              Page {safePage} of {totalPages}
+            </span>
+            <button
+              type="button"
+              className="inline-flex h-10 items-center justify-center rounded-2xl border border-border bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-blue-50 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+              disabled={safePage === totalPages}
+              onClick={() =>
+                setCurrentPage((page) => Math.min(totalPages, page + 1))
+              }
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      ) : null}
 
       {activeOrder ? (
         <OrderDetailsModal
@@ -372,7 +412,9 @@ function getOrderNumber(orderId: number) {
 }
 
 function getStripeSearchUrl(checkoutId: string) {
-  return `https://dashboard.stripe.com/search?query=${encodeURIComponent(
+  const modePrefix = checkoutId.startsWith("cs_test_") ? "/test" : "";
+
+  return `https://dashboard.stripe.com${modePrefix}/search?query=${encodeURIComponent(
     checkoutId,
   )}`;
 }

@@ -37,7 +37,7 @@ export function LegalFooter() {
             <Link
               key={link.href}
               href={link.href}
-              className="transition hover:text-slate-200"
+              className="transition hover:text-slate-950"
             >
               {link.label}
             </Link>
