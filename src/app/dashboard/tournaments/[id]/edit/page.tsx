@@ -133,7 +133,7 @@ export default async function EditTournamentPage({
       </div>
 
       <section className="mt-8 rounded-[2rem] border border-border bg-card p-6 shadow-sm">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.14em] text-blue-700">
               Public ticket page

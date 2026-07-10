@@ -98,18 +98,22 @@ export default async function Home() {
         </div>
       </section>
 
-      <section className="mx-auto grid w-full max-w-6xl gap-4 px-6 pb-16 lg:grid-cols-3 lg:px-8">
+      <section className="mx-auto grid w-full max-w-6xl gap-4 px-6 pb-16 md:grid-cols-2 lg:grid-cols-4 lg:px-8">
         <ValueCard
           title="Shorter lines"
-          body="Spectators can buy and open passes on their phones before they reach gate staff."
+          body="Spectators can purchase passes in seconds, skip cash or paper tickets, and open their passes from email. Each pass also includes a backup save option for venues with weak service."
         />
         <ValueCard
           title="Cleaner scanning"
-          body="Gate teams get secure scanner links for validating passes at each entrance."
+          body="Gate staff use secure scanner links to validate passes in real time with server-side duplicate detection. No special hardware or app install is required."
         />
         <ValueCard
           title="Less leakage"
-          body="Refunded, reused, duplicate, and wrong-day passes are flagged when scanned."
+          body="TourniBase blocks refunded, reused, duplicate, and wrong-day passes so tournament revenue is protected at the gate."
+        />
+        <ValueCard
+          title="Reliability and ease"
+          body="Scanner links use hashed credentials, Stripe handles payments securely, and directors can look up orders, process refunds, and review gate activity from one admissions dashboard."
         />
       </section>
 
@@ -122,9 +126,12 @@ export default async function Home() {
             Start with tournament-day admissions.
           </h2>
           <p className="mt-4 max-w-3xl leading-7 text-slate-600">
-            TourniBase is focused on youth basketball tournament admission
-            control first: online passes, pass emails, offline backups, scanner
-            links, order lookup, refunds, and gate activity.
+            TourniBase is purpose-built for youth tournament admissions, not
+            general event management. The first focus is youth basketball gate
+            control: online passes, pass emails, offline backups, scanner
+            links, order lookup, refunds, and gate activity. Early adopters
+            help shape the admissions platform before it expands to other
+            sports.
           </p>
         </div>
       </section>

@@ -1,8 +1,8 @@
 export const PRODUCT_POSITIONING =
-  "TourniBase is a digital gate system for youth basketball tournaments.";
+  "Parents buy passes online, save them to their phones, and breeze through the gate while TourniBase scanners block reused or refunded tickets.";
 
 export const DIRECTOR_PROMISE =
-  "Sell tournament passes online, scan people in faster, and stop duplicate tickets at the gate.";
+  "Skip the lines. Keep your gates secure.";
 
 export const PARENT_PROMISE =
   "Buy before arrival. Show your pass. Skip the line.";
