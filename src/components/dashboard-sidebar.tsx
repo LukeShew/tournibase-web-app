@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { ProfileAvatarIcon } from "@/components/profile-avatar-icon";
 import { useProfileAvatarId } from "@/hooks/use-profile-avatar-id";
@@ -43,17 +43,28 @@ export function DashboardSidebar({
   logoutAction,
 }: DashboardSidebarProps) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const avatarId = useProfileAvatarId();
   const [confirmingSignOut, setConfirmingSignOut] = useState(false);
   const tournamentId =
     pathname.match(/^\/dashboard\/tournaments\/(\d+)/)?.[1] ?? null;
-  const selectedTournamentId = tournamentId;
+  const settingsEventParam = searchParams.get("event");
+  const settingsTournamentId =
+    pathname === "/dashboard/settings" &&
+    settingsEventParam &&
+    /^\d+$/.test(settingsEventParam)
+      ? settingsEventParam
+      : null;
+  const selectedTournamentId = tournamentId ?? settingsTournamentId;
   const hasSelectedEvent = Boolean(selectedTournamentId);
   const selectEventMessage = "Please select an event first.";
 
   const eventBaseHref = selectedTournamentId
     ? `/dashboard/tournaments/${selectedTournamentId}`
     : undefined;
+  const settingsHref = selectedTournamentId
+    ? `/dashboard/settings?event=${selectedTournamentId}`
+    : "/dashboard/settings";
 
   const navItems: NavItem[] = [
     {
@@ -194,7 +205,7 @@ export function DashboardSidebar({
         )}
 
         <div className="grid grid-cols-1 gap-2 group-hover/sidebar:grid-cols-2 2xl:grid-cols-2">
-          <BottomLink href="/dashboard/settings" icon="settings" label="Settings" />
+          <BottomLink href={settingsHref} icon="settings" label="Settings" />
           <BottomLink href="/support" icon="support" label="Support" expandedOnly />
         </div>
       </div>

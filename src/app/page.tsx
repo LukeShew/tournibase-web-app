@@ -74,6 +74,34 @@ export default async function Home() {
         </div>
       </section>
 
+      <section className="bg-[#f7f8fb] py-20">
+        <div className="mx-auto grid w-full max-w-6xl gap-10 px-6 lg:grid-cols-[0.75fr_1.25fr] lg:items-start lg:px-8">
+          <SectionHeading
+            eyebrow="Fraud resistance"
+            title="Every pass is checked, not just scanned."
+            body="TourniBase helps reduce admission leakage by checking the order, event, date, refund status, and prior use before accepting a pass."
+          />
+          <div className="grid gap-4 sm:grid-cols-2">
+            <FraudCard
+              title="Duplicate blocking"
+              body="The first valid entry is recorded so the same pass cannot be reused at another gate."
+            />
+            <FraudCard
+              title="Refund checks"
+              body="Fully refunded orders are marked and their passes are blocked from entry."
+            />
+            <FraudCard
+              title="Event and date checks"
+              body="Wrong-event and wrong-day passes are rejected before admission is recorded."
+            />
+            <FraudCard
+              title="Controlled scanner access"
+              body="Gate links expire, can be revoked, and limit staff to the access they need."
+            />
+          </div>
+        </div>
+      </section>
+
       <section className="mx-auto grid w-full max-w-6xl gap-12 px-6 py-24 lg:grid-cols-[0.85fr_1.15fr] lg:items-center lg:px-8">
         <SectionHeading
           eyebrow="One connected flow"
@@ -89,7 +117,7 @@ export default async function Home() {
         </div>
       </section>
 
-      <section className="bg-slate-950 py-24 text-white">
+      <section className="gate-dark bg-slate-950 py-24 text-white">
         <div className="mx-auto grid w-full max-w-6xl gap-10 px-6 lg:grid-cols-[0.9fr_1.1fr] lg:items-center lg:px-8">
           <div>
             <p className="text-sm font-semibold text-blue-300">For directors</p>
@@ -108,7 +136,7 @@ export default async function Home() {
       </section>
 
       <section className="mx-auto w-full max-w-6xl px-6 py-24 lg:px-8">
-        <div className="relative overflow-hidden rounded-[2.25rem] bg-blue-600 px-7 py-12 text-white shadow-xl sm:px-12 sm:py-16">
+        <div className="gate-dark relative overflow-hidden rounded-[2.25rem] bg-blue-600 px-7 py-12 text-white shadow-xl sm:px-12 sm:py-16">
           <div className="absolute -right-20 -top-32 h-80 w-80 rounded-full border-[42px] border-white/10" />
           <div className="relative max-w-2xl">
             <p className="text-sm font-semibold text-blue-100">Start with one event</p>
@@ -184,7 +212,7 @@ function SecondaryLink({
 function GatePreview() {
   return (
     <div className="relative rounded-[2.25rem] border border-border bg-white p-5 shadow-xl shadow-blue-950/10">
-      <div className="rounded-[1.75rem] bg-slate-950 p-6 text-white">
+      <div className="gate-dark rounded-[1.75rem] bg-slate-950 p-6 text-white">
         <div className="flex items-start justify-between gap-4">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-blue-300">
@@ -254,6 +282,21 @@ function BenefitCard({
       </span>
       <h3 className="mt-6 text-xl font-semibold text-slate-950">{title}</h3>
       <p className="mt-3 leading-7 text-slate-600">{body}</p>
+    </article>
+  );
+}
+
+function FraudCard({ body, title }: { body: string; title: string }) {
+  return (
+    <article className="rounded-[1.75rem] border border-border bg-white p-5 shadow-sm">
+      <span
+        aria-hidden="true"
+        className="grid h-10 w-10 place-items-center rounded-2xl bg-brand-soft font-semibold text-blue-700"
+      >
+        ✓
+      </span>
+      <h3 className="mt-5 text-lg font-semibold text-slate-950">{title}</h3>
+      <p className="mt-2 text-sm leading-6 text-slate-600">{body}</p>
     </article>
   );
 }

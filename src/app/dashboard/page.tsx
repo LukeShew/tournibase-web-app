@@ -22,7 +22,12 @@ type Tournament = {
   end_date: string;
 };
 
-export default async function DashboardPage() {
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ q?: string }>;
+}) {
+  const query = ((await searchParams)?.q ?? "").trim();
   const director = await requireDirector();
   const supabase = await createClient();
 
@@ -43,7 +48,7 @@ export default async function DashboardPage() {
       .select("id, name, status, start_date, end_date")
       .in("organization_id", organizationIds)
       .order("start_date", { ascending: false })
-      .limit(8);
+      .limit(100);
 
     if (tournamentError) {
       throw tournamentError;
@@ -59,21 +64,28 @@ export default async function DashboardPage() {
   const publishedCount = tournaments.filter(
     (tournament) => tournament.status === "published",
   ).length;
+  const normalizedQuery = query.toLocaleLowerCase();
+  const matchingTournaments = normalizedQuery
+    ? tournaments.filter((tournament) =>
+        tournament.name.toLocaleLowerCase().includes(normalizedQuery),
+      )
+    : tournaments;
   const now = new Date();
-  const upcomingTournaments = tournaments
+  const upcomingTournaments = matchingTournaments
     .filter((tournament) => new Date(tournament.end_date) >= now)
     .sort(
       (first, second) =>
         new Date(first.start_date).getTime() -
         new Date(second.start_date).getTime(),
     );
-  const previousTournaments = tournaments
+  const previousTournaments = matchingTournaments
     .filter((tournament) => new Date(tournament.end_date) < now)
     .sort(
       (first, second) =>
         new Date(second.end_date).getTime() - new Date(first.end_date).getTime(),
     );
-  const featuredTournament = upcomingTournaments[0] ?? tournaments[0] ?? null;
+  const featuredTournament =
+    upcomingTournaments[0] ?? matchingTournaments[0] ?? null;
 
   return (
     <div className="space-y-8">
@@ -96,6 +108,46 @@ export default async function DashboardPage() {
           New admission event
         </Link>
       </div>
+
+      <form
+        action="/dashboard"
+        className="flex flex-col gap-3 rounded-[2rem] border border-border bg-card p-4 shadow-sm sm:flex-row sm:items-center"
+        role="search"
+      >
+        <label className="sr-only" htmlFor="tournament-search">
+          Search tournaments
+        </label>
+        <div className="relative flex-1">
+          <span
+            aria-hidden="true"
+            className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
+          >
+            ⌕
+          </span>
+          <input
+            id="tournament-search"
+            name="q"
+            type="search"
+            defaultValue={query}
+            placeholder="Search tournaments"
+            className="h-12 w-full rounded-2xl border border-border bg-card-strong pl-11 pr-4 text-sm text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-blue-300 focus:ring-4 focus:ring-blue-100"
+          />
+        </div>
+        <button
+          type="submit"
+          className="inline-flex h-12 items-center justify-center rounded-2xl bg-brand-strong px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-500"
+        >
+          Search
+        </button>
+        {query ? (
+          <Link
+            href="/dashboard"
+            className="inline-flex h-12 items-center justify-center rounded-2xl border border-border bg-white px-5 text-sm font-semibold text-slate-600 transition hover:bg-card-strong hover:text-slate-950"
+          >
+            Clear
+          </Link>
+        ) : null}
+      </form>
 
       <section>
         <div className="overflow-hidden rounded-[2rem] border border-border bg-card shadow-sm">
@@ -140,18 +192,28 @@ export default async function DashboardPage() {
                 +
               </div>
               <h2 className="mt-4 text-xl font-semibold text-slate-950">
-                No admission events yet
+                {query ? "No matching tournaments" : "No admission events yet"}
               </h2>
               <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-500">
-                Create your first event, add the tournament details, and reserve
-                its public ticket link.
+                {query
+                  ? `No tournaments match “${query}”. Try another name or clear the search.`
+                  : "Create your first event, add the tournament details, and reserve its public ticket link."}
               </p>
-              <Link
-                href="/dashboard/tournaments/new"
-                className="mt-5 inline-flex h-11 items-center justify-center rounded-2xl bg-brand-strong px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-500"
-              >
-                Create admission event
-              </Link>
+              {query ? (
+                <Link
+                  href="/dashboard"
+                  className="mt-5 inline-flex h-11 items-center justify-center rounded-2xl border border-border bg-white px-4 text-sm font-semibold text-slate-600 shadow-sm transition hover:bg-card-strong"
+                >
+                  Clear search
+                </Link>
+              ) : (
+                <Link
+                  href="/dashboard/tournaments/new"
+                  className="mt-5 inline-flex h-11 items-center justify-center rounded-2xl bg-brand-strong px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-500"
+                >
+                  Create admission event
+                </Link>
+              )}
             </div>
           )}
         </div>
