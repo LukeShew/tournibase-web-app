@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { ProfileAvatarIcon } from "@/components/profile-avatar-icon";
 import { useProfileAvatarId } from "@/hooks/use-profile-avatar-id";
 import {
@@ -47,21 +47,9 @@ export function DashboardSidebar({
   const [confirmingSignOut, setConfirmingSignOut] = useState(false);
   const tournamentId =
     pathname.match(/^\/dashboard\/tournaments\/(\d+)/)?.[1] ?? null;
-  const storedTournamentId =
-    typeof window === "undefined"
-      ? null
-      : window.localStorage.getItem("tournibase:lastTournamentId");
-  const selectedTournamentId = tournamentId ?? storedTournamentId;
+  const selectedTournamentId = tournamentId;
   const hasSelectedEvent = Boolean(selectedTournamentId);
   const selectEventMessage = "Please select an event first.";
-
-  useEffect(() => {
-    if (!tournamentId) {
-      return;
-    }
-
-    window.localStorage.setItem("tournibase:lastTournamentId", tournamentId);
-  }, [tournamentId]);
 
   const eventBaseHref = selectedTournamentId
     ? `/dashboard/tournaments/${selectedTournamentId}`

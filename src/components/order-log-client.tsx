@@ -146,13 +146,13 @@ export function OrderLogClient({
                   </Link>
                   {order.stripe_checkout_id ? (
                     <a
-                      href={getStripeCheckoutUrl(order.stripe_checkout_id)}
+                      href={getStripePaymentUrl(order.stripe_checkout_id)}
                       target="_blank"
                       rel="noreferrer"
                       className="block rounded-xl px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-blue-50 hover:text-blue-700"
                       onClick={() => setOpenActionsId(null)}
                     >
-                      Open checkout in Stripe
+                      View payment in Stripe
                     </a>
                   ) : (
                     <span className="block rounded-xl px-3 py-2 text-sm font-semibold text-slate-300">
@@ -336,12 +336,12 @@ function OrderDetailsModal({
           <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-end">
             {order.stripe_checkout_id ? (
               <a
-                href={getStripeCheckoutUrl(order.stripe_checkout_id)}
+                href={getStripePaymentUrl(order.stripe_checkout_id)}
                 target="_blank"
                 rel="noreferrer"
                 className="inline-flex h-11 items-center justify-center rounded-2xl border border-border bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700"
               >
-                Open checkout in Stripe
+                View payment in Stripe
               </a>
             ) : null}
             <button
@@ -411,10 +411,6 @@ function getOrderNumber(orderId: number) {
   return `TB-${orderId.toString().padStart(6, "0")}`;
 }
 
-function getStripeCheckoutUrl(checkoutId: string) {
-  const modePrefix = checkoutId.startsWith("cs_test_") ? "/test" : "";
-
-  return `https://dashboard.stripe.com${modePrefix}/checkout/sessions/${encodeURIComponent(
-    checkoutId,
-  )}`;
+function getStripePaymentUrl(checkoutId: string) {
+  return `/api/stripe/dashboard-payment?session_id=${encodeURIComponent(checkoutId)}`;
 }
