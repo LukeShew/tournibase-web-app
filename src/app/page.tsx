@@ -214,10 +214,10 @@ function SecondaryLink({
 function GatePreview() {
   return (
     <div className="relative rounded-[2.25rem] border border-border bg-white p-5 shadow-xl shadow-blue-950/10">
-      <div className="gate-dark rounded-[1.75rem] bg-[#123d6b] p-6 text-white">
+      <div className="rounded-[1.75rem] border border-border bg-[#f7f8fb] p-6 text-slate-950">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-blue-300">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-blue-700">
               Gate 1
             </p>
             <p className="mt-2 text-xl font-semibold">Pass accepted</p>
@@ -226,8 +226,8 @@ function GatePreview() {
             ✓
           </span>
         </div>
-        <div className="mt-8 rounded-3xl bg-[#1b4b7d] p-5">
-          <p className="text-sm text-slate-300">Weekend pass</p>
+        <div className="mt-8 rounded-3xl border border-border bg-white p-5 shadow-sm">
+          <p className="text-sm text-slate-500">Weekend pass</p>
           <p className="mt-2 text-2xl font-semibold">Taylor Johnson</p>
           <div className="mt-5 grid grid-cols-2 gap-3 text-sm">
             <PreviewStat label="Order" value="TB-000128" />
@@ -241,9 +241,9 @@ function GatePreview() {
 
 function PreviewStat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-2xl bg-[#25598d] p-3">
-      <p className="text-xs text-slate-400">{label}</p>
-      <p className="mt-1 font-mono text-sm text-white">{value}</p>
+    <div className="rounded-2xl bg-[#f7f8fb] p-3">
+      <p className="text-xs text-slate-500">{label}</p>
+      <p className="mt-1 font-mono text-sm text-slate-950">{value}</p>
     </div>
   );
 }
