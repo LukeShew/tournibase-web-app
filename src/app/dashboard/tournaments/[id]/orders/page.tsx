@@ -14,6 +14,7 @@ import {
   getTournamentDashboardMetrics,
 } from "@/lib/dashboard-metrics";
 import { createClient } from "@/lib/supabase/server";
+import { matchesStrictText, matchesTightName } from "@/lib/search-match";
 import { formatEventDateRange } from "@/lib/tournaments";
 
 export const metadata: Metadata = {
@@ -99,7 +100,6 @@ export default async function EventOrdersPage({
   }
 
   const query = (resolvedSearchParams.q ?? "").trim();
-  const queryLower = query.toLowerCase();
   const allOrders = ((orderRows ?? []) as unknown as OrderLogOrder[]).map(
     (order) => ({
       ...order,
@@ -108,18 +108,16 @@ export default async function EventOrdersPage({
     }),
   );
   const orders = allOrders.filter((order) => {
-    if (!queryLower) {
+    if (!query) {
       return true;
     }
 
-    const orderNumber = getOrderNumber(order.id).toLowerCase();
-
-    return [
-      orderNumber,
-      order.buyer_name,
-      order.buyer_email,
-      order.buyer_phone ?? "",
-    ].some((value) => value.toLowerCase().includes(queryLower));
+    return (
+      matchesTightName(order.buyer_name, query) ||
+      matchesStrictText(getOrderNumber(order.id), query) ||
+      matchesStrictText(order.buyer_email, query) ||
+      matchesStrictText(order.buyer_phone ?? "", query)
+    );
   });
   const tournament = tournamentRow as TournamentRecord;
   const averageOnlineOrder =
@@ -207,7 +205,11 @@ export default async function EventOrdersPage({
           </div>
         </div>
 
-        <OrderLogClient orders={orders} tournamentId={tournamentId} />
+        <OrderLogClient
+          key={query}
+          orders={orders}
+          tournamentId={tournamentId}
+        />
       </section>
     </div>
   );

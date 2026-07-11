@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { matchesStrictText, matchesTightName } from "@/lib/search-match";
 
 export type LiveCheckIn = {
   buyerName: string;
@@ -20,7 +21,17 @@ export function LiveCheckInFeed({
   timeZone: string;
 }) {
   const [isOpen, setIsOpen] = useState(false);
+  const [query, setQuery] = useState("");
   const preview = checkIns.slice(0, 5);
+  const filteredCheckIns = query.trim()
+    ? checkIns.filter(
+        (checkIn) =>
+          matchesTightName(checkIn.buyerName, query) ||
+          matchesStrictText(checkIn.ticketName, query) ||
+          matchesStrictText(checkIn.gateName, query) ||
+          matchesStrictText(formatResult(checkIn.result), query),
+      )
+    : checkIns;
 
   return (
     <>
@@ -87,19 +98,66 @@ export function LiveCheckInFeed({
                 type="button"
                 className="grid h-10 w-10 place-items-center rounded-full bg-white text-2xl leading-none text-slate-500 shadow-sm transition hover:bg-slate-100 hover:text-slate-950"
                 aria-label="Close full check-in list"
-                onClick={() => setIsOpen(false)}
+                onClick={() => {
+                  setIsOpen(false);
+                  setQuery("");
+                }}
               >
                 ×
               </button>
             </div>
-            <div className="max-h-[calc(85vh-104px)] overflow-y-auto divide-y divide-border">
-              {checkIns.map((checkIn) => (
-                <CheckInRow
-                  key={checkIn.id}
-                  checkIn={checkIn}
-                  timeZone={timeZone}
-                />
-              ))}
+            <form
+              className="flex flex-col gap-3 border-b border-border bg-card-strong px-6 py-4 sm:flex-row"
+              onSubmit={(event) => event.preventDefault()}
+              role="search"
+            >
+              <label className="sr-only" htmlFor="scanner-feed-search">
+                Search check-ins
+              </label>
+              <input
+                id="scanner-feed-search"
+                type="search"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Search buyer, ticket, or gate"
+                autoComplete="off"
+                className="min-h-11 min-w-0 flex-1 rounded-2xl border border-border bg-white px-4 text-sm text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
+              />
+              <button
+                type="submit"
+                className="inline-flex h-11 items-center justify-center rounded-2xl bg-brand-strong px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-500"
+              >
+                Search
+              </button>
+              {query ? (
+                <button
+                  type="button"
+                  className="inline-flex h-11 items-center justify-center rounded-2xl border border-border bg-white px-5 text-sm font-semibold text-slate-600 transition hover:bg-slate-100 hover:text-slate-950"
+                  onClick={() => setQuery("")}
+                >
+                  Clear
+                </button>
+              ) : null}
+            </form>
+            <div className="max-h-[calc(85vh-193px)] overflow-y-auto divide-y divide-border">
+              {filteredCheckIns.length > 0 ? (
+                filteredCheckIns.map((checkIn) => (
+                  <CheckInRow
+                    key={checkIn.id}
+                    checkIn={checkIn}
+                    timeZone={timeZone}
+                  />
+                ))
+              ) : (
+                <div className="px-6 py-12 text-center">
+                  <h3 className="font-semibold text-slate-950">
+                    No matching check-ins
+                  </h3>
+                  <p className="mt-2 text-sm text-slate-500">
+                    Try another buyer name, ticket, or gate.
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         </div>

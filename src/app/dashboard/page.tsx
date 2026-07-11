@@ -3,6 +3,7 @@ import Link from "next/link";
 import { LiveSearchForm } from "@/components/live-search-form";
 import { requireDirector } from "@/lib/auth";
 import { DIRECTOR_PROMISE } from "@/lib/product-copy";
+import { matchesTightName } from "@/lib/search-match";
 import { createClient } from "@/lib/supabase/server";
 import { formatEventDateRange } from "@/lib/tournaments";
 
@@ -65,10 +66,9 @@ export default async function DashboardPage({
   const publishedCount = tournaments.filter(
     (tournament) => tournament.status === "published",
   ).length;
-  const normalizedQuery = query.toLocaleLowerCase();
-  const matchingTournaments = normalizedQuery
+  const matchingTournaments = query
     ? tournaments.filter((tournament) =>
-        tournament.name.toLocaleLowerCase().includes(normalizedQuery),
+        matchesTightName(tournament.name, query),
       )
     : tournaments;
   const now = new Date();
