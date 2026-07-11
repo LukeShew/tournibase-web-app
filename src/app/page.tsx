@@ -135,30 +135,32 @@ export default async function Home() {
         </div>
       </section>
 
-      <section className="mx-auto w-full max-w-6xl px-6 py-24 lg:px-8">
-        <div className="gate-dark relative overflow-hidden rounded-[2.25rem] bg-blue-600 px-7 py-12 text-white shadow-xl sm:px-12 sm:py-16">
-          <div className="absolute -right-20 -top-32 h-80 w-80 rounded-full border-[42px] border-white/10" />
-          <div className="relative max-w-2xl">
-            <p className="text-sm font-semibold text-blue-100">Start with one event</p>
-            <h2 className="mt-3 text-4xl font-semibold tracking-[-0.04em]">
-              Make your next gate easier to run.
-            </h2>
-            <p className="mt-4 text-lg text-blue-100">
-              Click below to use TourniBase for your next tournament.
-            </p>
-            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-              <Link
-                href="/support"
-                className="inline-flex min-h-12 items-center justify-center rounded-2xl bg-white px-5 text-sm font-semibold text-blue-700 shadow-sm transition hover:bg-blue-50"
-              >
-                Get started
-              </Link>
-              <Link
-                href="/login"
-                className="inline-flex min-h-12 items-center justify-center rounded-2xl border border-white/30 px-5 text-sm font-semibold text-white transition hover:bg-white/10"
-              >
-                Sign in
-              </Link>
+      <section className="w-full bg-white py-24">
+        <div className="mx-auto w-full max-w-6xl px-6 lg:px-8">
+          <div className="gate-dark relative overflow-hidden rounded-[2.25rem] bg-blue-600 px-7 py-12 text-white shadow-xl sm:px-12 sm:py-16">
+            <div className="absolute -right-20 -top-32 h-80 w-80 rounded-full border-[42px] border-white/10" />
+            <div className="relative max-w-2xl">
+              <p className="text-sm font-semibold text-blue-100">Start with one event</p>
+              <h2 className="mt-3 text-4xl font-semibold tracking-[-0.04em]">
+                Make your next gate easier to run.
+              </h2>
+              <p className="mt-4 text-lg text-blue-100">
+                Click below to use TourniBase for your next tournament.
+              </p>
+              <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+                <Link
+                  href="/support"
+                  className="inline-flex min-h-12 items-center justify-center rounded-2xl bg-white px-5 text-sm font-semibold text-blue-700 shadow-sm transition hover:bg-blue-50"
+                >
+                  Get started
+                </Link>
+                <Link
+                  href="/login"
+                  className="inline-flex min-h-12 items-center justify-center rounded-2xl border border-white/30 px-5 text-sm font-semibold text-white transition hover:bg-white/10"
+                >
+                  Sign in
+                </Link>
+              </div>
             </div>
           </div>
         </div>
