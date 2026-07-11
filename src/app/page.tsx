@@ -25,7 +25,7 @@ export default async function Home() {
         <div className="relative">
           <div className="inline-flex items-center gap-2 rounded-full border border-blue-100 bg-white/90 px-3 py-1.5 text-sm font-semibold text-blue-700 shadow-sm">
             <span className="h-2 w-2 rounded-full bg-blue-600" />
-            Built for youth basketball gates
+            Built for youth basketball tournaments
           </div>
           <h1 className="mt-7 max-w-3xl text-5xl font-semibold tracking-[-0.055em] text-slate-950 sm:text-6xl lg:text-7xl">
             Faster entry. Fewer reused passes.
@@ -52,7 +52,7 @@ export default async function Home() {
           <SectionHeading
             eyebrow="Why TourniBase"
             title="Keep the gate moving."
-            body="The essentials for admission day, without extra hardware or a complicated setup."
+            body="Use TourniBase to streamline admissions for your next tournament."
           />
           <div className="mt-10 grid gap-5 md:grid-cols-3">
             <BenefitCard
@@ -102,21 +102,6 @@ export default async function Home() {
         </div>
       </section>
 
-      <section className="mx-auto grid w-full max-w-6xl gap-12 px-6 py-24 lg:grid-cols-[0.85fr_1.15fr] lg:items-center lg:px-8">
-        <SectionHeading
-          eyebrow="One connected flow"
-          title="From checkout to check-in."
-          body="Every step stays tied to the same order, pass, and event."
-        />
-        <div className="rounded-[2rem] border border-border bg-white p-5 shadow-sm sm:p-7">
-          <FlowStep number="1" title="Spectator buys" detail="Stripe checkout" />
-          <FlowConnector />
-          <FlowStep number="2" title="TourniBase sends" detail="Email + mobile pass" />
-          <FlowConnector />
-          <FlowStep number="3" title="Gate staff scans" detail="Live validation" />
-        </div>
-      </section>
-
       <section className="gate-dark bg-slate-950 py-24 text-white">
         <div className="mx-auto grid w-full max-w-6xl gap-10 px-6 lg:grid-cols-[0.9fr_1.1fr] lg:items-center lg:px-8">
           <div>
@@ -135,6 +120,21 @@ export default async function Home() {
         </div>
       </section>
 
+      <section className="mx-auto grid w-full max-w-6xl gap-12 px-6 py-24 lg:grid-cols-[0.85fr_1.15fr] lg:items-center lg:px-8">
+        <SectionHeading
+          eyebrow="One connected flow"
+          title="From checkout to check-in."
+          body="Every step stays tied to the same order, pass, and event."
+        />
+        <div className="rounded-[2rem] border border-border bg-white p-5 shadow-sm sm:p-7">
+          <FlowStep number="1" title="Spectator buys" detail="Stripe checkout" />
+          <FlowConnector />
+          <FlowStep number="2" title="TourniBase sends" detail="Email + mobile pass" />
+          <FlowConnector />
+          <FlowStep number="3" title="Gate staff scans" detail="Live validation" />
+        </div>
+      </section>
+
       <section className="mx-auto w-full max-w-6xl px-6 py-24 lg:px-8">
         <div className="gate-dark relative overflow-hidden rounded-[2.25rem] bg-blue-600 px-7 py-12 text-white shadow-xl sm:px-12 sm:py-16">
           <div className="absolute -right-20 -top-32 h-80 w-80 rounded-full border-[42px] border-white/10" />
@@ -144,7 +144,7 @@ export default async function Home() {
               Make your next gate easier to run.
             </h2>
             <p className="mt-4 text-lg text-blue-100">
-              TourniBase is starting with youth basketball tournament admission.
+              Click below to use TourniBase for your next tournament.
             </p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <Link
@@ -212,7 +212,7 @@ function SecondaryLink({
 function GatePreview() {
   return (
     <div className="relative rounded-[2.25rem] border border-border bg-white p-5 shadow-xl shadow-blue-950/10">
-      <div className="gate-dark rounded-[1.75rem] bg-slate-950 p-6 text-white">
+      <div className="gate-dark rounded-[1.75rem] bg-[#123d6b] p-6 text-white">
         <div className="flex items-start justify-between gap-4">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-blue-300">
@@ -224,7 +224,7 @@ function GatePreview() {
             ✓
           </span>
         </div>
-        <div className="mt-8 rounded-3xl bg-white/10 p-5">
+        <div className="mt-8 rounded-3xl bg-[#1b4b7d] p-5">
           <p className="text-sm text-slate-300">Weekend pass</p>
           <p className="mt-2 text-2xl font-semibold">Taylor Johnson</p>
           <div className="mt-5 grid grid-cols-2 gap-3 text-sm">
@@ -239,7 +239,7 @@ function GatePreview() {
 
 function PreviewStat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-2xl bg-slate-900 p-3">
+    <div className="rounded-2xl bg-[#25598d] p-3">
       <p className="text-xs text-slate-400">{label}</p>
       <p className="mt-1 font-mono text-sm text-white">{value}</p>
     </div>
