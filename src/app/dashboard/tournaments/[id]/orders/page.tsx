@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { DashboardMetricCard } from "@/components/dashboard-metric-card";
+import { LiveSearchForm } from "@/components/live-search-form";
 import {
   OrderLogClient,
   type OrderLogOrder,
@@ -196,21 +197,14 @@ export default async function EventOrdersPage({
           <p className="mt-1 text-sm text-slate-500">
             Search recent orders by buyer name, email, phone, or order number.
           </p>
-          <form className="mt-5 flex flex-col gap-3 sm:flex-row">
-            <input
-              className="min-h-11 flex-1 rounded-2xl border border-border bg-white px-4 text-sm text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
+          <div className="mt-5">
+            <LiveSearchForm
               defaultValue={query}
-              name="q"
+              inputClassName="min-h-11 min-w-0 flex-1 rounded-2xl border border-border bg-white px-4 text-sm text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
+              inputId="order-search"
               placeholder="Search orders"
-              type="search"
             />
-            <button
-              type="submit"
-              className="inline-flex h-11 items-center justify-center rounded-2xl bg-brand-strong px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-500"
-            >
-              Search
-            </button>
-          </form>
+          </div>
         </div>
 
         <OrderLogClient orders={orders} tournamentId={tournamentId} />

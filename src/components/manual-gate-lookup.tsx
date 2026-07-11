@@ -1,6 +1,12 @@
 "use client";
 
-import { type FormEvent, useState } from "react";
+import {
+  type FormEvent,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import type {
   ManualLookupCheckInInput,
   ManualLookupCheckInResult,
@@ -30,13 +36,21 @@ export function ManualGateLookup({
   const [notice, setNotice] = useState<string | null>(null);
   const [checkInResult, setCheckInResult] =
     useState<ManualLookupCheckInResult | null>(null);
+  const lookupTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lookupRequestRef = useRef(0);
 
-  async function runLookup(searchQuery: string) {
+  const runLookup = useCallback(async (searchQuery: string) => {
+    const requestId = lookupRequestRef.current + 1;
+    lookupRequestRef.current = requestId;
     setSearchPending(true);
     setNotice(null);
 
     try {
       const result = await lookupOrders(searchQuery);
+
+      if (lookupRequestRef.current !== requestId) {
+        return;
+      }
 
       if (result.status === "ok") {
         setOrders(result.orders);
@@ -46,16 +60,45 @@ export function ManualGateLookup({
         setNotice(result.message);
       }
     } catch {
+      if (lookupRequestRef.current !== requestId) {
+        return;
+      }
+
       setOrders([]);
       setNotice("TourniBase could not search orders. Try again.");
     } finally {
-      setSearchPending(false);
+      if (lookupRequestRef.current === requestId) {
+        setSearchPending(false);
+      }
     }
-  }
+  }, [lookupOrders]);
+
+  useEffect(() => {
+    const searchQuery = query.trim();
+
+    if (searchQuery.length < 2) {
+      return;
+    }
+
+    lookupTimeoutRef.current = setTimeout(() => {
+      setCheckInResult(null);
+      void runLookup(searchQuery);
+    }, 300);
+
+    return () => {
+      if (lookupTimeoutRef.current) {
+        clearTimeout(lookupTimeoutRef.current);
+      }
+    };
+  }, [query, runLookup]);
 
   async function submitLookup(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setCheckInResult(null);
+
+    if (lookupTimeoutRef.current) {
+      clearTimeout(lookupTimeoutRef.current);
+    }
 
     const searchQuery = query.trim();
 
@@ -112,7 +155,18 @@ export function ManualGateLookup({
             id="gate-order-search"
             type="search"
             value={query}
-            onChange={(event) => setQuery(event.target.value)}
+            onChange={(event) => {
+              const nextQuery = event.target.value;
+              setQuery(nextQuery);
+
+              if (nextQuery.trim().length < 2) {
+                lookupRequestRef.current += 1;
+                setOrders([]);
+                setSearchedQuery("");
+                setNotice(null);
+                setSearchPending(false);
+              }
+            }}
             minLength={2}
             maxLength={100}
             autoComplete="off"

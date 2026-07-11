@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { LiveSearchForm } from "@/components/live-search-form";
 import { requireDirector } from "@/lib/auth";
 import { DIRECTOR_PROMISE } from "@/lib/product-copy";
 import { createClient } from "@/lib/supabase/server";
@@ -109,45 +110,14 @@ export default async function DashboardPage({
         </Link>
       </div>
 
-      <form
-        action="/dashboard"
-        className="flex flex-col gap-3 rounded-[2rem] border border-border bg-card p-4 shadow-sm sm:flex-row sm:items-center"
-        role="search"
-      >
-        <label className="sr-only" htmlFor="tournament-search">
-          Search tournaments
-        </label>
-        <div className="relative flex-1">
-          <span
-            aria-hidden="true"
-            className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
-          >
-            ⌕
-          </span>
-          <input
-            id="tournament-search"
-            name="q"
-            type="search"
-            defaultValue={query}
-            placeholder="Search tournaments"
-            className="h-12 w-full rounded-2xl border border-border bg-card-strong pl-11 pr-4 text-sm text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-blue-300 focus:ring-4 focus:ring-blue-100"
-          />
-        </div>
-        <button
-          type="submit"
-          className="inline-flex h-12 items-center justify-center rounded-2xl bg-brand-strong px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-500"
-        >
-          Search
-        </button>
-        {query ? (
-          <Link
-            href="/dashboard"
-            className="inline-flex h-12 items-center justify-center rounded-2xl border border-border bg-white px-5 text-sm font-semibold text-slate-600 transition hover:bg-card-strong hover:text-slate-950"
-          >
-            Clear
-          </Link>
-        ) : null}
-      </form>
+      <div className="rounded-[2rem] border border-border bg-card p-4 shadow-sm">
+        <LiveSearchForm
+          defaultValue={query}
+          inputClassName="h-11 min-w-0 flex-1 rounded-2xl border border-border bg-card-strong px-4 text-sm text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-blue-300 focus:ring-4 focus:ring-blue-100"
+          inputId="tournament-search"
+          placeholder="Search tournaments"
+        />
+      </div>
 
       <section>
         <div className="overflow-hidden rounded-[2rem] border border-border bg-card shadow-sm">
