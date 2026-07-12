@@ -239,7 +239,7 @@ function SidebarNavItem({ item }: { item: NavItem }) {
       type="button"
       className={`flex w-full items-center gap-3 rounded-2xl px-2 py-2.5 text-left text-sm font-semibold transition ${className}`}
       onClick={() => {
-        window.alert(item.disabledMessage ?? "This page is not available yet.");
+        window.alert(item.disabledMessage ?? "This page is unavailable.");
       }}
     >
       <SidebarIcon icon={item.icon} isDisabled={Boolean(item.disabledMessage)} />

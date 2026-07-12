@@ -136,11 +136,11 @@ export default async function PublicEventPage({
             ) : (
               <div className="rounded-2xl border border-dashed border-white/15 bg-card/70 px-6 py-14 text-center">
                 <h2 className="text-xl font-semibold text-white">
-                  Online passes are not available yet
+                  Online passes are unavailable
                 </h2>
                 <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-slate-400">
-                  The organizer has not opened any ticket options for this
-                  event. Check back later or contact them directly.
+                  This event does not currently have passes available. Contact
+                  the organizer for admission information.
                 </p>
               </div>
             )}

@@ -17,8 +17,7 @@ export function ProfileAvatarPicker() {
       <div className="border-b border-border bg-card-strong px-6 py-5">
         <h2 className="font-semibold text-slate-950">Profile icon</h2>
         <p className="mt-1 text-sm text-slate-500">
-          Choose a preset icon and color for this browser. Uploads are disabled
-          for now.
+          Choose a preset icon and color for this browser.
         </p>
       </div>
       <div className="grid gap-6 p-6 lg:grid-cols-[220px_minmax(0,1fr)]">
