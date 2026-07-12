@@ -33,7 +33,7 @@ export default async function SettingsPage() {
         </dl>
       </section>
 
-      <ProfileAvatarPicker />
+      <ProfileAvatarPicker initialAvatarId={director.avatarId} />
 
       <section className="mt-6 rounded-[2rem] border border-border bg-card p-6 shadow-sm">
         <h2 className="font-semibold text-slate-950">Support</h2>

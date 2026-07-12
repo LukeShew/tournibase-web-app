@@ -5,13 +5,13 @@ import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { ProfileAvatarIcon } from "@/components/profile-avatar-icon";
-import { useProfileAvatarId } from "@/hooks/use-profile-avatar-id";
 import {
   getProfileAvatarOption,
 } from "@/lib/profile-avatar-options";
 
 type DashboardSidebarProps = {
   director: {
+    avatarId: string;
     email: string;
     name: string;
   };
@@ -44,7 +44,6 @@ export function DashboardSidebar({
 }: DashboardSidebarProps) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const avatarId = useProfileAvatarId();
   const [confirmingSignOut, setConfirmingSignOut] = useState(false);
   const tournamentId =
     pathname.match(/^\/dashboard\/tournaments\/(\d+)/)?.[1] ?? null;
@@ -109,7 +108,7 @@ export function DashboardSidebar({
       label: "Event details",
     },
   ];
-  const selectedAvatar = getProfileAvatarOption(avatarId);
+  const selectedAvatar = getProfileAvatarOption(director.avatarId);
 
   return (
     <aside

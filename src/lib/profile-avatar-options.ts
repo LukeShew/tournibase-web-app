@@ -1,5 +1,3 @@
-export const PROFILE_AVATAR_STORAGE_KEY = "tournibase-profile-avatar";
-
 export type ProfileAvatarIcon =
   | "anonymous"
   | "basketball"

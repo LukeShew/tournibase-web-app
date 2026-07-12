@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 
 export type DirectorProfile = {
+  avatarId: string;
   id: string;
   name: string;
   email: string;
@@ -21,7 +22,7 @@ export const getDirector = cache(async (): Promise<DirectorProfile | null> => {
 
   const { data: profile, error: profileError } = await supabase
     .from("users")
-    .select("id, name, email, role")
+    .select("id, name, email, role, avatar_id")
     .eq("id", userId)
     .maybeSingle();
 
@@ -29,7 +30,13 @@ export const getDirector = cache(async (): Promise<DirectorProfile | null> => {
     return null;
   }
 
-  return profile as DirectorProfile;
+  return {
+    avatarId: profile.avatar_id,
+    email: profile.email,
+    id: profile.id,
+    name: profile.name,
+    role: profile.role,
+  } as DirectorProfile;
 });
 
 export async function requireDirector() {

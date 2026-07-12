@@ -1,15 +1,23 @@
 "use client";
 
+import { useRouter } from "next/navigation";
+import { useState, useTransition } from "react";
+import { updateProfileAvatar } from "@/app/dashboard/settings/actions";
 import { ProfileAvatarIcon } from "@/components/profile-avatar-icon";
-import { useProfileAvatarId } from "@/hooks/use-profile-avatar-id";
 import {
   getProfileAvatarOption,
   PROFILE_AVATAR_OPTIONS,
-  PROFILE_AVATAR_STORAGE_KEY,
 } from "@/lib/profile-avatar-options";
 
-export function ProfileAvatarPicker() {
-  const selectedId = useProfileAvatarId();
+export function ProfileAvatarPicker({
+  initialAvatarId,
+}: {
+  initialAvatarId: string;
+}) {
+  const router = useRouter();
+  const [selectedId, setSelectedId] = useState(initialAvatarId);
+  const [message, setMessage] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
   const selectedOption = getProfileAvatarOption(selectedId);
 
   return (
@@ -17,7 +25,7 @@ export function ProfileAvatarPicker() {
       <div className="border-b border-border bg-card-strong px-6 py-5">
         <h2 className="font-semibold text-slate-950">Profile icon</h2>
         <p className="mt-1 text-sm text-slate-500">
-          Choose a preset icon and color for this browser.
+          Choose an icon and color for your profile.
         </p>
       </div>
       <div className="grid gap-6 p-6 lg:grid-cols-[220px_minmax(0,1fr)]">
@@ -31,7 +39,7 @@ export function ProfileAvatarPicker() {
             {selectedOption.label}
           </p>
           <p className="mt-1 text-xs leading-5 text-slate-500">
-            This updates the sidebar on this device.
+            Your choice stays with your account on every device.
           </p>
         </div>
 
@@ -43,17 +51,26 @@ export function ProfileAvatarPicker() {
               <button
                 key={option.id}
                 type="button"
-                className={`flex items-center gap-3 rounded-3xl border p-3 text-left transition ${
+                disabled={isPending}
+                className={`flex items-center gap-3 rounded-3xl border p-3 text-left transition disabled:cursor-wait disabled:opacity-60 ${
                   isSelected
                     ? "border-blue-300 bg-blue-50 shadow-sm"
                     : "border-border bg-white hover:border-blue-200 hover:bg-blue-50/60"
                 }`}
                 onClick={() => {
-                  window.localStorage.setItem(
-                    PROFILE_AVATAR_STORAGE_KEY,
-                    option.id,
-                  );
-                  window.dispatchEvent(new Event("tournibase-profile-avatar"));
+                  startTransition(async () => {
+                    setMessage(null);
+                    const result = await updateProfileAvatar(option.id);
+
+                    if (!result.success) {
+                      setMessage(result.message);
+                      return;
+                    }
+
+                    setSelectedId(option.id);
+                    setMessage("Profile icon updated.");
+                    router.refresh();
+                  });
                 }}
               >
                 <span
@@ -73,6 +90,18 @@ export function ProfileAvatarPicker() {
             );
           })}
         </div>
+        {message ? (
+          <p
+            className={`text-sm font-medium lg:col-start-2 ${
+              message === "Profile icon updated."
+                ? "text-emerald-700"
+                : "text-red-700"
+            }`}
+            role="status"
+          >
+            {message}
+          </p>
+        ) : null}
       </div>
     </section>
   );
