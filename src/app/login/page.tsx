@@ -9,8 +9,13 @@ export const metadata: Metadata = {
   title: "Director sign in",
 };
 
-export default async function LoginPage() {
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ created?: string; confirmation?: string }>;
+}) {
   const director = await getDirector();
+  const { created, confirmation } = (await searchParams) ?? {};
 
   if (director) {
     redirect("/dashboard");
@@ -36,6 +41,16 @@ export default async function LoginPage() {
         <p className="mt-3 leading-7 text-slate-500">
           Use the director account connected to your tournament dashboard.
         </p>
+        {created === "1" ? (
+          <div
+            aria-live="polite"
+            className="mt-6 rounded-2xl border border-emerald-300 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-900"
+          >
+            {confirmation === "required"
+              ? "Your account was created. Check your email to confirm it, then sign in."
+              : "Your account was created. Sign in to continue."}
+          </div>
+        ) : null}
         <div className="mt-8 rounded-[2rem] border border-border bg-white p-6 shadow-sm">
           <LoginForm />
         </div>

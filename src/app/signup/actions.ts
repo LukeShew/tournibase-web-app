@@ -74,11 +74,9 @@ export async function signup(
   }
 
   if (data.session) {
-    redirect("/dashboard");
+    await supabase.auth.signOut();
+    redirect("/login?created=1");
   }
 
-  return {
-    message: "Check your email to confirm your account, then sign in.",
-    success: true,
-  };
+  redirect("/login?created=1&confirmation=required");
 }
