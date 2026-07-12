@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { checkRateLimit, getRequestIp } from "@/lib/rate-limit";
 import { getSiteUrl } from "@/lib/site-url";
+import { getSignupFailureMessage } from "@/lib/signup-errors";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
@@ -48,7 +49,12 @@ export async function signup(
   });
 
   if (error || !data.user || data.user.identities?.length === 0) {
-    return { message: "An account with that email may already exist. Try signing in." };
+    return {
+      message: getSignupFailureMessage({
+        error,
+        identityCreated: Boolean(data.user && data.user.identities?.length !== 0),
+      }),
+    };
   }
 
   const admin = getSupabaseAdmin();
