@@ -29,6 +29,20 @@ describe("getSignupFailureMessage", () => {
     ).toBe("The account could not be created. Try again.");
   });
 
+  it("explains when the hosted Supabase project blocks signup", () => {
+    expect(
+      getSignupFailureMessage({
+        error: {
+          code: "signup_disabled",
+          message: "Signups not allowed for this instance",
+        },
+        identityCreated: false,
+      }),
+    ).toBe(
+      "New account creation is not enabled right now. Contact TourniBase support.",
+    );
+  });
+
   it("uses password copy for password policy failures", () => {
     expect(
       getSignupFailureMessage({

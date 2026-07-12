@@ -1,4 +1,5 @@
 type SignupErrorLike = {
+  code?: string;
   message?: string;
   status?: number;
 };
@@ -10,13 +11,18 @@ export function getSignupFailureMessage({
   error?: SignupErrorLike | null;
   identityCreated: boolean;
 }) {
+  const code = error?.code?.toLowerCase() ?? "";
   const message = error?.message?.toLowerCase() ?? "";
 
   if (message.includes("already registered")) {
     return "An account with that email already exists. Try signing in.";
   }
 
-  if (message.includes("signup") && message.includes("disabled")) {
+  if (
+    code === "signup_disabled" ||
+    (message.includes("signup") &&
+      (message.includes("disabled") || message.includes("not allowed")))
+  ) {
     return "New account creation is not enabled right now. Contact TourniBase support.";
   }
 
