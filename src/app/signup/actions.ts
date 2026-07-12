@@ -2,8 +2,8 @@
 
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import { getAuthEmailRedirectUrl } from "@/lib/auth-email-url";
 import { checkRateLimit, getRequestIp } from "@/lib/rate-limit";
-import { getSiteUrl } from "@/lib/site-url";
 import { getSignupFailureMessage } from "@/lib/signup-errors";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
@@ -43,7 +43,7 @@ export async function signup(
     email: parsed.data.email,
     options: {
       data: { name: parsed.data.name },
-      emailRedirectTo: `${getSiteUrl()}/login`,
+      emailRedirectTo: getAuthEmailRedirectUrl(),
     },
     password: parsed.data.password,
   });

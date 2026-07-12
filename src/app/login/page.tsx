@@ -41,14 +41,27 @@ export default async function LoginPage({
         <p className="mt-3 leading-7 text-slate-500">
           Use the director account connected to your tournament dashboard.
         </p>
-        {created === "1" ? (
+        {created === "1" || confirmation === "resent" ? (
           <div
             aria-live="polite"
             className="mt-6 rounded-2xl border border-emerald-300 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-900"
           >
-            {confirmation === "required"
+            {confirmation === "resent"
+              ? "A new confirmation email was sent. Use its link before signing in."
+              : confirmation === "required"
               ? "Your account was created. Check your email to confirm it, then sign in."
               : "Your account was created. Sign in to continue."}
+          </div>
+        ) : null}
+        {confirmation === "resend-error" ||
+        confirmation === "resend-limited" ? (
+          <div
+            aria-live="polite"
+            className="mt-6 rounded-2xl border border-red-300 bg-red-50 px-4 py-3 text-sm font-medium text-red-800"
+          >
+            {confirmation === "resend-limited"
+              ? "Too many confirmation requests. Try again later."
+              : "The confirmation email could not be sent. Try again."}
           </div>
         ) : null}
         <div className="mt-8 rounded-[2rem] border border-border bg-white p-6 shadow-sm">
