@@ -32,7 +32,7 @@ type PassState = {
 const statusStyles = {
   amber: "border-amber-300/25 bg-amber-300/[0.08] text-amber-200",
   blue: "border-blue-300/25 bg-blue-300/[0.08] text-blue-200",
-  green: "border-emerald-300/25 bg-emerald-300/[0.08] text-emerald-200",
+  green: "border-emerald-300 bg-emerald-50 text-emerald-800",
   red: "border-red-300/25 bg-red-300/[0.08] text-red-200",
 } satisfies Record<PassState["tone"], string>;
 
@@ -147,7 +147,7 @@ export default async function PassPage({
                   href={getOfflinePassSavePath(pass.publicToken)}
                   className="mt-5 inline-flex min-h-12 w-full items-center justify-center rounded-xl bg-brand px-5 text-sm font-semibold text-white transition hover:bg-brand-strong"
                 >
-                  Save to device
+                  Save to photos
                 </a>
                 <p className="mt-2 text-center text-xs leading-5 text-slate-500">
                   Opens a simple save page for weak-service backup.

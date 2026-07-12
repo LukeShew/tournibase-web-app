@@ -68,7 +68,7 @@ export function SavePassActions({
         disabled={sharing}
         className="inline-flex min-h-12 w-full items-center justify-center rounded-xl bg-brand px-5 text-sm font-semibold text-white transition hover:bg-brand-strong disabled:cursor-wait disabled:opacity-70"
       >
-        {sharing ? "Opening…" : "Save to device"}
+        {sharing ? "Opening…" : "Save to photos"}
       </button>
       <a
         href={downloadPath}

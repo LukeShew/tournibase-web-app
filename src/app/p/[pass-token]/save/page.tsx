@@ -119,7 +119,7 @@ export default async function SavePassPage({
           <InstructionCard
             title="Save to Photos"
             steps={[
-              "Tap Save to device.",
+              "Tap Save to photos.",
               "If your phone opens the share sheet, choose Save Image or Save to Photos.",
               "If it opens as an image instead, touch and hold the pass, then save it.",
             ]}
@@ -127,7 +127,7 @@ export default async function SavePassPage({
           <InstructionCard
             title="Save to Files"
             steps={[
-              "Tap Download file if Save to device is not available.",
+              "Tap Download file if Save to photos is not available.",
               "Choose where to save it if your phone asks.",
               "Open it from Files at the gate if service is weak.",
             ]}
