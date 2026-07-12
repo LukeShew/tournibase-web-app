@@ -121,7 +121,7 @@ export default async function GateAccessPage({
   const { data: checkInRows, error: checkInError } = await supabase
     .from("check_ins")
     .select(
-      "id, created_at, result, gate_name, source, passes(ticket_types(name), orders(buyer_name, buyer_email))",
+      "id, created_at, result, gate_name, source, passes!check_ins_pass_tournament_fk(ticket_types!passes_ticket_tournament_fk(name), orders!passes_order_tournament_fk(buyer_name, buyer_email))",
     )
     .eq("tournament_id", tournamentId)
     .is("undone_at", null)

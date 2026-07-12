@@ -16,6 +16,7 @@ import {
 } from "@/lib/scanner-tokens";
 import { getScannerSessionByToken } from "@/lib/scanner-sessions";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 const scanSourceSchema = z.enum(["camera", "manual"]);
 
@@ -127,6 +128,19 @@ export async function validatePassForEntry(
 ): Promise<PassValidationResult> {
   if (!isValidScannerToken(scannerToken)) {
     return scannerUnauthorized();
+  }
+
+  const allowed = await checkRateLimit({
+    key: `scanner:${hashScannerToken(scannerToken)}`,
+    limit: 240,
+    windowSeconds: 60,
+  });
+
+  if (!allowed) {
+    return {
+      message: "This scanner is moving too quickly. Wait a moment and try again.",
+      status: "service_error",
+    };
   }
 
   const parsedInput = validatePassInputSchema.safeParse(input);

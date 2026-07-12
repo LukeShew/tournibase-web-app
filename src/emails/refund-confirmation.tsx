@@ -296,7 +296,7 @@ const supportLink: CSSProperties = {
 };
 
 const footer: CSSProperties = {
-  color: "#7c8da3",
+  color: "#52657c",
   fontSize: "12px",
   lineHeight: "1.5",
   margin: "18px 8px 0",

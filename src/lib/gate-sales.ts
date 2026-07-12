@@ -68,6 +68,8 @@ export async function getGateSaleTicketOptions(
     .select("id, name, price, valid_from, valid_until")
     .eq("tournament_id", tournamentId)
     .eq("status", "active")
+    .lte("valid_from", new Date().toISOString())
+    .gte("valid_until", new Date().toISOString())
     .order("price", { ascending: true })
     .order("created_at", { ascending: true });
 

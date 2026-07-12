@@ -3,6 +3,7 @@ import {
   LegalPageShell,
   LegalSection,
 } from "@/components/legal-page-shell";
+import { SupportForm } from "@/components/support-form";
 
 export const metadata: Metadata = {
   title: "Support",
@@ -36,9 +37,15 @@ export default function SupportPage() {
       <LegalSection title="For directors">
         <p>
           Use the dashboard to review orders, scan activity, manual lookup,
-          sales totals, scanner links, and event setup. Refunds are still
-          processed manually in Stripe.
+          sales totals, scanner links, and event setup. Individual passes can
+          be refunded from order details, and full-order refunds can be
+          completed from the linked Stripe payment.
         </p>
+      </LegalSection>
+
+      <LegalSection title="Contact TourniBase">
+        <p>Send a message for account, setup, or technical help.</p>
+        <SupportForm />
       </LegalSection>
     </LegalPageShell>
   );

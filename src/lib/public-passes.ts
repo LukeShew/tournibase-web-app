@@ -134,6 +134,12 @@ export async function getPublicPass(
 
   const tournament = tournamentRow as TournamentRecord;
   const ticketType = ticketTypeRow as TicketTypeRecord;
+  const effectiveStatus: PublicPassStatus =
+    order.payment_status === "refunded"
+      ? "refunded"
+      : pass.status === "active" && Date.now() > new Date(pass.valid_until).getTime()
+        ? "expired"
+        : pass.status;
 
   return {
     buyerName: order.buyer_name,
@@ -144,7 +150,7 @@ export async function getPublicPass(
     orderNumber: `TB-${order.id.toString().padStart(6, "0")}`,
     organizerName: tournament.organizer_name,
     publicToken: pass.public_token,
-    status: order.payment_status === "refunded" ? "refunded" : pass.status,
+    status: effectiveStatus,
     ticketName: ticketType.name,
     validFrom: pass.valid_from,
     validUntil: pass.valid_until,

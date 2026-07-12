@@ -52,8 +52,10 @@ form. The browser never receives the Supabase secret key or Stripe secret keys.
 - Stripe webhook signatures are verified against the raw request body.
 - Full Stripe refunds sync back into TourniBase and invalidate active or
   checked-in passes for the refunded order.
-- Partial Stripe refunds mark the order as partially refunded but do not
-  automatically void a specific pass.
+- Pass-specific partial refunds created in TourniBase mark the order as
+  partially refunded, subtract the refund from net revenue, and void the
+  selected pass. Generic partial refunds created directly in Stripe update the
+  order total but cannot identify which pass to void.
 - Test mode remains active until production launch checks are complete.
 
 ### Transactional email
@@ -165,8 +167,10 @@ Supported webhook events:
    from Stripe metadata on the charge or its PaymentIntent.
 5. A full refund marks the order as `refunded` and marks active or checked-in
    passes as `refunded`.
-6. A partial refund marks the order as `partial_refund` and leaves passes
-   usable unless staff handle a specific pass manually.
+6. A pass-specific partial refund created in TourniBase marks the order as
+   `partial_refund` and voids the selected pass. A generic partial refund made
+   directly in Stripe updates refunded revenue but leaves passes usable because
+   Stripe does not identify a specific pass.
 7. TourniBase sends the buyer a refund confirmation email through Resend.
 
 ## Mobile pass flow

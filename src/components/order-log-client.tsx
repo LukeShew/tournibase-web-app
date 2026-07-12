@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 export type OrderLogItem = {
@@ -14,6 +15,7 @@ export type OrderLogItem = {
 
 export type OrderLogPass = {
   id: number;
+  order_item_id: number;
   public_token: string;
   sequence_number: number | null;
   status: "active" | "checked_in" | "expired" | "refunded" | "voided";
@@ -23,6 +25,7 @@ export type OrderLogPass = {
 };
 
 export type OrderLogOrder = {
+  amount_refunded: number | string;
   amount_total: number | string;
   buyer_email: string;
   buyer_name: string;
@@ -216,6 +219,39 @@ function OrderDetailsModal({
   onClose: () => void;
   order: OrderLogOrder;
 }) {
+  const router = useRouter();
+  const [refundingPassId, setRefundingPassId] = useState<number | null>(null);
+  const [refundError, setRefundError] = useState<string | null>(null);
+
+  async function refundPass(passId: number) {
+    if (!window.confirm("Refund this pass and block it from future entry?")) {
+      return;
+    }
+
+    setRefundError(null);
+    setRefundingPassId(passId);
+
+    try {
+      const response = await fetch("/api/stripe/refund-pass", {
+        body: JSON.stringify({ orderId: order.id, passId }),
+        headers: { "content-type": "application/json" },
+        method: "POST",
+      });
+      const result = (await response.json()) as { error?: string };
+
+      if (!response.ok) {
+        throw new Error(result.error || "The pass could not be refunded.");
+      }
+
+      onClose();
+      router.refresh();
+    } catch (error) {
+      setRefundError(error instanceof Error ? error.message : "The pass could not be refunded.");
+    } finally {
+      setRefundingPassId(null);
+    }
+  }
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4 backdrop-blur-sm"
@@ -255,7 +291,13 @@ function OrderDetailsModal({
             />
             <InfoBox
               label="Amount paid"
-              value={formatCurrency(Number(order.amount_total))}
+              value={formatCurrency(
+                Math.max(0, Number(order.amount_total) - Number(order.amount_refunded)),
+              )}
+            />
+            <InfoBox
+              label="Amount refunded"
+              value={formatCurrency(Number(order.amount_refunded))}
             />
             <InfoBox
               label="Payment method"
@@ -321,17 +363,38 @@ function OrderDetailsModal({
                         {pass.status.replace("_", " ")}
                       </p>
                     </div>
-                    <Link
-                      href={`/p/${pass.public_token}`}
-                      className="inline-flex h-10 items-center justify-center rounded-2xl border border-border bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700"
-                    >
-                      Open pass
-                    </Link>
+                    <div className="flex flex-wrap gap-2">
+                      <Link
+                        href={`/p/${pass.public_token}`}
+                        className="inline-flex h-10 items-center justify-center rounded-2xl border border-border bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700"
+                      >
+                        Open pass
+                      </Link>
+                      {order.payment_status !== "refunded" &&
+                      pass.status !== "refunded" &&
+                      pass.status !== "voided" &&
+                      Number(order.amount_total) > 0 ? (
+                        <button
+                          type="button"
+                          className="inline-flex h-10 items-center justify-center rounded-2xl border border-rose-200 bg-rose-50 px-4 text-sm font-semibold text-rose-700 transition hover:bg-rose-100 disabled:opacity-60"
+                          disabled={refundingPassId === pass.id}
+                          onClick={() => refundPass(pass.id)}
+                        >
+                          {refundingPassId === pass.id ? "Refunding…" : "Refund this pass"}
+                        </button>
+                      ) : null}
+                    </div>
                   </div>
                 ))}
               </div>
             )}
           </section>
+
+          {refundError ? (
+            <p className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700">
+              {refundError}
+            </p>
+          ) : null}
 
           <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-end">
             {order.stripe_checkout_id ? (

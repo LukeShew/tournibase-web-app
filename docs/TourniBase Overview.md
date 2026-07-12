@@ -186,14 +186,14 @@ See [MVP Architecture](./mvp-architecture.md) and
 ## Known limitations
 
 - Stripe remains in test mode.
-- Director accounts are created manually through Supabase.
+- Directors can create an account from the public signup page.
 - Supabase leaked-password protection is unavailable on the current plan, so
   invited directors must use strong, unique passwords.
 - Gate-sale recording tracks external payment but does not charge a card.
 - Full Stripe refunds automatically invalidate active or checked-in passes and
   send the buyer a refund confirmation email.
-- Partial refunds are tracked at the order level and send a buyer email, but
-  pass-specific partial refund handling is not automated.
+- Directors can refund a specific paid pass from order details. Generic partial
+  refunds created directly in Stripe cannot identify a specific pass.
 - Dispute operations are not automated.
 - Demo data is available only through the guarded local seed command.
 - Saved pass images work without buyer internet, but scanner devices still need

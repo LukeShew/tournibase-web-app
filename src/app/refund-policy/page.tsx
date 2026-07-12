@@ -31,10 +31,10 @@ export default function RefundPolicyPage() {
 
       <LegalSection title="Partial refunds">
         <p>
-          Partial refunds are tracked at the order level. They do not
-          automatically void a specific pass yet. If a specific pass should no
-          longer be accepted, the event organizer needs to handle that
-          operationally.
+          Pass-specific partial refunds created from TourniBase order details
+          update the refunded total and void the selected pass. A generic
+          partial refund created directly in Stripe updates the order total,
+          but it cannot identify which pass should be voided.
         </p>
       </LegalSection>
 

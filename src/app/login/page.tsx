@@ -21,10 +21,10 @@ export default async function LoginPage() {
       <header className="mx-auto flex w-full max-w-6xl items-center justify-between">
         <Brand tone="light" />
         <Link
-          href="/support"
+          href="/signup"
           className="rounded-full border border-border bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700"
         >
-          Request access
+          Create account
         </Link>
       </header>
 
@@ -42,10 +42,10 @@ export default async function LoginPage() {
         <p className="mt-6 text-center text-sm leading-6 text-slate-500">
           Need an account?{" "}
           <Link
-            href="/support"
+            href="/signup"
             className="font-semibold text-blue-700 hover:text-blue-500"
           >
-            Request access
+            Create account
           </Link>
           .
         </p>

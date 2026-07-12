@@ -149,8 +149,13 @@ export async function updateTournament(
     .maybeSingle();
 
   if (updateError || !updatedTournament) {
+    const incompatibleTicketDates =
+      updateError?.message?.includes("ticket dates") ||
+      updateError?.message?.includes("ticket window");
     return {
-      message: "We could not update this event. Try again.",
+      message: incompatibleTicketDates
+        ? "Edit the ticket dates first. Every ticket must stay inside the event dates."
+        : "We could not update this event. Try again.",
       errors: {},
     };
   }

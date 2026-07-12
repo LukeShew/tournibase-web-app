@@ -12,6 +12,7 @@ import { getSupabaseAdmin } from "@/lib/supabase/admin";
 type PaymentStatus = "pending" | "paid" | "failed" | "refunded" | "partial_refund";
 
 type OrderRecord = {
+  amount_refunded: number | string;
   amount_total: number | string;
   buyer_name: string;
   id: number;
@@ -63,14 +64,17 @@ export async function fulfillCheckoutSession(sessionId: string) {
   const stripe = getStripe();
   const session = await stripe.checkout.sessions.retrieve(sessionId);
 
-  if (session.payment_status !== "paid") {
+  if (
+    session.payment_status !== "paid" &&
+    session.payment_status !== "no_payment_required"
+  ) {
     return { fulfilled: false as const, paymentStatus: session.payment_status };
   }
 
   const supabase = getSupabaseAdmin();
   const { data: orderRow, error: orderError } = await supabase
     .from("orders")
-    .select("id, tournament_id, buyer_name, amount_total, payment_status")
+    .select("id, tournament_id, buyer_name, amount_total, amount_refunded, payment_status")
     .eq("stripe_checkout_id", session.id)
     .maybeSingle();
 
@@ -83,6 +87,13 @@ export async function fulfillCheckoutSession(sessionId: string) {
   }
 
   const order = orderRow as OrderRecord;
+
+  if (
+    order.payment_status === "refunded" ||
+    order.payment_status === "partial_refund"
+  ) {
+    return { fulfilled: true as const, orderId: order.id };
+  }
   const { data: itemRows, error: itemError } = await supabase
     .from("order_items")
     .select(
@@ -127,7 +138,8 @@ export async function fulfillCheckoutSession(sessionId: string) {
   const { error: paymentUpdateError } = await supabase
     .from("orders")
     .update({ payment_status: "paid" })
-    .eq("id", order.id);
+    .eq("id", order.id)
+    .in("payment_status", ["pending", "failed", "paid"]);
 
   if (paymentUpdateError) {
     throw paymentUpdateError;
@@ -187,7 +199,10 @@ export async function syncStripeChargeRefund(
 
   const { error: orderUpdateError } = await supabase
     .from("orders")
-    .update({ payment_status: nextStatus })
+    .update({
+      amount_refunded: (latestCharge.amount_refunded / 100).toFixed(2),
+      payment_status: nextStatus,
+    })
     .eq("id", order.id);
 
   if (orderUpdateError) {
@@ -203,6 +218,26 @@ export async function syncStripeChargeRefund(
 
     if (passUpdateError) {
       throw passUpdateError;
+    }
+  }
+
+  if (nextStatus === "partial_refund") {
+    const refunds = await stripe.refunds.list({ charge: latestCharge.id, limit: 100 });
+    const refundedPassIds = refunds.data
+      .map((refund) => Number(refund.metadata?.pass_id))
+      .filter((passId) => Number.isSafeInteger(passId) && passId > 0);
+
+    if (refundedPassIds.length > 0) {
+      const { error: passUpdateError } = await supabase
+        .from("passes")
+        .update({ status: "refunded" })
+        .eq("order_id", order.id)
+        .in("id", refundedPassIds)
+        .in("status", ["active", "checked_in"]);
+
+      if (passUpdateError) {
+        throw passUpdateError;
+      }
     }
   }
 
@@ -252,7 +287,7 @@ export async function getOrderConfirmation(
   const supabase = getSupabaseAdmin();
   const { data: orderRow, error: orderError } = await supabase
     .from("orders")
-    .select("id, tournament_id, buyer_name, amount_total, payment_status")
+    .select("id, tournament_id, buyer_name, amount_total, amount_refunded, payment_status")
     .eq("id", fulfillment.orderId)
     .single();
 

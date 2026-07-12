@@ -4,22 +4,30 @@ Last updated: July 7, 2026
 
 ## Current MVP policy
 
-Refunds are initiated manually in Stripe. TourniBase automatically syncs Stripe
-refund status back into the app when Stripe sends a refund webhook, then sends
-the buyer a TourniBase refund confirmation email.
+Full-order refunds can be initiated in Stripe. Directors can also refund one
+paid pass from the order detail view. TourniBase syncs the refunded amount,
+updates revenue totals, invalidates the affected pass or passes, and sends the
+buyer a refund confirmation email.
 
 This is intentionally simple for the MVP:
 
 - Full refund: TourniBase marks the order as refunded and invalidates active or
   checked-in passes for that order. The refund email tells the buyer those
   passes are no longer valid for entry.
-- Partial refund: TourniBase marks the order as partially refunded but does not
-  automatically void a specific pass. The refund email tells the buyer to
-  confirm remaining pass access with the organizer.
+- Partial refund: when a director refunds a specific pass from TourniBase, that
+  pass is invalidated and the remaining passes stay active.
 
-Partial refunds are not pass-specific yet. If one pass in a multi-pass order
-needs to be voided, handle the money in Stripe and make a separate operational
-note until a director-facing pass refund tool exists.
+For a generic partial refund created directly in Stripe, TourniBase can update
+the refunded amount but cannot infer which pass was intended. Use the
+director-facing pass refund action when a specific pass must be invalidated.
+
+## Director onboarding
+
+Directors create an account at `/signup`, confirm their email when required,
+sign in, and create their first admission event. The support form sends account
+and setup questions to the configured TourniBase support inbox. Before a pilot,
+TourniBase should still confirm the director, event dates, ticket setup, scanner
+staffing, and refund contact.
 
 ## Buyer support wording
 
@@ -42,8 +50,10 @@ for pass-validity messaging.
 7. Confirm Stripe records the refund.
 8. Confirm TourniBase updates:
    - Full refund: order is `refunded`; passes scan as refunded/not active.
-   - Partial refund: order is `partial_refund`; passes remain usable unless
-     manually handled.
+   - Pass refund from order details: order is `partial_refund`; the selected
+     pass is refunded while remaining passes stay usable.
+   - Generic partial refund in Stripe: refunded revenue updates, but no specific
+     pass is inferred.
 9. Confirm the buyer receives the TourniBase refund confirmation email.
 
 ## Required Stripe webhook event

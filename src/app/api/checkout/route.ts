@@ -8,6 +8,7 @@ import {
   getSupabaseAdmin,
   getSupabaseAdminConfigurationIssues,
 } from "@/lib/supabase/admin";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 
@@ -36,14 +37,20 @@ const checkoutSchema = z.object({
     .max(20),
 });
 
-type TicketTypeRecord = {
-  description: string | null;
-  id: number;
-  name: string;
-  price: number | string;
-  quantity_limit: number | null;
-  valid_from: string;
-  valid_until: string;
+type ReservedCheckout = {
+  amount_total_cents: number;
+  inventory_expires_at: string;
+  order_id: number;
+  tournament_id: number;
+  tournament_name: string;
+  public_slug: string;
+  items: Array<{
+    description: string | null;
+    name: string;
+    quantity: number;
+    ticket_type_id: number;
+    unit_amount_cents: number;
+  }>;
 };
 
 export async function POST(request: NextRequest) {
@@ -99,159 +106,76 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  const forwardedIp =
+    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    request.headers.get("x-real-ip") ||
+    "unknown";
+  const [ipAllowed, emailAllowed] = await Promise.all([
+    checkRateLimit({
+      key: `checkout-ip:${forwardedIp}`,
+      limit: 12,
+      windowSeconds: 600,
+    }),
+    checkRateLimit({
+      key: `checkout-email:${parsed.data.email}`,
+      limit: 6,
+      windowSeconds: 600,
+    }),
+  ]);
+
+  if (!ipAllowed || !emailAllowed) {
+    return NextResponse.json(
+      { error: "Too many checkout attempts. Wait a few minutes and try again." },
+      { status: 429 },
+    );
+  }
+
   const supabase = getSupabaseAdmin();
-  const { data: tournament, error: tournamentError } = await supabase
-    .from("tournaments")
-    .select("id, name, public_slug")
-    .eq("public_slug", parsed.data.eventSlug)
-    .eq("status", "published")
-    .maybeSingle();
-
-  if (tournamentError) {
-    console.error("[checkout] tournament lookup failed", {
-      code: tournamentError.code,
-    });
-    return checkoutError();
-  }
-
-  if (!tournament) {
-    return NextResponse.json(
-      { error: "This event is not currently accepting online orders." },
-      { status: 404 },
-    );
-  }
-
-  const ticketIds = [...uniqueTicketIds];
-  const { data: ticketRows, error: ticketError } = await supabase
-    .from("ticket_types")
-    .select(
-      "id, name, price, valid_from, valid_until, description, quantity_limit",
-    )
-    .eq("tournament_id", tournament.id)
-    .eq("status", "active")
-    .in("id", ticketIds);
-
-  if (ticketError) {
-    console.error("[checkout] ticket lookup failed", {
-      code: ticketError.code,
-    });
-    return checkoutError();
-  }
-
-  const tickets = (ticketRows ?? []) as TicketTypeRecord[];
-
-  if (tickets.length !== ticketIds.length) {
-    return NextResponse.json(
-      {
-        error:
-          "One or more selected tickets are no longer available. Refresh the page and try again.",
-      },
-      { status: 409 },
-    );
-  }
-
-  const ticketsById = new Map(tickets.map((ticket) => [ticket.id, ticket]));
-  const selectedTickets = parsed.data.items.map((item) => ({
-    ...item,
-    ticket: ticketsById.get(item.ticketTypeId)!,
-  }));
-
-  for (const selection of selectedTickets) {
-    const unitAmountCents = toCents(selection.ticket.price);
-
-    if (unitAmountCents === 0) {
-      return NextResponse.json(
-        {
-          error: `${selection.ticket.name} is a free or comp pass and cannot be purchased through online checkout.`,
-        },
-        { status: 400 },
-      );
-    }
-
-    if (selection.ticket.quantity_limit) {
-      const { count, error: inventoryError } = await supabase
-        .from("passes")
-        .select("id", { count: "exact", head: true })
-        .eq("ticket_type_id", selection.ticket.id)
-        .in("status", ["active", "checked_in"]);
-
-      if (inventoryError) {
-        console.error("[checkout] inventory lookup failed", {
-          code: inventoryError.code,
-          ticketTypeId: selection.ticket.id,
-        });
-        return checkoutError();
-      }
-
-      if (
-        (count ?? 0) + selection.quantity >
-        selection.ticket.quantity_limit
-      ) {
-        return NextResponse.json(
-          {
-            error: `${selection.ticket.name} does not have enough passes remaining for that quantity.`,
-          },
-          { status: 409 },
-        );
-      }
-    }
-  }
-
-  const amountTotalCents = selectedTickets.reduce(
-    (total, selection) =>
-      total + toCents(selection.ticket.price) * selection.quantity,
-    0,
-  );
-
-  if (amountTotalCents < 50) {
-    return NextResponse.json(
-      { error: "The online checkout total must be at least $0.50." },
-      { status: 400 },
-    );
-  }
-
   const buyerName = `${parsed.data.firstName} ${parsed.data.lastName}`.trim();
-  const { data: order, error: orderError } = await supabase
-    .from("orders")
-    .insert({
-      tournament_id: tournament.id,
-      buyer_name: buyerName,
-      buyer_email: parsed.data.email,
-      buyer_phone: parsed.data.phone || null,
-      buyer_team_name: parsed.data.teamName || null,
-      amount_total: (amountTotalCents / 100).toFixed(2),
-      payment_status: "pending",
-    })
-    .select("id")
-    .single();
-
-  if (orderError || !order) {
-    console.error("[checkout] pending order creation failed", {
-      code: orderError?.code,
-    });
-    return checkoutError();
-  }
-
-  const { error: itemInsertError } = await supabase.from("order_items").insert(
-    selectedTickets.map((selection) => ({
-      order_id: order.id,
-      ticket_type_id: selection.ticket.id,
-      ticket_name: selection.ticket.name,
-      unit_amount_cents: toCents(selection.ticket.price),
-      quantity: selection.quantity,
-      valid_from: selection.ticket.valid_from,
-      valid_until: selection.ticket.valid_until,
-    })),
+  const { data: reservationData, error: reservationError } = await supabase.rpc(
+    "reserve_checkout_order",
+    {
+      p_buyer_email: parsed.data.email,
+      p_buyer_name: buyerName,
+      p_buyer_phone: parsed.data.phone || null,
+      p_buyer_team_name: parsed.data.teamName || null,
+      p_event_slug: parsed.data.eventSlug,
+      p_items: parsed.data.items.map((item) => ({
+        quantity: item.quantity,
+        ticket_type_id: item.ticketTypeId,
+      })),
+    },
   );
 
-  if (itemInsertError) {
-    console.error("[checkout] order item creation failed", {
-      code: itemInsertError.code,
-      orderId: order.id,
+  if (reservationError || !reservationData) {
+    const message = reservationError?.message ?? "Checkout could not be reserved.";
+    const expected = /not accepting|not available|expired|remaining|quantity|ticket/i.test(message);
+    console.error("[checkout] atomic reservation failed", {
+      code: reservationError?.code,
+      message,
     });
-    await markOrderFailed(order.id);
-    return checkoutError();
+    return NextResponse.json(
+      { error: expected ? message : "Secure checkout could not be started. Try again." },
+      { status: expected ? 409 : 500 },
+    );
   }
+
+  const reservation = reservationData as unknown as ReservedCheckout;
+
+  if (
+    (reservationData as { status?: string }).status !== "reserved" ||
+    !Number.isSafeInteger(reservation.order_id) ||
+    !Array.isArray(reservation.items)
+  ) {
+    const response = reservationData as { message?: string; status?: string };
+    return NextResponse.json(
+      { error: response.message || "The selected tickets could not be reserved." },
+      { status: response.status === "invalid_request" ? 400 : 409 },
+    );
+  }
+  const order = { id: reservation.order_id };
+  const selectedTickets = reservation.items;
+  const amountTotalCents = reservation.amount_total_cents;
 
   const siteUrl = (
     process.env.NEXT_PUBLIC_SITE_URL || request.nextUrl.origin
@@ -268,25 +192,30 @@ export async function POST(request: NextRequest) {
           quantity: selection.quantity,
           price_data: {
             currency: "usd",
-            unit_amount: toCents(selection.ticket.price),
+            unit_amount: selection.unit_amount_cents,
             product_data: {
-              name: selection.ticket.name,
-              description: selection.ticket.description || undefined,
+              name: selection.name,
+              description: selection.description || undefined,
             },
           },
         })),
         metadata: {
           order_id: String(order.id),
-          tournament_id: String(tournament.id),
+          tournament_id: String(reservation.tournament_id),
         },
-        payment_intent_data: {
-          metadata: {
-            order_id: String(order.id),
-            tournament_id: String(tournament.id),
-          },
-        },
+        ...(amountTotalCents > 0
+          ? {
+              payment_intent_data: {
+                metadata: {
+                  order_id: String(order.id),
+                  tournament_id: String(reservation.tournament_id),
+                },
+              },
+            }
+          : {}),
+        expires_at: Math.floor(new Date(reservation.inventory_expires_at).getTime() / 1000),
         success_url: `${siteUrl}/order/success?session_id={CHECKOUT_SESSION_ID}`,
-        cancel_url: `${siteUrl}/e/${tournament.public_slug}?checkout=cancelled`,
+        cancel_url: `${siteUrl}/e/${reservation.public_slug}?checkout=cancelled`,
       },
       {
         idempotencyKey: `tournibase-order-${order.id}`,
@@ -337,10 +266,6 @@ export async function POST(request: NextRequest) {
       });
     }
   }
-}
-
-function toCents(price: number | string) {
-  return Math.round(Number(price) * 100);
 }
 
 function checkoutError() {

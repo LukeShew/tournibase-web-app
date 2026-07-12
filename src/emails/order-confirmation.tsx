@@ -108,7 +108,7 @@ export function OrderConfirmationEmail({
                     Open mobile pass
                   </Button>
                   <Button href={pass.offlineUrl} style={secondaryButton}>
-                    Save to device
+                    Save to photos
                   </Button>
                 </Section>
                 <Text style={offlineHelp}>
@@ -182,7 +182,7 @@ export function createOrderConfirmationText({
   const passLines = passes
     .map(
       (pass, index) =>
-        `${pass.label} · Pass ${index + 1}\nOpen pass: ${pass.url}\nSave to device: ${pass.offlineUrl}`,
+        `${pass.label} · Pass ${index + 1}\nOpen pass: ${pass.url}\nSave to photos: ${pass.offlineUrl}`,
     )
     .join("\n\n");
   const itemLines = items
@@ -375,7 +375,7 @@ const offlineHelp: CSSProperties = {
 };
 
 const fallbackText: CSSProperties = {
-  color: "#8090a4",
+  color: "#52657c",
   fontSize: "11px",
   lineHeight: "1.5",
   margin: "14px 0 0",
@@ -440,7 +440,7 @@ const totalValue: CSSProperties = {
 };
 
 const orderNumberStyle: CSSProperties = {
-  color: "#7b8da3",
+  color: "#52657c",
   fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
   fontSize: "12px",
   margin: "4px 0 0",
@@ -459,7 +459,7 @@ const supportLink: CSSProperties = {
 };
 
 const footer: CSSProperties = {
-  color: "#7c8da3",
+  color: "#52657c",
   fontSize: "12px",
   lineHeight: "1.5",
   margin: "18px 8px 0",

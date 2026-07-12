@@ -53,6 +53,7 @@ export const getPublicEvent = cache(
       )
       .eq("tournament_id", tournamentRow.id)
       .eq("status", "active")
+      .gte("valid_until", new Date().toISOString())
       .order("price", { ascending: true })
       .order("created_at", { ascending: true });
 

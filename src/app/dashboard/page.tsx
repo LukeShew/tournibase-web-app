@@ -6,6 +6,7 @@ import { DIRECTOR_PROMISE } from "@/lib/product-copy";
 import { matchesTightName } from "@/lib/search-match";
 import { createClient } from "@/lib/supabase/server";
 import { formatEventDateRange } from "@/lib/tournaments";
+import { eventDateFromTimestamp } from "@/lib/event-time";
 
 export const metadata: Metadata = {
   title: "Dashboard",
@@ -22,6 +23,7 @@ type Tournament = {
   status: "draft" | "published" | "closed" | "archived";
   start_date: string;
   end_date: string;
+  time_zone: string;
 };
 
 export default async function DashboardPage({
@@ -47,7 +49,7 @@ export default async function DashboardPage({
   if (organizationIds.length > 0) {
     const { data: tournamentRows, error: tournamentError } = await supabase
       .from("tournaments")
-      .select("id, name, status, start_date, end_date")
+      .select("id, name, status, start_date, end_date, time_zone")
       .in("organization_id", organizationIds)
       .order("start_date", { ascending: false })
       .limit(100);
@@ -71,16 +73,23 @@ export default async function DashboardPage({
         matchesTightName(tournament.name, query),
       )
     : tournaments;
-  const now = new Date();
   const upcomingTournaments = matchingTournaments
-    .filter((tournament) => new Date(tournament.end_date) >= now)
+    .filter(
+      (tournament) =>
+        tournament.end_date >=
+        eventDateFromTimestamp(new Date().toISOString(), tournament.time_zone),
+    )
     .sort(
       (first, second) =>
         new Date(first.start_date).getTime() -
         new Date(second.start_date).getTime(),
     );
   const previousTournaments = matchingTournaments
-    .filter((tournament) => new Date(tournament.end_date) < now)
+    .filter(
+      (tournament) =>
+        tournament.end_date <
+        eventDateFromTimestamp(new Date().toISOString(), tournament.time_zone),
+    )
     .sort(
       (first, second) =>
         new Date(second.end_date).getTime() - new Date(first.end_date).getTime(),

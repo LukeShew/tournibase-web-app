@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import { matchesStrictText, matchesTightName } from "@/lib/search-match";
 
 export type LiveCheckIn = {
@@ -20,6 +21,7 @@ export function LiveCheckInFeed({
   checkIns: LiveCheckIn[];
   timeZone: string;
 }) {
+  const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState("");
   const preview = checkIns.slice(0, 5);
@@ -32,6 +34,11 @@ export function LiveCheckInFeed({
           matchesStrictText(formatResult(checkIn.result), query),
       )
     : checkIns;
+
+  useEffect(() => {
+    const interval = window.setInterval(() => router.refresh(), 8000);
+    return () => window.clearInterval(interval);
+  }, [router]);
 
   return (
     <>

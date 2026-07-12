@@ -37,7 +37,11 @@ export async function GET(
       return unavailableResponse(404);
     }
 
-    if (pass.status === "refunded" || pass.status === "voided") {
+    if (
+      pass.status === "refunded" ||
+      pass.status === "voided" ||
+      pass.status === "expired"
+    ) {
       return unavailableResponse(409);
     }
 

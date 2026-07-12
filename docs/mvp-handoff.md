@@ -221,11 +221,11 @@ Verified July 5, 2026:
   does not process those payments.
 - Full Stripe refunds automatically mark the order refunded, invalidate active
   or checked-in passes for that order, and send a buyer refund email.
-- Partial refunds are tracked at the order level, but pass-specific partial
-  refund handling is not automated.
+- Pass-specific partial refunds are available from TourniBase order details;
+  generic partial refunds created directly in Stripe remain order-level only.
 - Disputes are not automated.
-- Ticket quantity limits are not a reserved-inventory system for heavy
-  simultaneous demand.
+- Ticket quantity limits use an atomic pending checkout reservation so
+  simultaneous buyers cannot oversell the remaining inventory.
 - Saved pass PNGs work without buyer internet, but scanner devices require an
   internet connection for database validation.
 - Apple Wallet and Google Wallet passes are postponed.

@@ -1,6 +1,6 @@
-import Link from "next/link";
 import { Brand } from "@/components/brand";
 import { DashboardSidebar } from "@/components/dashboard-sidebar";
+import { DashboardMobileNavigation } from "@/components/dashboard-mobile-navigation";
 import { logout } from "@/app/login/actions";
 import { requireDirector } from "@/lib/auth";
 
@@ -22,12 +22,7 @@ export default async function DashboardLayout({
           <header className="sticky top-0 z-10 border-b border-border bg-background/90 px-5 py-4 backdrop-blur-xl lg:hidden">
             <div className="flex items-center justify-between gap-4">
               <Brand />
-              <Link
-                href="/dashboard/tournaments/new"
-                className="inline-flex h-10 items-center justify-center rounded-xl bg-brand-strong px-3 text-sm font-semibold text-white"
-              >
-                New event
-              </Link>
+              <DashboardMobileNavigation logoutAction={logout} />
             </div>
           </header>
 

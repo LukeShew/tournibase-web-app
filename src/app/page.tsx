@@ -15,7 +15,7 @@ export default async function Home() {
       <header className="relative z-10 mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-6 lg:px-8">
         <Brand tone="light" />
         <div className="flex items-center gap-3">
-          <PrimaryLink href="/support">Get started</PrimaryLink>
+          <PrimaryLink href="/signup">Get started</PrimaryLink>
           <SecondaryLink href="/login">Sign in</SecondaryLink>
         </div>
       </header>
@@ -35,7 +35,7 @@ export default async function Home() {
             gate staff one simple scanner.
           </p>
           <div className="mt-9 flex flex-col gap-3 sm:flex-row">
-            <PrimaryLink href="/support" large>
+            <PrimaryLink href="/signup" large>
               Get started
             </PrimaryLink>
             <SecondaryLink href="/login" large>
@@ -149,7 +149,7 @@ export default async function Home() {
               </p>
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
                 <Link
-                  href="/support"
+                  href="/signup"
                   className="inline-flex min-h-12 items-center justify-center rounded-2xl bg-white px-5 text-sm font-semibold text-blue-700 shadow-sm transition hover:bg-blue-50"
                 >
                   Get started

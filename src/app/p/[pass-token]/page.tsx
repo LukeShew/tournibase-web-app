@@ -33,7 +33,7 @@ const statusStyles = {
   amber: "border-amber-300/25 bg-amber-300/[0.08] text-amber-200",
   blue: "border-blue-300/25 bg-blue-300/[0.08] text-blue-200",
   green: "border-emerald-300 bg-emerald-50 text-emerald-800",
-  red: "border-red-300/25 bg-red-300/[0.08] text-red-200",
+  red: "border-rose-300 bg-rose-50 text-rose-700",
 } satisfies Record<PassState["tone"], string>;
 
 export default async function PassPage({

@@ -299,7 +299,7 @@ export function PublicTicketForm({
         </p>
         <div aria-live="polite" className="min-h-6">
           {message ? (
-            <p className="mt-3 rounded-xl bg-red-400/10 px-4 py-3 text-sm leading-6 text-red-200">
+            <p className="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium leading-6 text-rose-700">
               {message}
             </p>
           ) : null}

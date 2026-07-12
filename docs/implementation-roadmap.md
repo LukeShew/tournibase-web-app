@@ -112,12 +112,11 @@ These are required before accepting real customer payments:
   internet for authoritative validation and duplicate prevention.
 - Apple Wallet and Google Wallet passes are postponed.
 - Gate sales record external payment; TourniBase does not process those charges.
-- Partial refunds are tracked at the order level, but pass-specific partial
-  refund handling is not automated.
+- Pass-specific partial refunds are available from order details. Generic
+  partial refunds created directly in Stripe remain order-level only.
 - Dispute workflows are not automated.
-- Ticket quantity limits are enforced during checkout, but this is not a
-  reserved-inventory system for heavy concurrent demand.
-- Director accounts are invite-only and created through Supabase.
+- Ticket quantities use an atomic pending reservation during checkout.
+- Directors can create an account from the public signup page.
 
 ## MVP-ready definition
 

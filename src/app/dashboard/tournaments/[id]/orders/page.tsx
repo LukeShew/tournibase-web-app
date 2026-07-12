@@ -89,11 +89,11 @@ export default async function EventOrdersPage({
   const { data: orderRows, error: orderError } = await supabase
     .from("orders")
     .select(
-      "id, buyer_name, buyer_email, buyer_phone, amount_total, payment_status, created_at, stripe_checkout_id, order_items(id, ticket_name, unit_amount_cents, quantity, valid_from, valid_until), passes(id, public_token, status, sequence_number, ticket_types(name))",
+      "id, buyer_name, buyer_email, buyer_phone, amount_total, amount_refunded, payment_status, created_at, stripe_checkout_id, order_items!order_items_order_tournament_fk(id, ticket_name, unit_amount_cents, quantity, valid_from, valid_until), passes!passes_order_tournament_fk(id, order_item_id, public_token, status, sequence_number, ticket_types!passes_ticket_tournament_fk(name))",
     )
     .eq("tournament_id", tournamentId)
     .order("created_at", { ascending: false })
-    .limit(100);
+    .limit(1000);
 
   if (orderError) {
     throw orderError;
@@ -167,7 +167,7 @@ export default async function EventOrdersPage({
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             <DashboardMetricCard
               detail={`${metrics.sales.onlineOrderCount} captured online orders`}
-              label="Gross online sales"
+              label="Net online sales"
               value={formatCurrency(metrics.sales.grossOnlineSales)}
             />
             <DashboardMetricCard
