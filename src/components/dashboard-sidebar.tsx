@@ -139,7 +139,7 @@ export function DashboardSidebar({
       </nav>
 
       <div className="mt-auto space-y-3">
-        <div className="flex items-center justify-center gap-3 rounded-3xl bg-card-strong p-2 group-hover/sidebar:justify-start 2xl:justify-start">
+        <div className="flex items-center gap-3 rounded-3xl bg-card-strong p-2">
           <div
             className={`grid h-9 w-9 shrink-0 place-items-center rounded-2xl ${selectedAvatar.bgClass} ${selectedAvatar.textClass}`}
           >
