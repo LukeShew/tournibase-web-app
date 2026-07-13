@@ -139,13 +139,13 @@ export function DashboardSidebar({
       </nav>
 
       <div className="mt-auto space-y-3">
-        <div className="flex items-center gap-3 rounded-3xl bg-card-strong p-2">
+        <div className="flex items-center justify-center gap-3 rounded-3xl bg-card-strong p-2 group-hover/sidebar:justify-start 2xl:justify-start">
           <div
             className={`grid h-9 w-9 shrink-0 place-items-center rounded-2xl ${selectedAvatar.bgClass} ${selectedAvatar.textClass}`}
           >
             <ProfileAvatarIcon className="h-5 w-5" icon={selectedAvatar.icon} />
           </div>
-          <div className="min-w-0 opacity-0 transition-opacity duration-150 group-hover/sidebar:opacity-100 2xl:opacity-100">
+          <div className="hidden min-w-0 group-hover/sidebar:block 2xl:block">
             <p className="truncate text-sm font-semibold text-slate-950">
               {director.name}
             </p>
