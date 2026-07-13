@@ -23,11 +23,11 @@ export const PROFILE_AVATAR_OPTIONS: ProfileAvatarOption[] = [
     textClass: "text-white",
   },
   {
-    bgClass: "bg-blue-600",
+    bgClass: "bg-white",
     icon: "basketball",
     id: "basketball-blue",
     label: "Basketball",
-    textClass: "text-white",
+    textClass: "text-slate-900",
   },
   {
     bgClass: "bg-emerald-600",

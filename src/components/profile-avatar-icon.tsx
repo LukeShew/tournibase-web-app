@@ -15,12 +15,12 @@ export function ProfileAvatarIcon({
         fill="none"
         viewBox="0 0 24 24"
       >
-        <circle cx="12" cy="12" r="8.25" stroke="currentColor" strokeWidth="2" />
+        <circle cx="12" cy="12" r="8.25" fill="currentColor" />
         <path
-          d="M12 3.75c3 2.1 4.8 5.1 4.8 8.25S15 18.15 12 20.25M12 3.75C9 5.85 7.2 8.9 7.2 12S9 18.15 12 20.25M3.75 12h16.5"
-          stroke="currentColor"
+          d="M4.25 8.15c4.35 2.35 10.25 1.7 15.2-1.55M3.75 12.15c4.9 3.15 11.1 3.8 16.5 1.6M7.7 4.5c-2.4 4.65-.8 11.85 4.55 15.35"
+          stroke="white"
           strokeLinecap="round"
-          strokeWidth="1.6"
+          strokeWidth="1.8"
         />
       </svg>
     );
