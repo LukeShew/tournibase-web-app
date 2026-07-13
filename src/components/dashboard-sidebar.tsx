@@ -140,10 +140,12 @@ export function DashboardSidebar({
 
       <div className="mt-auto space-y-3">
         <div className="flex items-center gap-3 rounded-3xl bg-card-strong p-2">
-          <div
-            className={`grid h-9 w-9 shrink-0 place-items-center rounded-2xl ${selectedAvatar.bgClass} ${selectedAvatar.textClass}`}
-          >
-            <ProfileAvatarIcon className="h-5 w-5" icon={selectedAvatar.icon} />
+          <div className="grid w-10 shrink-0 place-items-center">
+            <div
+              className={`grid h-9 w-9 place-items-center rounded-2xl ${selectedAvatar.bgClass} ${selectedAvatar.textClass}`}
+            >
+              <ProfileAvatarIcon className="h-5 w-5" icon={selectedAvatar.icon} />
+            </div>
           </div>
           <div className="hidden min-w-0 group-hover/sidebar:block 2xl:block">
             <p className="truncate text-sm font-semibold text-slate-950">
@@ -286,18 +288,20 @@ function SidebarIcon({
   size?: "md" | "sm";
 }) {
   return (
-    <span
-      className={`grid shrink-0 place-items-center rounded-2xl border shadow-sm ${
-        size === "sm" ? "h-8 w-8 rounded-xl" : "h-9 w-9"
-      } ${
-        isActive
-          ? "border-blue-100 bg-white text-blue-700"
-          : isDisabled
-            ? "border-slate-200 bg-slate-100 text-slate-300"
-            : "border-border bg-white text-current"
-      }`}
-    >
-      <NavIcon icon={icon} />
+    <span className="grid w-10 shrink-0 place-items-center">
+      <span
+        className={`grid place-items-center rounded-2xl border shadow-sm ${
+          size === "sm" ? "h-8 w-8 rounded-xl" : "h-9 w-9"
+        } ${
+          isActive
+            ? "border-blue-100 bg-white text-blue-700"
+            : isDisabled
+              ? "border-slate-200 bg-slate-100 text-slate-300"
+              : "border-border bg-white text-current"
+        }`}
+      >
+        <NavIcon icon={icon} />
+      </span>
     </span>
   );
 }
