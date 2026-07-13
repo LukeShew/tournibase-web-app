@@ -17,14 +17,14 @@ export function ProfileAvatarIcon({
       >
         <defs>
           <clipPath id="basketball-seams">
-            <circle cx="12" cy="12" r="8" />
+            <circle cx="12" cy="12" r="9" />
           </clipPath>
         </defs>
-        <circle cx="12" cy="12" r="8" fill="#d99a5b" />
+        <circle cx="12" cy="12" r="9" fill="#d99a5b" />
         <g clipPath="url(#basketball-seams)">
-          <path d="M4 12h16M12 4v16" stroke="#172033" strokeWidth="1.5" />
+          <path d="M3 12h18M12 3v18" stroke="#172033" strokeWidth="1.5" />
           <path
-            d="M5 6.75c4 3 10 3 14 0M5 17.25c4-3 10-3 14 0"
+            d="M4.25 6.25c4.5 3.4 11 3.4 15.5 0M4.25 17.75c4.5-3.4 11-3.4 15.5 0"
             stroke="#172033"
             strokeWidth="1.5"
           />
