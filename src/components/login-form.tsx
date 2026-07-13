@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import {
   login,
   resendSignupConfirmation,
@@ -15,12 +15,30 @@ const initialLoginState: LoginState = {
   message: "",
 };
 
-export function LoginForm() {
+export function LoginForm({
+  initialEmail = "",
+  initialConfirmationEmail,
+  initialResendCooldownSeconds,
+}: {
+  initialEmail?: string;
+  initialConfirmationEmail?: string;
+  initialResendCooldownSeconds?: number;
+}) {
   const [state, action, pending] = useActionState(login, initialLoginState);
+  const passwordInput = useRef<HTMLInputElement>(null);
+  const displayedEmail = state.email ?? initialEmail;
+  const formKey = `${displayedEmail}-${state.focusPasswordAt ?? "initial"}`;
+  const confirmationEmail = state.confirmationEmail ?? initialConfirmationEmail;
+
+  useEffect(() => {
+    if (state.focusPassword) {
+      window.requestAnimationFrame(() => passwordInput.current?.focus());
+    }
+  }, [state.focusPassword, state.focusPasswordAt]);
 
   return (
     <div className="space-y-4">
-      <form action={action} className="space-y-5">
+      <form key={formKey} action={action} className="space-y-5">
         <div>
           <label
             htmlFor="email"
@@ -35,6 +53,7 @@ export function LoginForm() {
             autoComplete="email"
             required
             disabled={pending}
+            defaultValue={displayedEmail}
             className="h-12 w-full rounded-xl border border-border bg-white px-4 text-base text-slate-950 placeholder:text-slate-400 focus:border-blue-400 focus:outline-none focus:ring-4 focus:ring-blue-100 disabled:cursor-wait disabled:opacity-70"
             placeholder="director@example.com"
           />
@@ -53,6 +72,7 @@ export function LoginForm() {
             autoComplete="current-password"
             required
             disabled={pending}
+            ref={passwordInput}
             className="h-12 w-full rounded-xl border border-border bg-white px-4 text-base text-slate-950 placeholder:text-slate-400 focus:border-blue-400 focus:outline-none focus:ring-4 focus:ring-blue-100 disabled:cursor-wait disabled:opacity-70"
             placeholder="Your password"
           />
@@ -73,16 +93,26 @@ export function LoginForm() {
         </button>
       </form>
 
-      {state.confirmationEmail ? (
-        <ConfirmationResendForm email={state.confirmationEmail} />
+      {confirmationEmail ? (
+        <ConfirmationResendForm
+          key={confirmationEmail}
+          email={confirmationEmail}
+          initialCooldownSeconds={initialResendCooldownSeconds}
+        />
       ) : null}
     </div>
   );
 }
 
-function ConfirmationResendForm({ email }: { email: string }) {
+function ConfirmationResendForm({
+  email,
+  initialCooldownSeconds = CONFIRMATION_RESEND_COOLDOWN_SECONDS,
+}: {
+  email: string;
+  initialCooldownSeconds?: number;
+}) {
   const [availableAt] = useState(
-    () => Date.now() + CONFIRMATION_RESEND_COOLDOWN_SECONDS * 1000,
+    () => Date.now() + initialCooldownSeconds * 1000,
   );
   const [secondsRemaining, setSecondsRemaining] = useState(() =>
     getConfirmationResendSecondsRemaining(availableAt),

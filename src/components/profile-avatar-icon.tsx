@@ -1,3 +1,6 @@
+"use client";
+
+import { useId } from "react";
 import type { ProfileAvatarIcon } from "@/lib/profile-avatar-options";
 
 export function ProfileAvatarIcon({
@@ -7,21 +10,23 @@ export function ProfileAvatarIcon({
   className?: string;
   icon: ProfileAvatarIcon;
 }) {
+  const basketballSeamsId = useId().replaceAll(":", "");
+
   if (icon === "basketball") {
     return (
       <svg
         aria-hidden="true"
-        className={className}
+        className={`${className} block`}
         fill="none"
         viewBox="0 0 24 24"
       >
         <defs>
-          <clipPath id="basketball-seams">
+          <clipPath id={basketballSeamsId}>
             <circle cx="12" cy="12" r="9" />
           </clipPath>
         </defs>
         <circle cx="12" cy="12" r="9" fill="#d99a5b" />
-        <g clipPath="url(#basketball-seams)">
+        <g clipPath={`url(#${basketballSeamsId})`}>
           <path d="M3 12h18M12 3v18" stroke="#172033" strokeWidth="1.5" />
           <path
             d="M4.25 6.25c4.5 3.4 11 3.4 15.5 0M4.25 17.75c4.5-3.4 11-3.4 15.5 0"

@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { Brand } from "@/components/brand";
 import { LoginForm } from "@/components/login-form";
 import { getDirector } from "@/lib/auth";
+import { CONFIRMATION_RESEND_COOLDOWN_SECONDS } from "@/lib/confirmation-resend";
 
 export const metadata: Metadata = {
   title: "Director sign in",
@@ -12,10 +13,22 @@ export const metadata: Metadata = {
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams?: Promise<{ created?: string; confirmation?: string }>;
+  searchParams?: Promise<{
+    created?: string;
+    confirmation?: string;
+    email?: string;
+  }>;
 }) {
   const director = await getDirector();
-  const { created, confirmation } = (await searchParams) ?? {};
+  const { created, confirmation, email } = (await searchParams) ?? {};
+  const canResendConfirmation = [
+    "required",
+    "resent",
+    "resend-error",
+    "resend-limited",
+  ].includes(confirmation ?? "");
+  const showConfirmationNotice =
+    created === "1" || confirmation === "required" || confirmation === "resent";
 
   if (director) {
     redirect("/dashboard");
@@ -41,7 +54,7 @@ export default async function LoginPage({
         <p className="mt-3 leading-7 text-slate-500">
           Use the director account connected to your tournament dashboard.
         </p>
-        {created === "1" || confirmation === "resent" ? (
+        {showConfirmationNotice ? (
           <div
             aria-live="polite"
             className="mt-6 rounded-2xl border border-emerald-300 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-900"
@@ -60,12 +73,22 @@ export default async function LoginPage({
             className="mt-6 rounded-2xl border border-red-300 bg-red-50 px-4 py-3 text-sm font-medium text-red-800"
           >
             {confirmation === "resend-limited"
-              ? "Too many confirmation requests. Try again later."
-              : "The confirmation email could not be sent. Try again."}
+              ? "A confirmation email was sent recently. You can request another in about a minute."
+              : "The confirmation email could not be sent right now. Wait a minute, then try again."}
           </div>
         ) : null}
         <div className="mt-8 rounded-[2rem] border border-border bg-white p-6 shadow-sm">
-          <LoginForm />
+          <LoginForm
+            initialEmail={email}
+            initialConfirmationEmail={
+              canResendConfirmation && email ? email : undefined
+            }
+            initialResendCooldownSeconds={
+              confirmation === "required" || confirmation === "resend-limited"
+                ? CONFIRMATION_RESEND_COOLDOWN_SECONDS
+                : undefined
+            }
+          />
         </div>
         <p className="mt-6 text-center text-sm leading-6 text-slate-500">
           Need an account?{" "}

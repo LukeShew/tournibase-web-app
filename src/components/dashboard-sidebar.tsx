@@ -143,7 +143,7 @@ export function DashboardSidebar({
           <div
             className={`grid h-9 w-9 shrink-0 place-items-center rounded-2xl ${selectedAvatar.bgClass} ${selectedAvatar.textClass}`}
           >
-            <ProfileAvatarIcon icon={selectedAvatar.icon} />
+            <ProfileAvatarIcon className="h-5 w-5" icon={selectedAvatar.icon} />
           </div>
           <div className="min-w-0 opacity-0 transition-opacity duration-150 group-hover/sidebar:opacity-100 2xl:opacity-100">
             <p className="truncate text-sm font-semibold text-slate-950">

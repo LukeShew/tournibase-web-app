@@ -27,7 +27,7 @@ export async function ensureDirectorSetup({
       id: userId,
       name,
     },
-    { onConflict: "id" },
+    { ignoreDuplicates: true, onConflict: "id" },
   );
 
   if (profileError) {

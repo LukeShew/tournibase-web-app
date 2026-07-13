@@ -6,6 +6,9 @@ import { z } from "zod";
 import { getAuthEmailRedirectUrl } from "@/lib/auth-email-url";
 import { ensureDirectorSetup } from "@/lib/director-setup";
 import {
+  CONFIRMATION_RESEND_COOLDOWN_SECONDS,
+} from "@/lib/confirmation-resend";
+import {
   getLoginFailureMessage,
   isEmailConfirmationRequired,
 } from "@/lib/login-errors";
@@ -24,14 +27,46 @@ const loginSchema = z.object({
 export type LoginState = {
   message: string;
   confirmationEmail?: string;
+  email?: string;
+  focusPassword?: boolean;
+  focusPasswordAt?: number;
 };
+
+function hasValidEmail(value: unknown) {
+  return z.email().safeParse(value).success;
+}
+
+function loginConfirmationUrl(status: string, email?: string) {
+  const params = new URLSearchParams({ confirmation: status });
+  if (email) params.set("email", email);
+  return `/login?${params.toString()}`;
+}
+
+function isConfirmationRateLimited(error: {
+  code?: string;
+  message?: string;
+  status?: number;
+}) {
+  const details = `${error.code ?? ""} ${error.message ?? ""}`.toLowerCase();
+  return (
+    error.status === 429 ||
+    details.includes("rate limit") ||
+    details.includes("over_email_send_rate_limit") ||
+    details.includes("only request this after")
+  );
+}
 
 export async function login(
   _previousState: LoginState,
   formData: FormData,
 ): Promise<LoginState> {
+  const submittedEmail = formData.get("email");
+  const normalizedSubmittedEmail =
+    typeof submittedEmail === "string"
+      ? submittedEmail.trim().toLowerCase()
+      : "";
   const result = loginSchema.safeParse({
-    email: formData.get("email"),
+    email: submittedEmail,
     password: formData.get("password"),
   });
 
@@ -39,6 +74,9 @@ export async function login(
     return {
       message:
         result.error.issues[0]?.message ?? "Check your email and password.",
+      email: normalizedSubmittedEmail || undefined,
+      focusPassword: hasValidEmail(normalizedSubmittedEmail),
+      focusPasswordAt: Date.now(),
     };
   }
 
@@ -52,6 +90,9 @@ export async function login(
   if (!allowed) {
     return {
       message: "Too many sign-in attempts. Try again in a few minutes.",
+      email: result.data.email,
+      focusPassword: true,
+      focusPasswordAt: Date.now(),
     };
   }
 
@@ -64,6 +105,9 @@ export async function login(
         message:
           "Confirm your email before signing in. Check your inbox for the confirmation link.",
         confirmationEmail: result.data.email,
+        email: result.data.email,
+        focusPassword: true,
+        focusPasswordAt: Date.now(),
       };
     }
 
@@ -75,10 +119,14 @@ export async function login(
       .limit(1)
       .maybeSingle();
 
+    const accountExists = lookupError ? null : Boolean(account);
     return {
       message: getLoginFailureMessage({
-        accountExists: lookupError ? null : Boolean(account),
+        accountExists,
       }),
+      email: result.data.email,
+      focusPassword: true,
+      focusPasswordAt: Date.now(),
     };
   }
 
@@ -99,6 +147,9 @@ export async function login(
     return {
       message:
         "Your account exists, but we could not finish loading it. Try signing in again.",
+      email: result.data.email,
+      focusPassword: true,
+      focusPasswordAt: Date.now(),
     };
   }
 
@@ -114,18 +165,18 @@ export async function resendSignupConfirmation(formData: FormData) {
     .safeParse(formData.get("email"));
 
   if (!parsed.success) {
-    redirect("/login?confirmation=resend-error");
+    redirect(loginConfirmationUrl("resend-error"));
   }
 
   const ip = await getRequestIp();
   const allowed = await checkRateLimit({
     key: `confirmation:${ip}:${parsed.data}`,
-    limit: 3,
-    windowSeconds: 3600,
+    limit: 1,
+    windowSeconds: CONFIRMATION_RESEND_COOLDOWN_SECONDS,
   });
 
   if (!allowed) {
-    redirect("/login?confirmation=resend-limited");
+    redirect(loginConfirmationUrl("resend-limited", parsed.data));
   }
 
   const supabase = await createClient();
@@ -137,11 +188,16 @@ export async function resendSignupConfirmation(formData: FormData) {
     },
   });
 
-  redirect(
-    error
-      ? "/login?confirmation=resend-error"
-      : "/login?confirmation=resent",
-  );
+  if (error) {
+    redirect(
+      loginConfirmationUrl(
+        isConfirmationRateLimited(error) ? "resend-limited" : "resend-error",
+        parsed.data,
+      ),
+    );
+  }
+
+  redirect(loginConfirmationUrl("resent", parsed.data));
 }
 
 export async function logout() {

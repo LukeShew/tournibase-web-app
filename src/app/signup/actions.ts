@@ -78,5 +78,7 @@ export async function signup(
     redirect("/login?created=1");
   }
 
-  redirect("/login?created=1&confirmation=required");
+  redirect(
+    `/login?created=1&confirmation=required&email=${encodeURIComponent(parsed.data.email)}`,
+  );
 }
