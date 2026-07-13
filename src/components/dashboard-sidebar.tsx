@@ -161,7 +161,7 @@ export function DashboardSidebar({
           <>
             <button
               type="button"
-              className="flex w-full items-center gap-3 rounded-2xl border border-border bg-white px-2 py-2.5 text-sm font-semibold text-slate-600 shadow-sm transition hover:bg-card-strong hover:text-slate-950 group-hover/sidebar:hidden 2xl:hidden"
+              className="flex w-full items-center gap-3 rounded-2xl bg-white px-2 py-2.5 text-sm font-semibold text-slate-600 shadow-sm ring-1 ring-inset ring-border transition hover:bg-card-strong hover:text-slate-950 group-hover/sidebar:hidden 2xl:hidden"
               aria-label="Sign out"
               onClick={() => setConfirmingSignOut(false)}
             >
@@ -194,7 +194,7 @@ export function DashboardSidebar({
         ) : (
           <button
             type="button"
-            className="flex w-full items-center gap-3 rounded-2xl border border-border bg-white px-2 py-2.5 text-sm font-semibold text-slate-600 shadow-sm transition hover:bg-card-strong hover:text-slate-950"
+            className="flex w-full items-center gap-3 rounded-2xl bg-white px-2 py-2.5 text-sm font-semibold text-slate-600 shadow-sm ring-1 ring-inset ring-border transition hover:bg-card-strong hover:text-slate-950"
             aria-label="Sign out"
             onClick={() => setConfirmingSignOut(true)}
           >
