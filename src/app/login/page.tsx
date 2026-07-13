@@ -47,7 +47,7 @@ export default async function LoginPage({
             className="mt-6 rounded-2xl border border-emerald-300 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-900"
           >
             {confirmation === "resent"
-              ? "A new confirmation email was sent. Use its link before signing in."
+              ? "If this account still needs confirmation, a new email was sent. If it is already confirmed, sign in."
               : confirmation === "required"
               ? "Your account was created. Check your email to confirm it, then sign in."
               : "Your account was created. Sign in to continue."}
