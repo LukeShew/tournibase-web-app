@@ -3,9 +3,9 @@
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { getAuthEmailRedirectUrl } from "@/lib/auth-email-url";
+import { ensureDirectorSetup } from "@/lib/director-setup";
 import { checkRateLimit, getRequestIp } from "@/lib/rate-limit";
 import { getSignupFailureMessage } from "@/lib/signup-errors";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
 const schema = z.object({
@@ -42,7 +42,10 @@ export async function signup(
   const { data, error } = await supabase.auth.signUp({
     email: parsed.data.email,
     options: {
-      data: { name: parsed.data.name },
+      data: {
+        name: parsed.data.name,
+        organization_name: parsed.data.organization,
+      },
       emailRedirectTo: getAuthEmailRedirectUrl(),
     },
     password: parsed.data.password,
@@ -57,20 +60,17 @@ export async function signup(
     };
   }
 
-  const admin = getSupabaseAdmin();
-  const { error: profileError } = await admin.from("users").update({
+  const { error: setupError } = await ensureDirectorSetup({
+    email: parsed.data.email,
     name: parsed.data.name,
-  }).eq("id", data.user.id);
-  const { error: organizationError } = profileError
-    ? { error: null }
-    : await admin.from("organizations").insert({
-        name: parsed.data.organization,
-        owner_user_id: data.user.id,
-      });
+    organizationName: parsed.data.organization,
+    userId: data.user.id,
+  });
 
-  if (profileError || organizationError) {
-    await admin.auth.admin.deleteUser(data.user.id).catch(() => undefined);
-    return { message: "The account could not be created. Try again." };
+  if (setupError) {
+    // The user can still confirm their email and sign in. Their profile setup
+    // is retried at sign-in instead of deleting a valid new Auth account.
+    console.error("Unable to finish director signup setup", setupError);
   }
 
   if (data.session) {

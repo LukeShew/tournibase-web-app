@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { getAuthEmailRedirectUrl } from "@/lib/auth-email-url";
+import { ensureDirectorSetup } from "@/lib/director-setup";
 import {
   getLoginFailureMessage,
   isEmailConfirmationRequired,
@@ -55,7 +56,7 @@ export async function login(
   }
 
   const supabase = await createClient();
-  const { error } = await supabase.auth.signInWithPassword(result.data);
+  const { data, error } = await supabase.auth.signInWithPassword(result.data);
 
   if (error) {
     if (isEmailConfirmationRequired(error)) {
@@ -78,6 +79,26 @@ export async function login(
       message: getLoginFailureMessage({
         accountExists: lookupError ? null : Boolean(account),
       }),
+    };
+  }
+
+  const user = data.user;
+  const metadata = user.user_metadata as {
+    name?: string;
+    organization_name?: string;
+  };
+  const { error: setupError } = await ensureDirectorSetup({
+    email: user.email ?? result.data.email,
+    name: metadata.name?.trim() || user.email?.split("@")[0] || "Director",
+    organizationName: metadata.organization_name?.trim() || "My organization",
+    userId: user.id,
+  });
+
+  if (setupError) {
+    await supabase.auth.signOut();
+    return {
+      message:
+        "Your account exists, but we could not finish loading it. Try signing in again.",
     };
   }
 

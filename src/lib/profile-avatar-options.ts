@@ -27,7 +27,7 @@ export const PROFILE_AVATAR_OPTIONS: ProfileAvatarOption[] = [
     icon: "basketball",
     id: "basketball-blue",
     label: "Basketball",
-    textClass: "text-slate-950",
+    textClass: "text-white",
   },
   {
     bgClass: "bg-emerald-600",

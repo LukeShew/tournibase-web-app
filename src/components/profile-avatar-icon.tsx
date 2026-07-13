@@ -15,13 +15,20 @@ export function ProfileAvatarIcon({
         fill="none"
         viewBox="0 0 24 24"
       >
-        <circle cx="12" cy="12" r="8.25" fill="currentColor" />
-        <path
-          d="M4.25 8.15c4.35 2.35 10.25 1.7 15.2-1.55M3.75 12.15c4.9 3.15 11.1 3.8 16.5 1.6M7.7 4.5c-2.4 4.65-.8 11.85 4.55 15.35"
-          stroke="white"
-          strokeLinecap="round"
-          strokeWidth="1.8"
-        />
+        <defs>
+          <clipPath id="basketball-seams">
+            <circle cx="12" cy="12" r="8" />
+          </clipPath>
+        </defs>
+        <circle cx="12" cy="12" r="8" fill="#93c5fd" />
+        <g clipPath="url(#basketball-seams)">
+          <path d="M4 12h16M12 4v16" stroke="white" strokeWidth="1.5" />
+          <path
+            d="M5 6.75c4 3 10 3 14 0M5 17.25c4-3 10-3 14 0"
+            stroke="white"
+            strokeWidth="1.5"
+          />
+        </g>
       </svg>
     );
   }
