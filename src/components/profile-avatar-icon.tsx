@@ -17,7 +17,7 @@ export function ProfileAvatarIcon({
       >
         <circle cx="12" cy="12" r="8.25" stroke="currentColor" strokeWidth="2" />
         <path
-          d="M4.8 8.2c4.7 1.2 8 5.8 8 11.5M19.2 15.8c-4.7-1.2-8-5.8-8-11.5M12 3.8c.4 5.5 3.2 8.9 8.1 10.4M3.9 9.8c4.9 1.5 7.7 4.9 8.1 10.4"
+          d="M12 3.75c3 2.1 4.8 5.1 4.8 8.25S15 18.15 12 20.25M12 3.75C9 5.85 7.2 8.9 7.2 12S9 18.15 12 20.25M3.75 12h16.5"
           stroke="currentColor"
           strokeLinecap="round"
           strokeWidth="1.6"

@@ -14,13 +14,15 @@ afterEach(() => {
 describe("getAuthEmailRedirectUrl", () => {
   it("never sends hosted confirmation emails back to localhost", () => {
     process.env.NEXT_PUBLIC_SITE_URL = "http://localhost:3000";
-    expect(getAuthEmailRedirectUrl()).toBe("https://tournibase.com/login");
+    expect(getAuthEmailRedirectUrl()).toBe(
+      "https://tournibase.com/email-confirmed",
+    );
   });
 
   it("uses a configured hosted site URL", () => {
     process.env.NEXT_PUBLIC_SITE_URL = "https://preview.example.com/";
     expect(getAuthEmailRedirectUrl()).toBe(
-      "https://preview.example.com/login",
+      "https://preview.example.com/email-confirmed",
     );
   });
 });
