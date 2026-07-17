@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { requireDirector } from "@/lib/auth";
 import type { CreateTournamentState } from "@/lib/form-states";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
 const isoDate = z
@@ -131,7 +132,8 @@ export async function updateTournament(
     };
   }
 
-  const { data: updatedTournament, error: updateError } = await supabase
+  const { data: updatedTournament, error: updateError } =
+    await getSupabaseAdmin()
     .from("tournaments")
     .update({
       name: result.data.name,

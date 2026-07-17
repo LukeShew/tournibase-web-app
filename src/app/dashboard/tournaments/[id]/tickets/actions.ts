@@ -5,6 +5,12 @@ import { z } from "zod";
 import { requireDirector } from "@/lib/auth";
 import { eventDayEnd, eventDayStart } from "@/lib/event-time";
 import type { TicketTypeFormState } from "@/lib/form-states";
+import { isOrganizationStripeAccountReady } from "@/lib/stripe-connect";
+import { getStripeConfigurationIssues } from "@/lib/stripe";
+import {
+  getSupabaseAdmin,
+  getSupabaseAdminConfigurationIssues,
+} from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
 const isoDate = z
@@ -71,8 +77,10 @@ type TicketTypeField = keyof z.input<typeof ticketTypeSchema>;
 type OwnedTournament = {
   end_date: string;
   id: number;
+  organization_id: number;
   public_slug: string;
   start_date: string;
+  status: "draft" | "published" | "closed" | "archived";
   time_zone: string;
 };
 
@@ -109,7 +117,16 @@ export async function createTicketType(
     return dateErrors;
   }
 
-  const { error } = await supabase.from("ticket_types").insert({
+  const paymentError = await validatePaidTicketActivation(
+    parsed.data,
+    tournament,
+  );
+
+  if (paymentError) {
+    return paymentError;
+  }
+
+  const { error } = await getSupabaseAdmin().from("ticket_types").insert({
     tournament_id: tournamentId,
     name: parsed.data.name,
     price: centsToDatabasePrice(dollarsToCents(parsed.data.price)),
@@ -161,7 +178,7 @@ export async function updateTicketType(
   const supabase = await createClient();
   const { data: ticketType, error: ticketLookupError } = await supabase
     .from("ticket_types")
-    .select("id, tournament_id")
+    .select("id, price, status, tournament_id")
     .eq("id", ticketTypeId)
     .maybeSingle();
 
@@ -202,7 +219,20 @@ export async function updateTicketType(
     return dateErrors;
   }
 
-  const { data: updatedTicketType, error: updateError } = await supabase
+  const introducesPaidActivation =
+    parsed.data.status === "active" &&
+    dollarsToCents(parsed.data.price) > 0 &&
+    (ticketType.status !== "active" || Number(ticketType.price) <= 0);
+  const paymentError = introducesPaidActivation
+    ? await validatePaidTicketActivation(parsed.data, tournament)
+    : null;
+
+  if (paymentError) {
+    return paymentError;
+  }
+
+  const { data: updatedTicketType, error: updateError } =
+    await getSupabaseAdmin()
     .from("ticket_types")
     .update({
       name: parsed.data.name,
@@ -254,7 +284,7 @@ export async function setTicketTypeStatus(
   const supabase = await createClient();
   const { data: ticketType, error: ticketLookupError } = await supabase
     .from("ticket_types")
-    .select("id, tournament_id")
+    .select("id, price, tournament_id")
     .eq("id", ticketTypeId)
     .maybeSingle();
 
@@ -273,7 +303,28 @@ export async function setTicketTypeStatus(
     throw new Error("You do not have access to this ticket type.");
   }
 
-  const { data: updatedTicketType, error: updateError } = await supabase
+  if (
+    nextStatus === "active" &&
+    tournament.status === "published" &&
+    Number(ticketType.price) > 0
+  ) {
+    if (
+      !(await isOrganizationStripeAccountReady(tournament.organization_id))
+    ) {
+      throw new Error(
+        "Connect a ready Stripe account in Settings before activating paid tickets on a published event.",
+      );
+    }
+
+    if (!paidCheckoutConfigurationReady()) {
+      throw new Error(
+        "Finish the Stripe and server configuration before activating paid tickets on a published event.",
+      );
+    }
+  }
+
+  const { data: updatedTicketType, error: updateError } =
+    await getSupabaseAdmin()
     .from("ticket_types")
     .update({ status: nextStatus })
     .eq("id", ticketTypeId)
@@ -357,7 +408,9 @@ async function getOwnedTournament(
 
   const { data: tournament, error: tournamentError } = await supabase
     .from("tournaments")
-    .select("id, public_slug, start_date, end_date, time_zone")
+    .select(
+      "id, organization_id, public_slug, start_date, end_date, status, time_zone",
+    )
     .eq("id", tournamentId)
     .in("organization_id", organizationIds)
     .maybeSingle();
@@ -367,6 +420,55 @@ async function getOwnedTournament(
   }
 
   return tournament as OwnedTournament | null;
+}
+
+async function validatePaidTicketActivation(
+  data: z.output<typeof ticketTypeSchema>,
+  tournament: OwnedTournament,
+): Promise<TicketTypeFormState | null> {
+  if (
+    data.status !== "active" ||
+    tournament.status !== "published" ||
+    dollarsToCents(data.price) === 0
+  ) {
+    return null;
+  }
+
+  if (await isOrganizationStripeAccountReady(tournament.organization_id)) {
+    if (paidCheckoutConfigurationReady()) {
+      return null;
+    }
+
+    return {
+      errors: {
+        status:
+          "Finish the Stripe and server configuration before activating a paid ticket on a published event.",
+      },
+      message:
+        "Paid tickets cannot be activated while paid checkout setup is incomplete.",
+      success: false,
+    };
+  }
+
+  return {
+    errors: {
+      status:
+        "Connect a ready Stripe account before activating a paid ticket on a published event.",
+    },
+    message:
+      "Paid tickets cannot be activated while the organization’s Stripe account is not ready.",
+    success: false,
+  };
+}
+
+function paidCheckoutConfigurationReady() {
+  return (
+    getStripeConfigurationIssues({
+      includeConnectedPaymentsWebhookSecret: true,
+      includePublishableKey: true,
+    }).length === 0 &&
+    getSupabaseAdminConfigurationIssues().length === 0
+  );
 }
 
 function validateTicketDates(

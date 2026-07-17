@@ -4,6 +4,13 @@ import { getDirector } from "@/lib/auth";
 import { attemptRefundConfirmationEmail } from "@/lib/email/refund-confirmation";
 import { syncStripeChargeRefund } from "@/lib/orders";
 import { getStripe } from "@/lib/stripe";
+import {
+  assertStripeRoutingMatches,
+  getStripeRequestOptions,
+  isCurrentStripeEnvironment,
+  isPaidStripeRefundAmountCents,
+  type StripeEnvironment,
+} from "@/lib/stripe-connect-payments";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
 export const runtime = "nodejs";
@@ -29,7 +36,7 @@ export async function POST(request: NextRequest) {
   const supabase = getSupabaseAdmin();
   const { data: pass, error } = await supabase
     .from("passes")
-    .select("id, order_id, order_item_id, status, orders!inner(stripe_checkout_id, tournaments!inner(organizations!inner(owner_user_id))), order_items!inner(unit_amount_cents)")
+    .select("id, order_id, order_item_id, status, orders!inner(stripe_checkout_id, stripe_connected_account_id, stripe_environment, platform_fee_amount, tournaments!inner(organizations!inner(owner_user_id))), order_items!inner(unit_amount_cents)")
     .eq("id", parsed.data.passId)
     .eq("order_id", parsed.data.orderId)
     .maybeSingle();
@@ -43,6 +50,9 @@ export async function POST(request: NextRequest) {
     status: string;
     orders: {
       stripe_checkout_id: string | null;
+      stripe_connected_account_id: string | null;
+      stripe_environment: StripeEnvironment;
+      platform_fee_amount: number | string;
       tournaments: { organizations: { owner_user_id: string } };
     };
     order_items: { unit_amount_cents: number };
@@ -56,12 +66,44 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "That pass is already inactive." }, { status: 409 });
   }
 
+  if (!isPaidStripeRefundAmountCents(relation.order_items.unit_amount_cents)) {
+    return NextResponse.json(
+      { error: "Complimentary passes do not have a Stripe payment to refund." },
+      { status: 409 },
+    );
+  }
+
   if (!relation.orders.stripe_checkout_id) {
     return NextResponse.json({ error: "This order does not have a Stripe payment." }, { status: 409 });
   }
 
+  const routing = {
+    connectedAccountId: relation.orders.stripe_connected_account_id,
+    environment: relation.orders.stripe_environment,
+  };
+
+  if (!isCurrentStripeEnvironment(routing.environment)) {
+    return NextResponse.json(
+      {
+        error:
+          "This payment was created in a different Stripe environment and is read-only here.",
+      },
+      { status: 409 },
+    );
+  }
+
   const stripe = getStripe();
-  const session = await stripe.checkout.sessions.retrieve(relation.orders.stripe_checkout_id);
+  const session = await stripe.checkout.sessions.retrieve(
+    relation.orders.stripe_checkout_id,
+    {},
+    getStripeRequestOptions(routing),
+  );
+
+  assertStripeRoutingMatches({
+    actualEnvironment: session.livemode ? "live" : "test",
+    routing,
+  });
+
   const paymentIntent =
     typeof session.payment_intent === "string"
       ? session.payment_intent
@@ -80,8 +122,14 @@ export async function POST(request: NextRequest) {
           pass_id: String(parsed.data.passId),
         },
         payment_intent: paymentIntent,
+        ...(routing.connectedAccountId
+          ? { refund_application_fee: true }
+          : {}),
       },
-      { idempotencyKey: `tournibase-pass-refund-${parsed.data.passId}` },
+      getStripeRequestOptions(
+        routing,
+        `tournibase-pass-refund-${parsed.data.passId}`,
+      ),
     );
     const chargeId = typeof refund.charge === "string" ? refund.charge : refund.charge?.id;
 
@@ -89,8 +137,15 @@ export async function POST(request: NextRequest) {
       throw new Error("Stripe did not return a charge for the refund.");
     }
 
-    const charge = await stripe.charges.retrieve(chargeId);
-    const result = await syncStripeChargeRefund(charge);
+    const charge = await stripe.charges.retrieve(
+      chargeId,
+      {},
+      getStripeRequestOptions(routing),
+    );
+    const result = await syncStripeChargeRefund(
+      charge,
+      routing.connectedAccountId,
+    );
 
     if (result.status === "refunded" || result.status === "partial_refund") {
       await attemptRefundConfirmationEmail(result);

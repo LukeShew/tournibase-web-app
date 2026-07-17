@@ -1,6 +1,6 @@
 # TourniBase Web MVP Architecture
 
-Last verified: July 6, 2026
+Last verified: July 16, 2026
 
 ## System overview
 
@@ -11,9 +11,13 @@ flowchart LR
   Staff["Gate staff"] --> Web
   Web --> Auth["Supabase Auth"]
   Web --> DB["Supabase Postgres + RLS"]
-  Web --> Stripe["Stripe Checkout"]
-  Stripe --> Webhook["Signed webhook route"]
+  Web --> Connect["Stripe Connect Accounts v2"]
+  Director --> Connect
+  Web --> Stripe["Direct-charge Stripe Checkout"]
+  Stripe --> Webhook["Connected-payment webhook"]
+  Connect --> AccountWebhook["Connect account-status webhook"]
   Webhook --> DB
+  AccountWebhook --> DB
   Webhook --> Email["Resend transactional email"]
 ```
 
@@ -45,13 +49,27 @@ form. The browser never receives the Supabase secret key or Stripe secret keys.
 - Sensitive gate functions are callable only by the server-side Supabase secret
   key.
 
-### Stripe
+### Stripe Connect
 
-- TourniBase uses Stripe-hosted Checkout in payment mode.
-- The app calculates prices on the server from current ticket records.
-- Stripe webhook signatures are verified against the raw request body.
-- Full Stripe refunds sync back into TourniBase and invalidate active or
-  checked-in passes for the refunded order.
+- TourniBase's existing Stripe account is the Connect platform.
+- Each organization has one Accounts v2 connected account in each Stripe
+  environment.
+- Directors complete Stripe-hosted onboarding. Connected accounts receive the
+  full Stripe Dashboard; TourniBase does not support switching or disconnecting
+  accounts during the pilot.
+- Event organizers are the sellers and merchants of record.
+- Checkout Sessions are direct charges on the order's connected account.
+- Stripe processing fees and payout timing belong to the connected account.
+- TourniBase calculates an optional percentage-plus-fixed application fee. Both
+  fee settings are `0` during the pilot.
+- The app stores the connected account, environment, fee, PaymentIntent, and
+  charge on the order so later API calls cannot route to a different merchant.
+- Connected-payment and account-status webhook signatures are verified against
+  separate secrets and the raw request body.
+- A connected-payment event must identify the same connected account stored on
+  the order before fulfillment or refund synchronization can continue.
+- Full refunds and pass-specific partial refunds run against the connected
+  account and reverse the related application fee.
 - Pass-specific partial refunds created in TourniBase mark the order as
   partially refunded, subtract the refund from net revenue, and void the
   selected pass. Generic partial refunds created directly in Stripe update the
@@ -100,6 +118,7 @@ form. The browser never receives the Supabase secret key or Stripe secret keys.
 | `/dashboard/tournaments/[id]/sales` | Sales dashboard |
 | `/dashboard/tournaments/[id]/scans` | Gate-activity dashboard |
 | `/dashboard/tournaments/[id]/share` | Coach and parent sharing tools |
+| `/dashboard/settings` | Director profile and organization payment onboarding/status |
 | `/print/tournaments/[id]/gate-poster` | Legacy printable buyer checkout poster |
 
 ### Gate routes
@@ -116,7 +135,12 @@ form. The browser never receives the Supabase secret key or Stripe secret keys.
 | Route | Purpose |
 | --- | --- |
 | `POST /api/checkout` | Validate an order and create Stripe Checkout |
-| `POST /api/stripe/webhook` | Verify Stripe events, fulfill paid orders, and sync refunds |
+| `POST /api/stripe/webhook` | Verify legacy or connected payment events, fulfill orders, and sync refunds |
+| `GET/POST /api/stripe/connect/start` | Create a connected account when authorized and open hosted onboarding |
+| `GET/POST /api/stripe/connect/refresh` | Synchronize Connect status and return to settings |
+| `POST /api/stripe/connect/dashboard` | Open the exact connected account in Stripe Dashboard |
+| `POST /api/stripe/connect/webhook` | Synchronize account status, capabilities, requirements, and closure |
+| `POST /api/stripe/dashboard-payment` | Open a connected order's payment in the correct Stripe Dashboard |
 
 ## Tournament setup flow
 
@@ -126,20 +150,29 @@ form. The browser never receives the Supabase secret key or Stripe secret keys.
 3. The tournament is inserted as `draft` with a collision-safe public slug.
 4. Ticket Server Actions create or edit ticket types after ownership and date
    checks.
-5. Publishing is blocked until at least one active ticket type exists.
+5. Publishing is blocked until at least one active ticket type exists. If any
+   active ticket is paid, the organization's current-environment connected
+   account must be ready for both charges and payouts.
 6. Only published tournaments and active ticket types are visible to anonymous
    buyers.
+7. A published event stays visible if its connected account later becomes
+   restricted, but paid ticket options and paid checkout are disabled. Free
+   ticket options remain available.
 
 ## Purchase and pass-creation flow
 
 1. `POST /api/checkout` validates the event, ticket IDs, quantities, inventory,
    and buyer fields.
-2. The server creates a pending `orders` row and `order_items` snapshots.
-3. The server creates a Stripe Checkout Session with the TourniBase order ID in
-   metadata.
+2. The server requires the event organization's connected account to be ready
+   for paid carts and creates a pending `orders` row, immutable `order_items`,
+   and immutable payment-routing fields.
+3. The server creates a direct-charge Stripe Checkout Session on the connected
+   account with the TourniBase order ID in metadata and an application fee only
+   when the configured fee is greater than zero.
 4. Stripe redirects the buyer to hosted Checkout.
 5. Stripe sends a signed success event to `/api/stripe/webhook`.
-6. `fulfillCheckoutSession` retrieves the Checkout Session directly from Stripe
+6. `fulfillCheckoutSession` requires the event's connected account and mode to
+   match the order, retrieves the Checkout Session from that connected account,
    and continues only when Stripe reports `paid`.
 7. The function upserts one `passes` row per purchased admission using the
    unique order-item and sequence-number pair.
@@ -160,11 +193,14 @@ Supported webhook events:
 
 ## Refund sync flow
 
-1. An operator issues a refund in Stripe.
+1. A director uses the TourniBase order detail view for full-order or
+   pass-specific refunds. The payment-specific Stripe Dashboard link is for
+   review and reconciliation.
 2. Stripe sends `charge.refunded` to `/api/stripe/webhook`.
 3. The webhook verifies the Stripe signature.
-4. TourniBase retrieves the latest Stripe charge, then resolves the order ID
-   from Stripe metadata on the charge or its PaymentIntent.
+4. TourniBase verifies the event account matches the immutable order routing,
+   retrieves the latest Stripe charge from that connected account, then
+   resolves the order ID from Stripe metadata on the charge or PaymentIntent.
 5. A full refund marks the order as `refunded` and marks active or checked-in
    passes as `refunded`.
 6. A pass-specific partial refund created in TourniBase marks the order as
@@ -172,6 +208,7 @@ Supported webhook events:
    directly in Stripe updates refunded revenue but leaves passes usable because
    Stripe does not identify a specific pass.
 7. TourniBase sends the buyer a refund confirmation email through Resend.
+8. Any application fee is reversed with the refund. The pilot fee is $0.
 
 ## Mobile pass flow
 

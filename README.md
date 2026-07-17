@@ -14,11 +14,13 @@ Production app:
 ## Current status
 
 - All 19 numbered web MVP phases complete
-- Stripe test mode
+- Stripe Connect Sandbox with hosted director onboarding and direct charges
 - Final repository review and MVP handoff complete
 - Transactional pass email is live through Resend and passed a real test order
 - Buyers can download each QR pass as a PNG for offline access
 - Full Stripe refunds sync back into TourniBase and invalidate active passes
+- Tournament organizers are the sellers and receive online proceeds in their
+  connected Stripe accounts; the TourniBase pilot application fee is $0
 
 Current progress and remaining work:
 [Implementation Roadmap](docs/implementation-roadmap.md)
@@ -67,7 +69,7 @@ Current progress and remaining work:
 - Node.js 20.9 or newer
 - npm
 - A separate Supabase project for the web app
-- A Stripe account in test mode
+- A Stripe platform account with Connect enabled in a Sandbox
 - Stripe CLI for local webhook testing
 - Docker only if you want to run the full Supabase stack locally
 
@@ -110,9 +112,13 @@ Current progress and remaining work:
 | `NEXT_PUBLIC_SUPABASE_URL` | Browser and server | Web-app Supabase project URL |
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Browser and server | Supabase publishable key protected by RLS |
 | `SUPABASE_SECRET_KEY` | Server only | Paid-order fulfillment, pass lookup, and gate operations |
-| `STRIPE_SECRET_KEY` | Server only | Creates and verifies Stripe Checkout Sessions |
-| `STRIPE_WEBHOOK_SECRET` | Server only | Verifies signed Stripe webhook requests |
+| `STRIPE_SECRET_KEY` | Server only | TourniBase Connect platform key used for Accounts v2 and direct-charge API calls |
+| `STRIPE_WEBHOOK_SECRET` | Server only | Verifies legacy platform-payment webhook requests |
+| `STRIPE_CONNECTED_PAYMENTS_WEBHOOK_SECRET` | Server only | Verifies connected-account Checkout and refund events |
+| `STRIPE_CONNECT_ACCOUNT_WEBHOOK_SECRET` | Server only | Verifies Accounts v2 onboarding, requirement, capability, and closure events |
 | `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Browser-safe configuration | Matching Stripe mode and account |
+| `TOURNIBASE_PLATFORM_FEE_BPS` | Server only | Percentage application fee in basis points; `0` during the pilot |
+| `TOURNIBASE_PLATFORM_FEE_FIXED_CENTS` | Server only | Fixed application fee in cents; `0` during the pilot |
 | `NEXT_PUBLIC_SITE_URL` | Browser and server | Base URL used for pass, scanner, success, and cancel links |
 | `EMAIL_PROVIDER` | Server only | `disabled` locally; use `resend` only after production activation |
 | `RESEND_API_KEY` | Server only | Sending-only Resend API key |
@@ -240,12 +246,31 @@ the `director` role.
 
 ## Stripe setup
 
-Keep all Stripe values in the same mode. During development, use only
-`sk_test_...`, `pk_test_...`, and a webhook attached to the same test account.
+Keep all Stripe values in the same environment. Accounts v2 onboarding must be
+tested in a Stripe Sandbox. Use that Sandbox's `sk_test_...`, `pk_test_...`,
+and webhook destinations together.
 
-### Production test-mode endpoint
+TourniBase is the Connect platform. Each organization creates one connected
+Stripe account from **Settings → Payments** and completes Stripe-hosted
+onboarding. The organizer is the seller and merchant of record. Paid Checkout
+Sessions use direct charges on that organizer's connected account, so Stripe
+deducts its processing fees and pays out the remaining balance according to
+the organizer's Stripe payout schedule.
 
-Create a Stripe webhook endpoint at:
+The pilot application fee is controlled by:
+
+```text
+TOURNIBASE_PLATFORM_FEE_BPS=0
+TOURNIBASE_PLATFORM_FEE_FIXED_CENTS=0
+```
+
+The fee is calculated as
+`round(order total × basis points / 10,000) + fixed cents`. Keep both values at
+zero until TourniBase intentionally begins charging a fee.
+
+### Hosted Sandbox endpoints
+
+Create a connected-account payment webhook endpoint at:
 
 ```text
 https://tournibase.com/api/stripe/webhook
@@ -259,8 +284,22 @@ Subscribe it to:
 - `checkout.session.expired`
 - `charge.refunded`
 
-Copy that endpoint’s `whsec_...` signing secret into the Vercel
-`STRIPE_WEBHOOK_SECRET` variable.
+Enable delivery for events from connected accounts. Copy that endpoint's
+`whsec_...` signing secret into
+`STRIPE_CONNECTED_PAYMENTS_WEBHOOK_SECRET`. Keep
+`STRIPE_WEBHOOK_SECRET` configured while legacy platform test orders still
+exist.
+
+Create a second Accounts v2 webhook endpoint at:
+
+```text
+https://tournibase.com/api/stripe/connect/webhook
+```
+
+Subscribe it to account creation, account closure, account updates, merchant
+configuration/capability updates, current requirements, and future
+requirements. Put that endpoint's signing secret in
+`STRIPE_CONNECT_ACCOUNT_WEBHOOK_SECRET`.
 
 TourniBase syncs full Stripe refunds back into order and pass statuses. See
 [Refund and Support Process](docs/refund-support.md).
@@ -275,14 +314,14 @@ TourniBase syncs full Stripe refunds back into order and pass statuses. See
    stripe login
    ```
 
-3. Forward test events:
+3. Forward connected-account payment events:
 
    ```bash
-   stripe listen --forward-to localhost:3000/api/stripe/webhook
+   stripe listen --forward-connect-to localhost:3000/api/stripe/webhook
    ```
 
 4. Copy the displayed `whsec_...` value into the local
-   `STRIPE_WEBHOOK_SECRET`.
+   `STRIPE_CONNECTED_PAYMENTS_WEBHOOK_SECRET`.
 
 5. Restart `npm run dev` after changing `.env.local`.
 
@@ -397,11 +436,13 @@ digital pass.
 
 ## Stripe success and pass creation
 
-`POST /api/checkout` creates a pending order and immutable order-item snapshots
-before redirecting to Stripe. Stripe sends a signed success event to
-`POST /api/stripe/webhook`. The server retrieves the Checkout Session from
-Stripe, requires a paid status, upserts one pass per purchased admission, and
-marks the order paid.
+`POST /api/checkout` creates a pending order and immutable order-item and
+payment-routing snapshots before redirecting to Stripe. For connected orders,
+the Checkout Session is a direct charge on the organizer's account. Stripe
+sends a signed connected-account success event to
+`POST /api/stripe/webhook`. The server requires the event account and
+environment to match the order before retrieving the Checkout Session from the
+connected account, fulfilling passes, and marking the order paid.
 
 The success page calls the same fulfillment function before displaying pass
 links. Webhook retries and page reloads therefore do not create duplicate
@@ -428,9 +469,13 @@ npm run build
 
 ## Known limitations
 
-- Stripe is in test mode.
+- Stripe Connect is in a Sandbox. Every pilot director must repeat onboarding
+  in live mode before TourniBase accepts real tournament payments.
 - Director accounts are invite-only.
-- Refunds and disputes are not automated.
+- Directors initiate refunds in TourniBase. Stripe refund events then
+  synchronize order and pass status, reverse the application fee when
+  applicable, and trigger the buyer refund email. Dispute handling is not
+  automated.
 - Gate-sale recording does not process payment.
 - Saved pass images work without internet on the buyer’s phone, but the gate
   scanner still needs internet to validate current status and prevent reuse.

@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 export default function TermsPage() {
   return (
     <LegalPageShell eyebrow="Legal" title="Terms of use">
-      <p className="text-sm text-slate-500">Last updated: July 7, 2026</p>
+      <p className="text-sm text-slate-500">Last updated: July 16, 2026</p>
 
       <LegalSection title="What TourniBase does">
         <p>
@@ -24,10 +24,11 @@ export default function TermsPage() {
 
       <LegalSection title="Event organizer responsibility">
         <p>
-          Event organizers control their event details, dates, venue
-          information, ticket types, pricing, admission rules, refund decisions,
-          and gate operations. Buyers should contact the event organizer for
-          event-specific questions.
+          The event organizer is the seller and merchant of record for
+          admission orders. Organizers control their event details, dates,
+          venue information, ticket types, pricing, admission rules, refund
+          decisions, and gate operations. Buyers should contact the event
+          organizer for event-specific questions.
         </p>
       </LegalSection>
 
@@ -45,8 +46,15 @@ export default function TermsPage() {
 
       <LegalSection title="Payments and refunds">
         <p>
-          Card payments are processed by Stripe. TourniBase does not store full
-          card numbers. Refund requests are handled by the event organizer.
+          Card payments are processed through the event organizer’s connected
+          Stripe account. Stripe deducts its processing fees from the
+          organizer’s proceeds and controls the organizer’s bank payout
+          schedule. TourniBase does not store full card numbers.
+        </p>
+        <p>
+          TourniBase may retain an application fee from an organizer’s
+          transaction proceeds. The pilot application fee is currently $0.
+          Refund requests and decisions are handled by the event organizer.
           Refund timing can depend on Stripe, the card network, and the buyer’s
           bank.
         </p>

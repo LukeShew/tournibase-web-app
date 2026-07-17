@@ -29,6 +29,7 @@ describe("refund confirmation email", () => {
     expect(html).toContain(sample.amountRefunded);
     expect(html).toContain(sample.organizerEmail);
     expect(html).toContain("no longer valid for entry");
+    expect(html).toContain("the event seller");
   });
 
   it("creates a plain-text fallback for full refunds", () => {
@@ -38,6 +39,7 @@ describe("refund confirmation email", () => {
     expect(text).toContain("Original payment: $25.00");
     expect(text).toContain("no longer valid for entry");
     expect(text).toContain(sample.organizerEmail);
+    expect(text).toContain("the event seller");
   });
 
   it("explains partial refunds without voiding passes", () => {

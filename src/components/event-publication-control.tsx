@@ -12,6 +12,8 @@ export function EventPublicationControl({
   activeTicketCount,
   align = "start",
   checkoutConfigured,
+  hasPaidTickets,
+  paymentReady,
   publicPath,
   showIdleMessage = true,
   status,
@@ -20,6 +22,8 @@ export function EventPublicationControl({
   activeTicketCount: number;
   align?: "end" | "start";
   checkoutConfigured: boolean;
+  hasPaidTickets: boolean;
+  paymentReady: boolean;
   publicPath: string;
   showIdleMessage?: boolean;
   status: TournamentStatus;
@@ -37,7 +41,10 @@ export function EventPublicationControl({
   );
   const state = actionState ?? initialPublicationState;
   const canPublish =
-    status === "published" || (status === "draft" && activeTicketCount > 0);
+    status === "published" ||
+    (status === "draft" &&
+      activeTicketCount > 0 &&
+      (!hasPaidTickets || (paymentReady && checkoutConfigured)));
 
   if (status === "closed" || status === "archived") {
     return (
@@ -55,6 +62,8 @@ export function EventPublicationControl({
   const idleMessage = getIdlePublicationMessage({
     activeTicketCount,
     checkoutConfigured,
+    hasPaidTickets,
+    paymentReady,
     status,
   });
   const visibleMessage = state.message

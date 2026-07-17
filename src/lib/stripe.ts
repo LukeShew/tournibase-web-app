@@ -5,9 +5,11 @@ import Stripe from "stripe";
 let stripeClient: Stripe | null = null;
 
 export function getStripeConfigurationIssues({
+  includeConnectedPaymentsWebhookSecret = false,
   includePublishableKey = false,
   includeWebhookSecret = false,
 }: {
+  includeConnectedPaymentsWebhookSecret?: boolean;
   includePublishableKey?: boolean;
   includeWebhookSecret?: boolean;
 } = {}) {
@@ -28,7 +30,24 @@ export function getStripeConfigurationIssues({
     issues.push("STRIPE_WEBHOOK_SECRET");
   }
 
+  if (
+    includeConnectedPaymentsWebhookSecret &&
+    !process.env.STRIPE_CONNECTED_PAYMENTS_WEBHOOK_SECRET
+  ) {
+    issues.push("STRIPE_CONNECTED_PAYMENTS_WEBHOOK_SECRET");
+  }
+
   return issues;
+}
+
+export function getStripePaymentWebhookSecrets() {
+  return [
+    process.env.STRIPE_CONNECTED_PAYMENTS_WEBHOOK_SECRET,
+    process.env.STRIPE_WEBHOOK_SECRET,
+  ].filter(
+    (secret, index, secrets): secret is string =>
+      Boolean(secret) && secrets.indexOf(secret) === index,
+  );
 }
 
 export function getStripe() {

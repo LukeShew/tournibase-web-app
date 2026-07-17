@@ -36,14 +36,19 @@ export type OrderLogOrder = {
   passes: OrderLogPass[];
   payment_status: "pending" | "paid" | "failed" | "refunded" | "partial_refund";
   stripe_checkout_id: string | null;
+  stripe_connected_account_id: string | null;
+  stripe_environment: "live" | "test";
+  stripe_payment_intent_id: string | null;
 };
 
 const ORDERS_PER_PAGE = 15;
 
 export function OrderLogClient({
+  currentStripeEnvironment,
   orders,
   tournamentId,
 }: {
+  currentStripeEnvironment: "live" | "test";
   orders: OrderLogOrder[];
   tournamentId: number;
 }) {
@@ -147,19 +152,21 @@ export function OrderLogClient({
                   >
                     Manual check-in lookup
                   </Link>
-                  {order.stripe_checkout_id ? (
+                  {canViewStripePayment(order) ? (
                     <a
-                      href={getStripePaymentUrl(order.stripe_checkout_id)}
+                      href={getStripePaymentUrl(order.id)}
                       target="_blank"
                       rel="noreferrer"
                       className="block rounded-xl px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-blue-50 hover:text-blue-700"
                       onClick={() => setOpenActionsId(null)}
                     >
-                      View payment in Stripe
+                      {order.stripe_environment === currentStripeEnvironment
+                        ? "View payment in Stripe"
+                        : `View ${order.stripe_environment} payment in Stripe`}
                     </a>
                   ) : (
-                    <span className="block rounded-xl px-3 py-2 text-sm font-semibold text-slate-300">
-                      No Stripe checkout ID
+                    <span className="block rounded-xl px-3 py-2 text-sm font-semibold text-slate-400">
+                      {getPaymentActionLabel(order)}
                     </span>
                   )}
                 </div>
@@ -204,6 +211,7 @@ export function OrderLogClient({
 
       {activeOrder ? (
         <OrderDetailsModal
+          currentStripeEnvironment={currentStripeEnvironment}
           order={activeOrder}
           onClose={() => setActiveOrder(null)}
         />
@@ -213,15 +221,24 @@ export function OrderLogClient({
 }
 
 function OrderDetailsModal({
+  currentStripeEnvironment,
   onClose,
   order,
 }: {
+  currentStripeEnvironment: "live" | "test";
   onClose: () => void;
   order: OrderLogOrder;
 }) {
   const router = useRouter();
   const [refundingPassId, setRefundingPassId] = useState<number | null>(null);
+  const [refundingOrder, setRefundingOrder] = useState(false);
   const [refundError, setRefundError] = useState<string | null>(null);
+  const isHistoricalStripeEnvironment =
+    order.stripe_environment !== currentStripeEnvironment;
+  const canRefundStripePayment =
+    !isHistoricalStripeEnvironment &&
+    Boolean(order.stripe_checkout_id) &&
+    Number(order.amount_total) > 0;
 
   async function refundPass(passId: number) {
     if (!window.confirm("Refund this pass and block it from future entry?")) {
@@ -249,6 +266,41 @@ function OrderDetailsModal({
       setRefundError(error instanceof Error ? error.message : "The pass could not be refunded.");
     } finally {
       setRefundingPassId(null);
+    }
+  }
+
+  async function refundOrder() {
+    if (
+      !window.confirm(
+        "Refund the remaining order balance and block every pass from future entry?",
+      )
+    ) {
+      return;
+    }
+
+    setRefundError(null);
+    setRefundingOrder(true);
+
+    try {
+      const response = await fetch("/api/stripe/refund-order", {
+        body: JSON.stringify({ orderId: order.id }),
+        headers: { "content-type": "application/json" },
+        method: "POST",
+      });
+      const result = (await response.json()) as { error?: string };
+
+      if (!response.ok) {
+        throw new Error(result.error || "The order could not be refunded.");
+      }
+
+      onClose();
+      router.refresh();
+    } catch (error) {
+      setRefundError(
+        error instanceof Error ? error.message : "The order could not be refunded.",
+      );
+    } finally {
+      setRefundingOrder(false);
     }
   }
 
@@ -302,9 +354,13 @@ function OrderDetailsModal({
             <InfoBox
               label="Payment method"
               value={
-                order.stripe_checkout_id
-                  ? "Stripe Checkout"
-                  : "Unavailable"
+                Number(order.amount_total) === 0
+                  ? "Complimentary online order"
+                  : order.stripe_connected_account_id
+                    ? "Stripe Checkout"
+                    : order.stripe_checkout_id
+                      ? "Legacy Stripe checkout"
+                      : "Unavailable"
               }
             />
           </div>
@@ -373,7 +429,7 @@ function OrderDetailsModal({
                       {order.payment_status !== "refunded" &&
                       pass.status !== "refunded" &&
                       pass.status !== "voided" &&
-                      Number(order.amount_total) > 0 ? (
+                      canRefundStripePayment ? (
                         <button
                           type="button"
                           className="inline-flex h-10 items-center justify-center rounded-2xl border border-rose-200 bg-rose-50 px-4 text-sm font-semibold text-rose-700 transition hover:bg-rose-100 disabled:opacity-60"
@@ -396,16 +452,42 @@ function OrderDetailsModal({
             </p>
           ) : null}
 
+          {isHistoricalStripeEnvironment ? (
+            <p className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-800">
+              This {order.stripe_environment} payment is historical and
+              read-only while TourniBase is running in{" "}
+              {currentStripeEnvironment} mode.
+            </p>
+          ) : order.stripe_checkout_id && Number(order.amount_total) > 0 ? (
+            <p className="mt-4 rounded-2xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-medium text-blue-800">
+              You can review this payment in Stripe. Use the TourniBase refund
+              controls so pass status and the TourniBase fee stay synchronized.
+            </p>
+          ) : null}
+
           <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-end">
-            {order.stripe_checkout_id ? (
+            {canViewStripePayment(order) ? (
               <a
-                href={getStripePaymentUrl(order.stripe_checkout_id)}
+                href={getStripePaymentUrl(order.id)}
                 target="_blank"
                 rel="noreferrer"
                 className="inline-flex h-11 items-center justify-center rounded-2xl border border-border bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700"
               >
                 View payment in Stripe
               </a>
+            ) : null}
+            {(order.payment_status === "paid" ||
+              order.payment_status === "partial_refund") &&
+            Number(order.amount_total) > Number(order.amount_refunded) &&
+            canRefundStripePayment ? (
+              <button
+                type="button"
+                className="inline-flex h-11 items-center justify-center rounded-2xl border border-rose-200 bg-rose-50 px-4 text-sm font-semibold text-rose-700 transition hover:bg-rose-100 disabled:opacity-60"
+                disabled={refundingOrder || refundingPassId !== null}
+                onClick={refundOrder}
+              >
+                {refundingOrder ? "Refunding order…" : "Refund remaining order"}
+              </button>
             ) : null}
             <button
               type="button"
@@ -474,6 +556,28 @@ function getOrderNumber(orderId: number) {
   return `TB-${orderId.toString().padStart(6, "0")}`;
 }
 
-function getStripePaymentUrl(checkoutId: string) {
-  return `/api/stripe/dashboard-payment?session_id=${encodeURIComponent(checkoutId)}`;
+function getPaymentActionLabel(
+  order: OrderLogOrder,
+) {
+  if (Number(order.amount_total) === 0) {
+    return "Complimentary order — no Stripe payment";
+  }
+
+  if (!order.stripe_connected_account_id) {
+    return "Legacy Stripe payment — use order details";
+  }
+
+  return "Stripe payment link unavailable";
+}
+
+function canViewStripePayment(order: OrderLogOrder) {
+  return Boolean(
+    Number(order.amount_total) > 0 &&
+      order.stripe_connected_account_id &&
+      order.stripe_payment_intent_id,
+  );
+}
+
+function getStripePaymentUrl(orderId: number) {
+  return `/api/stripe/dashboard-payment?order_id=${encodeURIComponent(orderId)}`;
 }

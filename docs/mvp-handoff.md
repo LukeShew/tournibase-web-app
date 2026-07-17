@@ -1,14 +1,17 @@
 # TourniBase Web MVP Handoff
 
-Last verified: July 6, 2026
+Last verified: July 16, 2026
 
 ## Handoff status
 
 All 19 numbered web MVP phases are complete.
 
-The app is deployed, remains in Stripe test mode, and is suitable for product
-demos and controlled testing. It is not ready to accept real customer payments
-until the launch requirements in this document are complete.
+The deployed app remains on its pre-Connect release. Stripe Connect is
+implemented locally against a Sandbox for product demos and controlled
+testing. The
+Connect migration, environment variables, and webhooks must be deployed before
+the new payment routing can be used. The app is not ready to accept real
+customer payments until the launch requirements in this document are complete.
 
 Production app:
 [tournibase.com](https://tournibase.com)
@@ -21,9 +24,9 @@ Production app:
 | Local web app | `apps/tournibase-web-app` |
 | Production hosting | Vercel project `tournibase-web-app` |
 | Production database | Supabase project `khwaafsdtgiymucppkmo` |
-| Payments | Stripe test mode |
+| Payments | Stripe Connect Sandbox; direct charges to organizer accounts |
 | Transactional email | Resend from `passes@tournibase.com` |
-| Refund support | Manual Stripe refunds with automatic full-refund pass invalidation |
+| Refund support | TourniBase full-order and pass-specific refunds with connected-account webhook synchronization |
 
 The postponed waitlist website remains in the separate
 [LukeShew/TourniBase](https://github.com/LukeShew/TourniBase) repository.
@@ -38,9 +41,13 @@ Vercel environment variables for hosted deployments.
 | `NEXT_PUBLIC_SUPABASE_URL` | Browser and server | Web-app Supabase project URL |
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Browser-safe | Supabase publishable key protected by RLS |
 | `SUPABASE_SECRET_KEY` | Server only | Fulfillment, pass lookup, and gate operations |
-| `STRIPE_SECRET_KEY` | Server only | Creates and verifies Stripe Checkout Sessions |
-| `STRIPE_WEBHOOK_SECRET` | Server only | Verifies signed Stripe webhook requests |
+| `STRIPE_SECRET_KEY` | Server only | Connect platform key for Accounts v2 and connected payment API calls |
+| `STRIPE_WEBHOOK_SECRET` | Server only | Verifies legacy platform-payment webhook requests |
+| `STRIPE_CONNECTED_PAYMENTS_WEBHOOK_SECRET` | Server only | Verifies connected-account payment and refund events |
+| `STRIPE_CONNECT_ACCOUNT_WEBHOOK_SECRET` | Server only | Verifies Accounts v2 onboarding, requirement, capability, and closure events |
 | `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Browser-safe | Stripe key matching the configured mode and account |
+| `TOURNIBASE_PLATFORM_FEE_BPS` | Server only | Percentage application fee in basis points; `0` for the pilot |
+| `TOURNIBASE_PLATFORM_FEE_FIXED_CENTS` | Server only | Fixed application fee in cents; `0` for the pilot |
 | `NEXT_PUBLIC_SITE_URL` | Browser and server | Base URL for checkout, pass, scanner, and success links |
 | `EMAIL_PROVIDER` | Server only | `disabled` locally; `resend` after production activation |
 | `RESEND_API_KEY` | Server only | Sending-only Resend API key |
@@ -77,6 +84,7 @@ Vercel environment variables for hosted deployments.
 | `/dashboard/tournaments/[id]/sales` | Sales dashboard |
 | `/dashboard/tournaments/[id]/scans` | Gate-activity dashboard |
 | `/dashboard/tournaments/[id]/share` | Sharing tools |
+| `/dashboard/settings` | Profile and organization Stripe Connect onboarding/status |
 | `/print/tournaments/[id]/gate-poster` | Legacy printable public-checkout poster |
 
 ### Scanner routes
@@ -96,18 +104,25 @@ authorized gate staff.
 | Route | Purpose |
 | --- | --- |
 | `POST /api/checkout` | Validates a cart and creates Stripe Checkout |
-| `POST /api/stripe/webhook` | Verifies Stripe events, fulfills paid orders, and syncs refunds |
+| `POST /api/stripe/webhook` | Verifies legacy or connected payment events, fulfills paid orders, and syncs refunds |
+| `GET/POST /api/stripe/connect/start` | Creates an authorized organization's account and opens hosted onboarding |
+| `GET/POST /api/stripe/connect/refresh` | Synchronizes account status |
+| `POST /api/stripe/connect/dashboard` | Opens the exact connected account in Stripe Dashboard |
+| `POST /api/stripe/connect/webhook` | Synchronizes account status, requirements, capabilities, and closure |
+| `POST /api/stripe/dashboard-payment` | Opens a connected order's payment in Stripe Dashboard |
 | `GET /dev/email-preview` | Local-only branded pass-email preview; returns 404 in production |
 
 ## Database handoff
 
-Production has 12 applied product migrations. The local repository contains the
-same 12 migrations, so there is no migration drift.
+Production currently has the pre-Connect schema. The local repository adds the
+Stripe Connect foundation migration, which must be applied before deploying
+the Connect application code.
 
-The 11 public application tables are:
+The 12 public application tables after the migration are:
 
 - `users`
 - `organizations`
+- `organization_stripe_accounts`
 - `tournaments`
 - `ticket_types`
 - `orders`
@@ -118,7 +133,7 @@ The 11 public application tables are:
 - `manual_sales`
 - `order_email_deliveries`
 
-RLS is enabled on all 11 tables. Anonymous access is limited to published
+RLS is enabled on all 12 tables. Anonymous access is limited to published
 tournaments and active ticket types. Orders, passes, scanner records, and buyer
 data remain private. Email delivery records and their atomic claim function are
 available only to the server-side service role.
@@ -150,7 +165,7 @@ to use the live website.
 
 4. Put the local API URL, publishable key, and secret key from
    `npx supabase status` in `.env.local`.
-5. Keep the Stripe variables in test mode.
+5. Keep the Stripe variables in the same Stripe Sandbox.
 6. Create or refresh the demo:
 
    ```bash
@@ -173,7 +188,7 @@ Password: TourniBaseDemo123!
 Demo event:
 `http://localhost:3000/e/dmv-summer-tip-off-classic`
 
-## Final verification
+## Pre-Connect verification
 
 Verified July 5, 2026:
 
@@ -190,8 +205,9 @@ Verified July 5, 2026:
 - Ten automated email and pass-display tests passed.
 - `npm audit --omit=dev` found zero vulnerabilities.
 - The production URL returned HTTP 200 from Vercel.
-- Production and local Supabase have all 12 migrations and RLS on all 11 public
-  tables.
+- At that time, production and local Supabase had all 12 migrations and RLS on
+  all 11 public tables. The current local Connect rollout adds migration 19 and
+  a twelfth public table; production remains on migration 18 until rollout.
 - The email delivery table blocks anonymous and signed-in browser access while
   allowing only the service role to claim deliveries.
 - A transaction-only database test confirmed the first email claim succeeds and
@@ -211,7 +227,14 @@ Verified July 5, 2026:
 
 - The branded order email, plain-text fallback, delivery tracking, duplicate
   protection, retry states, and Resend delivery are active in production.
-- Stripe remains in test mode.
+- Stripe Connect remains in a Sandbox. Sandbox onboarding does not carry into
+  live mode.
+- One organization supports one connected account per environment. Account
+  switching and self-service disconnection are intentionally unavailable
+  during the pilot.
+- Stripe controls the director's payout schedule. TourniBase does not hold
+  tournament proceeds.
+- The configurable TourniBase application fee is $0 during the pilot.
 - Director accounts are invite-only and created through Supabase.
 - Supabase leaked-password protection is disabled because it is unavailable on
   the current plan. Use strong, unique passwords for invited directors. Enable
@@ -232,16 +255,21 @@ Verified July 5, 2026:
 
 ## Requirements before real customer payments
 
-1. Switch the Stripe secret key, publishable key, and webhook to live mode
-   together.
-2. Run one low-value purchase with a real card.
-3. Confirm the live webhook marks the order paid and creates every pass.
-4. Confirm the buyer receives the Resend email and can save every offline pass.
-5. Open and scan every issued pass through a production scanner link.
-6. Confirm TourniBase sales totals match Stripe.
-7. Fully refund one test order, confirm the buyer receives the refund email,
+1. Apply the Connect migration to hosted Supabase.
+2. Configure live Connect settings and separate connected-payment and
+   account-status webhook endpoints.
+3. Switch all Stripe keys and webhooks to live mode together.
+4. Have the pilot director repeat Stripe-hosted onboarding in live mode.
+5. Run one low-value purchase with a real card.
+6. Confirm the live connected-payment webhook marks the order paid and creates
+   every pass.
+7. Confirm the buyer receives the Resend email and can save every offline pass.
+8. Open and scan every issued pass through a production scanner link.
+9. Confirm gross sales, Stripe fees, $0 TourniBase fee, director proceeds, and
+   TourniBase reporting match Stripe.
+10. Fully refund the test order, confirm the buyer receives the refund email,
    and confirm the scanner blocks the refunded pass.
-8. Follow the basic tournament-day support and refund process in
+11. Follow the basic tournament-day support and refund process in
    [Refund and Support Process](./refund-support.md).
 
 Do not switch only one Stripe key to live mode. All Stripe variables and the

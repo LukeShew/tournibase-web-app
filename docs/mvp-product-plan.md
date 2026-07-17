@@ -1,6 +1,6 @@
 # TourniBase Web MVP Product Plan
 
-Last updated: July 5, 2026
+Last updated: July 16, 2026
 
 ## Current product
 
@@ -45,8 +45,13 @@ sales when permitted.
 - Tournament creation and publishing
 - Ticket type creation, editing, activation, and deactivation
 - Public event and coach-sharing pages
-- Stripe-hosted online checkout in test mode
+- Organization-level Stripe Connect Accounts v2 hosted onboarding
+- Direct-charge Stripe Checkout on each organizer’s connected account
+- Configurable percentage plus fixed TourniBase application fee, set to $0
+  during the pilot
 - Paid-order fulfillment with one mobile pass per admission
+- Full-order and individual-pass refund actions with refund synchronization
+- Transactional pass and refund email through Resend
 - Mobile pass pages with QR codes
 - Temporary, revocable scanner links with permission levels
 - Camera scanning and manual pass entry
@@ -67,8 +72,12 @@ sales when permitted.
 3. They enter the event, venue, organizer, contact, date, and public-link
    details.
 4. TourniBase creates the tournament as a draft.
-5. The director adds at least one active ticket type.
-6. The director publishes the event from its overview.
+5. For a paid event, the director connects the organization’s Stripe account
+   and completes hosted onboarding.
+6. The director adds at least one active ticket type.
+7. TourniBase requires a connected account ready for charges and payouts
+   before a paid event can publish. Free-only events do not require Connect.
+8. The director publishes the event from its overview.
 
 ### Create ticket types
 
@@ -83,17 +92,18 @@ sales when permitted.
 1. A buyer opens `/e/[event-slug]`.
 2. They choose ticket quantities and provide contact information.
 3. TourniBase creates a pending order and immutable order-item snapshots.
-4. Stripe Checkout collects payment.
+4. Stripe Checkout creates a direct charge on the event organizer’s connected
+   account. Stripe deducts processing fees and routes the configured
+   application fee to TourniBase.
 5. A signed Stripe success event marks the order paid and creates one pass per
    purchased admission.
 6. TourniBase prepares one branded email containing every individual mobile
    pass link.
 7. The success page also shows all pass links as the permanent fallback.
 
-The pass-email template, protected delivery tracking, duplicate protection, and
-retry states are implemented. Real sending remains disabled until a provider
-and verified domain are connected, so the buyer must currently keep or bookmark
-the success-page links.
+The pass-email template, protected delivery tracking, duplicate protection,
+retry states, verified sender domain, and Resend delivery are implemented. The
+success page remains a backup pass-retrieval method.
 
 ### Admit a buyer
 
@@ -122,8 +132,8 @@ card or issue a digital pass.
 
 - Tournament scheduling, brackets, teams, scores, standings, or referee tools
 - A full point-of-sale card terminal
-- Automated refunds or dispute handling
-- An activated transactional email provider and verified sending domain
+- Automated dispute handling
+- A buyer-facing self-service refund portal
 - Native iOS or Android apps
 - New waitlist-site work
 
@@ -157,10 +167,11 @@ All 19 numbered web MVP phases are complete. The local demo seed is guarded
 against hosted Supabase URLs, the quality checks pass, and the final repository
 review and handoff are complete.
 
-Before charging real customers, TourniBase also needs to activate the completed
-pass-email foundation with a provider and verified domain, configure Stripe
-live mode, and complete one live-mode purchase, webhook, pass, email, and scan
-verification.
+Before charging real customers, TourniBase must deploy the Connect migration
+and webhooks, complete the multi-director payment and refund test plan in a
+Stripe Sandbox, switch all Stripe Connect settings to live mode, have the pilot
+director repeat onboarding, and complete one live purchase, webhook, pass,
+email, scan, duplicate, refund, and dashboard verification.
 
 See [Final MVP Handoff](./mvp-handoff.md) for the complete routes, environment,
 database, testing, limitations, and launch checklist.

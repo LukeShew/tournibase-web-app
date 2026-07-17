@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getDirector } from "@/lib/auth";
-import { getStripe } from "@/lib/stripe";
+import { getStripeDashboardPaymentUrl } from "@/lib/stripe-connect-payments";
 import { createClient } from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
@@ -12,44 +12,44 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
-  const sessionId = request.nextUrl.searchParams.get("session_id")?.trim();
+  const orderId = Number(request.nextUrl.searchParams.get("order_id"));
 
-  if (!sessionId || !sessionId.startsWith("cs_")) {
+  if (!Number.isSafeInteger(orderId) || orderId < 1) {
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 
   const supabase = await createClient();
   const { data: order, error } = await supabase
     .from("orders")
-    .select("id")
-    .eq("stripe_checkout_id", sessionId)
+    .select(
+      "id, stripe_connected_account_id, stripe_environment, stripe_payment_intent_id",
+    )
+    .eq("id", orderId)
     .maybeSingle();
 
   if (error || !order) {
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 
-  try {
-    const session = await getStripe().checkout.sessions.retrieve(sessionId);
-    const paymentIntentId =
-      typeof session.payment_intent === "string"
-        ? session.payment_intent
-        : session.payment_intent?.id;
-
-    if (paymentIntentId) {
-      const modePath = session.livemode ? "" : "/test";
-
-      return NextResponse.redirect(
-        `https://dashboard.stripe.com${modePath}/payments/${encodeURIComponent(paymentIntentId)}`,
-      );
-    }
-  } catch {
-    // Fall through to Stripe's payment list if this older session cannot be retrieved.
+  if (!order.stripe_connected_account_id) {
+    return NextResponse.json(
+      { error: "This legacy payment does not have a connected-account view." },
+      { status: 409 },
+    );
   }
 
-  const modePath = sessionId.startsWith("cs_test_") ? "/test" : "";
+  if (!order.stripe_payment_intent_id) {
+    return NextResponse.json(
+      { error: "This order does not have a Stripe payment to open." },
+      { status: 409 },
+    );
+  }
 
   return NextResponse.redirect(
-    `https://dashboard.stripe.com${modePath}/payments`,
+    getStripeDashboardPaymentUrl({
+      connectedAccountId: order.stripe_connected_account_id,
+      environment: order.stripe_environment,
+      paymentIntentId: order.stripe_payment_intent_id,
+    }),
   );
 }

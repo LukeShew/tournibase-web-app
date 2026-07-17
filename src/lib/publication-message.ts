@@ -7,10 +7,14 @@ export type TournamentPublicationStatus =
 export function getIdlePublicationMessage({
   activeTicketCount,
   checkoutConfigured,
+  hasPaidTickets,
+  paymentReady,
   status,
 }: {
   activeTicketCount: number;
   checkoutConfigured: boolean;
+  hasPaidTickets: boolean;
+  paymentReady: boolean;
   status: TournamentPublicationStatus;
 }) {
   if (status === "closed" || status === "archived") {
@@ -27,10 +31,38 @@ export function getIdlePublicationMessage({
     };
   }
 
+  if (status === "draft" && hasPaidTickets && !paymentReady) {
+    return {
+      className: "text-amber-700",
+      text: "Connect a ready Stripe account in Settings before publishing paid tickets.",
+    };
+  }
+
+  if (status === "draft" && hasPaidTickets && !checkoutConfigured) {
+    return {
+      className: "text-amber-700",
+      text: "Paid checkout setup is incomplete. Finish the Stripe and server configuration before publishing.",
+    };
+  }
+
   if (status === "draft") {
     return {
       className: "text-slate-500",
       text: "Publishing makes the event and active ticket types publicly visible.",
+    };
+  }
+
+  if (hasPaidTickets && !paymentReady) {
+    return {
+      className: "text-amber-700",
+      text: "This page is public, but paid checkout is paused until the organizer’s Stripe account is ready.",
+    };
+  }
+
+  if (!hasPaidTickets) {
+    return {
+      className: "text-emerald-700",
+      text: "The free ticket page is public and ready for guests.",
     };
   }
 
@@ -43,6 +75,6 @@ export function getIdlePublicationMessage({
 
   return {
     className: "text-amber-700",
-    text: "The page is public, but payment environment variables are still missing.",
+    text: "The page is public, but paid checkout is paused because the Stripe or server configuration is incomplete.",
   };
 }

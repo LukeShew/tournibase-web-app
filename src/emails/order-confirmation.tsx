@@ -148,6 +148,10 @@ export function OrderConfirmationEmail({
             <Hr style={divider} />
 
             <Text style={supportText}>
+              {organizerName} is the seller for this admission order.
+              TourniBase provides the checkout and digital pass tools.
+            </Text>
+            <Text style={supportText}>
               Questions or refund requests? Contact{" "}
               <Link href={`mailto:${organizerEmail}`} style={supportLink}>
                 {organizerName}
@@ -208,6 +212,8 @@ export function createOrderConfirmationText({
     itemLines,
     `Amount paid: ${amountPaid}`,
     `Order: ${orderNumber}`,
+    "",
+    `${organizerName} is the seller for this admission order. TourniBase provides the checkout and digital pass tools.`,
     "",
     `Questions or refund requests? Contact ${organizerName} at ${organizerEmail} and include order ${orderNumber}.`,
     "",

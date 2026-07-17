@@ -11,13 +11,14 @@ export const metadata: Metadata = {
 export default function RefundPolicyPage() {
   return (
     <LegalPageShell eyebrow="Support" title="Refund policy">
-      <p className="text-sm text-slate-500">Last updated: July 7, 2026</p>
+      <p className="text-sm text-slate-500">Last updated: July 16, 2026</p>
 
       <LegalSection title="Who handles refunds">
         <p>
-          Refund decisions are handled by the tournament or event organizer.
-          Buyers should contact the organizer listed on the event page or in
-          the TourniBase confirmation email and include their order number.
+          The tournament or event organizer is the seller for admission orders
+          and handles refund decisions. Buyers should contact the organizer
+          listed on the event page or in the TourniBase confirmation email and
+          include their order number.
         </p>
       </LegalSection>
 
@@ -40,9 +41,11 @@ export default function RefundPolicyPage() {
 
       <LegalSection title="Refund timing">
         <p>
-          TourniBase should update pass status shortly after Stripe sends the
-          webhook event. The money returning to a card can take longer because
-          it depends on Stripe, the card network, and the buyer’s bank.
+          Refunds are processed through the organizer’s connected Stripe
+          account. TourniBase should update pass status shortly after Stripe
+          sends the webhook event. The money returning to a card can take
+          longer because it depends on Stripe, the card network, and the
+          buyer’s bank.
         </p>
       </LegalSection>
     </LegalPageShell>

@@ -8,7 +8,8 @@ Last updated: July 6, 2026
 - Completed: All 19 numbered phases
 - Current production URL:
   [tournibase.com](https://tournibase.com)
-- Payment status: Stripe test mode
+- Payment status: Stripe Connect Sandbox implemented locally; production
+  rollout pending
 - Transactional email: Live through Resend and end-to-end tested
 - Offline access: Downloadable PNG for every paid pass
 - Refund support: Basic organizer support flow and Stripe refund sync built
@@ -83,7 +84,9 @@ Completed July 4, 2026:
 - Reviewed both repositories and confirmed they matched GitHub before Phase 19.
 - Confirmed no real secrets or private environment files are tracked or present
   in Git history.
-- Confirmed production and local migration histories match.
+- Confirmed production and local migration histories matched at the July 4
+  handoff. The later Connect foundation is local migration 19 and still needs
+  to be applied to production.
 - Rebuilt and reseeded the local Docker database from scratch.
 - Recorded final routes, environment variables, schema state, local test
   instructions, verification results, and known limitations in the
@@ -93,21 +96,30 @@ Completed July 4, 2026:
 
 These are required before accepting real customer payments:
 
-- Switch all Stripe variables and the production webhook to live mode together.
+- Apply Connect migration 19 to production.
+- Configure the separate connected-payment and Connect account-status
+  webhooks.
+- Complete Sandbox onboarding and verify ready, incomplete, restricted, and
+  multi-director isolation states.
+- Test a direct charge with the $0 pilot fee and a temporary nonzero
+  percentage-plus-fixed fee.
+- Verify completed, asynchronous, failed, expired, duplicate, full-refund, and
+  pass-refund webhook flows.
+- Switch all Stripe variables and webhooks to live mode together.
+- Have the pilot director repeat hosted onboarding in live mode.
 - Run one low-value live purchase using a real card.
-- Confirm the live webhook marks the order paid and creates the correct passes.
-- Confirm a full Stripe refund marks the order and passes refunded and sends
-  the buyer a TourniBase refund email.
-- Open and scan every issued pass through a production scanner link.
-- Confirm the director dashboard totals match Stripe and the gate results.
+- Confirm pass creation, email, scanning, duplicate blocking, refund email,
+  refunded-pass rejection, and dashboard totals.
 - Follow the basic support and refund procedure for tournament day.
 
 ## Known current limitations
 
 - Pass-email delivery is live and has passed a Stripe test purchase.
-- Full Stripe refunds sync into TourniBase, invalidate active or checked-in
-  passes for that order, and send the buyer a refund email.
-- Stripe is configured in test mode.
+- Full-order and pass-specific refunds are initiated in TourniBase, synchronized
+  from the connected Stripe account, reflected in revenue, and followed by a
+  buyer refund email.
+- Stripe Connect is configured for Sandbox/test operation locally. Production
+  remains on the pre-Connect release until rollout.
 - Saved pass PNGs work offline for buyers, but scanner devices still require
   internet for authoritative validation and duplicate prevention.
 - Apple Wallet and Google Wallet passes are postponed.

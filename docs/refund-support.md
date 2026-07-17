@@ -1,13 +1,16 @@
 # TourniBase Refund and Support Process
 
-Last updated: July 7, 2026
+Last updated: July 16, 2026
 
 ## Current MVP policy
 
-Full-order refunds can be initiated in Stripe. Directors can also refund one
-paid pass from the order detail view. TourniBase syncs the refunded amount,
-updates revenue totals, invalidates the affected pass or passes, and sends the
-buyer a refund confirmation email.
+Tournament organizers are the sellers and merchants of record. Connected
+orders are direct charges on each organizer's Stripe account. Directors can
+refund a full order or one paid pass from the TourniBase order detail view.
+TourniBase scopes the refund to the order's immutable connected account,
+reverses any application fee, syncs the refunded amount, updates revenue
+totals, invalidates the affected pass or passes, and sends the buyer a refund
+confirmation email.
 
 This is intentionally simple for the MVP:
 
@@ -41,24 +44,26 @@ for pass-validity messaging.
 
 ## Manual refund steps
 
-1. Open the Stripe Dashboard in the same mode as TourniBase.
-2. Search for the buyer email, Stripe payment, or TourniBase order number.
-3. Open the payment.
-4. Click **Refund**.
-5. Choose the refund amount.
-6. Submit the refund.
-7. Confirm Stripe records the refund.
-8. Confirm TourniBase updates:
+1. Open the event's **Orders** page in TourniBase.
+2. Search for the buyer or TourniBase order number and open the order.
+3. Choose **Refund remaining order** for a full refund, or **Refund this pass**
+   for a pass-specific partial refund.
+4. Confirm the refund.
+5. Use **View payment in Stripe** only to verify the connected-account payment,
+   fee, and refund records.
+6. Confirm TourniBase updates:
    - Full refund: order is `refunded`; passes scan as refunded/not active.
-   - Pass refund from order details: order is `partial_refund`; the selected
-     pass is refunded while remaining passes stay usable.
-   - Generic partial refund in Stripe: refunded revenue updates, but no specific
-     pass is inferred.
-9. Confirm the buyer receives the TourniBase refund confirmation email.
+   - Pass refund: order is `partial_refund`; the selected pass is refunded
+     while remaining passes stay usable.
+7. Confirm the buyer receives the TourniBase refund confirmation email.
+
+Stripe can still send a refund event for a refund initiated directly in the
+connected account. TourniBase reconciles that amount, but a generic partial
+refund created in Stripe cannot identify which pass should be invalidated.
 
 ## Required Stripe webhook event
 
-The production Stripe webhook endpoint must include:
+The connected-payment webhook endpoint must include:
 
 ```text
 charge.refunded
@@ -86,12 +91,14 @@ Run one test-mode refund before switching to live mode:
 
 1. Buy a test pass.
 2. Scan it successfully.
-3. Refund the payment fully in Stripe test mode.
+3. Refund the remaining order from the TourniBase order detail view.
 4. Open the Stripe webhook delivery and confirm `charge.refunded` returned
    `200`.
 5. Confirm the buyer receives the TourniBase refund confirmation email.
 6. Scan the same pass again.
 7. Confirm the scanner blocks it as refunded/not active.
 
-Then repeat this once in live mode with a low-value real transaction before
-using TourniBase for a real tournament.
+Then have the director complete live Connect onboarding and repeat this once in
+live mode with a low-value real transaction before using TourniBase for a real
+tournament. Confirm the gross charge, Stripe fee, $0 pilot TourniBase fee,
+director proceeds, refund, and dashboard totals.

@@ -4,6 +4,7 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 
 const moneySchema = z.number().finite().nonnegative();
+const signedMoneySchema = z.number().finite();
 
 const dashboardMetricsSchema = z.object({
   gate: z.object({
@@ -18,15 +19,20 @@ const dashboardMetricsSchema = z.object({
     wrongDayAttempts: z.number().int().nonnegative(),
   }),
   sales: z.object({
-    estimatedNetPayout: moneySchema,
+    estimatedDirectorProceeds: signedMoneySchema,
+    estimatedNetPayout: signedMoneySchema,
     estimatedStripeFees: moneySchema,
+    grossCapturedOnlineSales: moneySchema,
     grossOnlineSales: moneySchema,
     manualAdmissions: z.number().int().nonnegative(),
     manualSaleCount: z.number().int().nonnegative(),
     manualSales: moneySchema,
     onlineOrderCount: z.number().int().nonnegative(),
+    onlineRefunds: moneySchema,
     onlineTicketsSold: z.number().int().nonnegative(),
+    refundedTournibasePlatformFees: moneySchema,
     totalEstimatedRevenue: moneySchema,
+    tournibasePlatformFees: moneySchema,
   }),
   salesByDay: z.array(
     z.object({

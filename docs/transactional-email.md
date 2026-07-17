@@ -51,7 +51,8 @@ fails.
 
 ## Refund email flow
 
-1. An operator refunds a payment in Stripe.
+1. A director refunds an order or individual pass from the TourniBase order
+   detail view.
 2. Stripe sends `charge.refunded` to the TourniBase webhook.
 3. TourniBase retrieves the latest Stripe charge before deciding whether the
    refund is full or partial.

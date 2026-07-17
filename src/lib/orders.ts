@@ -7,6 +7,14 @@ import {
   parseStripeOrderIdMetadata,
 } from "@/lib/order-refunds";
 import { getStripe } from "@/lib/stripe";
+import {
+  assertStripeRoutingMatches,
+  getApplicationFeeRefundTargetCents,
+  getStripeRequestOptions,
+  isCurrentStripeEnvironment,
+  type StripeEnvironment,
+  type StripePaymentRouting,
+} from "@/lib/stripe-connect-payments";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
 type PaymentStatus = "pending" | "paid" | "failed" | "refunded" | "partial_refund";
@@ -17,8 +25,17 @@ type OrderRecord = {
   buyer_name: string;
   id: number;
   payment_status: PaymentStatus;
+  platform_fee_amount: number | string;
+  platform_fee_refunded: number | string;
+  stripe_charge_id: string | null;
+  stripe_connected_account_id: string | null;
+  stripe_environment: StripeEnvironment;
+  stripe_payment_intent_id: string | null;
   tournament_id: number;
 };
+
+const orderRecordSelection =
+  "id, tournament_id, buyer_name, amount_total, amount_refunded, payment_status, stripe_connected_account_id, stripe_environment, platform_fee_amount, platform_fee_refunded, stripe_payment_intent_id, stripe_charge_id";
 
 type OrderItemRecord = {
   id: number;
@@ -60,22 +77,15 @@ export type OrderConfirmation = {
   }>;
 };
 
-export async function fulfillCheckoutSession(sessionId: string) {
-  const stripe = getStripe();
-  const session = await stripe.checkout.sessions.retrieve(sessionId);
-
-  if (
-    session.payment_status !== "paid" &&
-    session.payment_status !== "no_payment_required"
-  ) {
-    return { fulfilled: false as const, paymentStatus: session.payment_status };
-  }
-
+export async function fulfillCheckoutSession(
+  sessionId: string,
+  eventConnectedAccountId?: string | null,
+) {
   const supabase = getSupabaseAdmin();
   const { data: orderRow, error: orderError } = await supabase
     .from("orders")
-    .select("id, tournament_id, buyer_name, amount_total, amount_refunded, payment_status")
-    .eq("stripe_checkout_id", session.id)
+    .select(orderRecordSelection)
+    .eq("stripe_checkout_id", sessionId)
     .maybeSingle();
 
   if (orderError) {
@@ -87,6 +97,71 @@ export async function fulfillCheckoutSession(sessionId: string) {
   }
 
   const order = orderRow as OrderRecord;
+  const routing = getOrderStripeRouting(order);
+
+  assertStripeRoutingMatches({
+    eventConnectedAccountId,
+    routing,
+  });
+
+  let paymentIdentifiers: {
+    chargeId: string | null;
+    paymentIntentId: string | null;
+  } = {
+    chargeId: order.stripe_charge_id,
+    paymentIntentId: order.stripe_payment_intent_id,
+  };
+
+  if (!isCurrentStripeEnvironment(routing.environment)) {
+    if (
+      order.payment_status === "paid" ||
+      order.payment_status === "refunded" ||
+      order.payment_status === "partial_refund"
+    ) {
+      return { fulfilled: true as const, orderId: order.id };
+    }
+
+    throw new Error(
+      "This checkout belongs to a different Stripe environment and is read-only.",
+    );
+  }
+
+  if (isFreeCheckoutId(sessionId)) {
+    if (Number(order.amount_total) !== 0 || routing.connectedAccountId) {
+      throw new Error("Free checkout routing does not match the TourniBase order.");
+    }
+  } else {
+    const stripe = getStripe();
+    const session = await stripe.checkout.sessions.retrieve(
+      sessionId,
+      {},
+      getStripeRequestOptions(routing),
+    );
+
+    assertStripeRoutingMatches({
+      actualEnvironment: session.livemode ? "live" : "test",
+      routing,
+    });
+
+    if (
+      session.metadata?.order_id &&
+      session.metadata.order_id !== String(order.id)
+    ) {
+      throw new Error("Stripe checkout metadata does not match the TourniBase order.");
+    }
+
+    if (
+      session.payment_status !== "paid" &&
+      session.payment_status !== "no_payment_required"
+    ) {
+      return {
+        fulfilled: false as const,
+        paymentStatus: session.payment_status,
+      };
+    }
+
+    paymentIdentifiers = await getStripePaymentIdentifiers(session, routing);
+  }
 
   if (
     order.payment_status === "refunded" ||
@@ -137,7 +212,11 @@ export async function fulfillCheckoutSession(sessionId: string) {
 
   const { error: paymentUpdateError } = await supabase
     .from("orders")
-    .update({ payment_status: "paid" })
+    .update({
+      payment_status: "paid",
+      stripe_charge_id: paymentIdentifiers.chargeId,
+      stripe_payment_intent_id: paymentIdentifiers.paymentIntentId,
+    })
     .eq("id", order.id)
     .in("payment_status", ["pending", "failed", "paid"]);
 
@@ -148,12 +227,36 @@ export async function fulfillCheckoutSession(sessionId: string) {
   return { fulfilled: true as const, orderId: order.id };
 }
 
-export async function markCheckoutFailed(sessionId: string) {
+export async function markCheckoutFailed(
+  sessionId: string,
+  eventConnectedAccountId?: string | null,
+) {
   const supabase = getSupabaseAdmin();
+  const { data: orderRow, error: orderLookupError } = await supabase
+    .from("orders")
+    .select(orderRecordSelection)
+    .eq("stripe_checkout_id", sessionId)
+    .maybeSingle();
+
+  if (orderLookupError) {
+    throw orderLookupError;
+  }
+
+  if (!orderRow) {
+    return;
+  }
+
+  const order = orderRow as OrderRecord;
+
+  assertStripeRoutingMatches({
+    eventConnectedAccountId,
+    routing: getOrderStripeRouting(order),
+  });
+
   const { error } = await supabase
     .from("orders")
     .update({ payment_status: "failed" })
-    .eq("stripe_checkout_id", sessionId)
+    .eq("id", order.id)
     .eq("payment_status", "pending");
 
   if (error) {
@@ -163,47 +266,71 @@ export async function markCheckoutFailed(sessionId: string) {
 
 export async function syncStripeChargeRefund(
   charge: Stripe.Charge,
+  eventConnectedAccountId: string | null = null,
 ): Promise<StripeRefundSyncResult> {
   const stripe = getStripe();
-  const latestCharge = await stripe.charges.retrieve(charge.id);
+  const eventRouting: StripePaymentRouting = {
+    connectedAccountId: eventConnectedAccountId,
+    environment: charge.livemode ? "live" : "test",
+  };
+  const latestCharge = await stripe.charges.retrieve(
+    charge.id,
+    {},
+    getStripeRequestOptions(eventRouting),
+  );
   const refundStatus = getRefundPaymentStatusForCharge(latestCharge);
 
   if (!refundStatus) {
     return { status: "not_refunded" };
   }
 
-  const orderId = await resolveOrderIdForStripeCharge(latestCharge);
+  const order = await resolveOrderForStripeCharge(
+    latestCharge,
+    eventRouting,
+  );
 
-  if (!orderId) {
+  if (!order) {
     return { chargeId: latestCharge.id, status: "order_not_found" };
   }
 
-  const supabase = getSupabaseAdmin();
-  const { data: orderRow, error: orderError } = await supabase
-    .from("orders")
-    .select("id, payment_status")
-    .eq("id", orderId)
-    .maybeSingle();
+  const routing = getOrderStripeRouting(order);
 
-  if (orderError) {
-    throw orderError;
-  }
+  assertStripeRoutingMatches({
+    actualEnvironment: latestCharge.livemode ? "live" : "test",
+    eventConnectedAccountId,
+    routing,
+  });
 
-  if (!orderRow) {
-    return { chargeId: charge.id, status: "order_not_found" };
-  }
-
-  const order = orderRow as Pick<OrderRecord, "id" | "payment_status">;
   const nextStatus =
     order.payment_status === "refunded" ? "refunded" : refundStatus;
+  const platformFeeRefundedCents =
+    await synchronizeApplicationFeeRefund(latestCharge, order);
+  const paymentIntentId =
+    typeof latestCharge.payment_intent === "string"
+      ? latestCharge.payment_intent
+      : latestCharge.payment_intent?.id ?? order.stripe_payment_intent_id;
 
-  const { error: orderUpdateError } = await supabase
+  const supabase = getSupabaseAdmin();
+  let orderUpdate = supabase
     .from("orders")
     .update({
       amount_refunded: (latestCharge.amount_refunded / 100).toFixed(2),
       payment_status: nextStatus,
+      platform_fee_refunded: (platformFeeRefundedCents / 100).toFixed(2),
+      stripe_charge_id: latestCharge.id,
+      stripe_payment_intent_id: paymentIntentId,
     })
-    .eq("id", order.id);
+    .eq("id", order.id)
+    .eq("stripe_environment", routing.environment);
+
+  orderUpdate = routing.connectedAccountId
+    ? orderUpdate.eq(
+        "stripe_connected_account_id",
+        routing.connectedAccountId,
+      )
+    : orderUpdate.is("stripe_connected_account_id", null);
+
+  const { error: orderUpdateError } = await orderUpdate;
 
   if (orderUpdateError) {
     throw orderUpdateError;
@@ -222,8 +349,12 @@ export async function syncStripeChargeRefund(
   }
 
   if (nextStatus === "partial_refund") {
-    const refunds = await stripe.refunds.list({ charge: latestCharge.id, limit: 100 });
+    const refunds = await stripe.refunds.list(
+      { charge: latestCharge.id, limit: 100 },
+      getStripeRequestOptions(routing),
+    );
     const refundedPassIds = refunds.data
+      .filter((refund) => refund.status === "succeeded")
       .map((refund) => Number(refund.metadata?.pass_id))
       .filter((passId) => Number.isSafeInteger(passId) && passId > 0);
 
@@ -238,6 +369,14 @@ export async function syncStripeChargeRefund(
       if (passUpdateError) {
         throw passUpdateError;
       }
+    } else {
+      console.warn(
+        "[stripe-refund-sync] partial refund did not identify a pass; order totals were synchronized without changing pass status",
+        {
+          chargeId: latestCharge.id,
+          orderId: order.id,
+        },
+      );
     }
   }
 
@@ -249,27 +388,229 @@ export async function syncStripeChargeRefund(
   };
 }
 
-async function resolveOrderIdForStripeCharge(charge: Stripe.Charge) {
-  const chargeMetadataOrderId = parseStripeOrderIdMetadata(charge.metadata);
-
-  if (chargeMetadataOrderId) {
-    return chargeMetadataOrderId;
-  }
-
+async function resolveOrderForStripeCharge(
+  charge: Stripe.Charge,
+  routing: StripePaymentRouting,
+): Promise<OrderRecord | null> {
   const paymentIntentId =
     typeof charge.payment_intent === "string"
       ? charge.payment_intent
       : charge.payment_intent?.id;
+  const [chargeOrder, paymentIntentOrder] = await Promise.all([
+    findOrderByStripeIdentifier("stripe_charge_id", charge.id, routing),
+    paymentIntentId
+      ? findOrderByStripeIdentifier(
+          "stripe_payment_intent_id",
+          paymentIntentId,
+          routing,
+        )
+      : Promise.resolve(null),
+  ]);
+
+  if (
+    chargeOrder &&
+    paymentIntentOrder &&
+    chargeOrder.id !== paymentIntentOrder.id
+  ) {
+    throw new Error(
+      "Stripe charge and PaymentIntent resolve to different TourniBase orders.",
+    );
+  }
+
+  const storedOrder = chargeOrder ?? paymentIntentOrder;
+
+  if (storedOrder) {
+    assertOrderPaymentIdentifiers(storedOrder, charge.id, paymentIntentId);
+    return storedOrder;
+  }
+
+  const chargeMetadataOrderId = parseStripeOrderIdMetadata(charge.metadata);
+  let paymentIntentMetadataOrderId: number | null = null;
+
+  if (paymentIntentId) {
+    const paymentIntent = await getStripe().paymentIntents.retrieve(
+      paymentIntentId,
+      {},
+      getStripeRequestOptions(routing),
+    );
+
+    assertStripeRoutingMatches({
+      actualEnvironment: paymentIntent.livemode ? "live" : "test",
+      routing,
+    });
+    paymentIntentMetadataOrderId = parseStripeOrderIdMetadata(
+      paymentIntent.metadata,
+    );
+  }
+
+  if (
+    chargeMetadataOrderId &&
+    paymentIntentMetadataOrderId &&
+    chargeMetadataOrderId !== paymentIntentMetadataOrderId
+  ) {
+    throw new Error(
+      "Stripe charge and PaymentIntent metadata identify different TourniBase orders.",
+    );
+  }
+
+  const metadataOrderId =
+    chargeMetadataOrderId ?? paymentIntentMetadataOrderId;
+
+  if (!metadataOrderId) {
+    return null;
+  }
+
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase
+    .from("orders")
+    .select(orderRecordSelection)
+    .eq("id", metadataOrderId)
+    .maybeSingle();
+
+  if (error) {
+    throw error;
+  }
+
+  if (!data) {
+    return null;
+  }
+
+  const metadataOrder = data as OrderRecord;
+
+  assertStripeRoutingMatches({
+    actualEnvironment: charge.livemode ? "live" : "test",
+    eventConnectedAccountId: routing.connectedAccountId,
+    routing: getOrderStripeRouting(metadataOrder),
+  });
+  assertOrderPaymentIdentifiers(metadataOrder, charge.id, paymentIntentId);
+
+  return metadataOrder;
+}
+
+async function findOrderByStripeIdentifier(
+  field: "stripe_charge_id" | "stripe_payment_intent_id",
+  value: string,
+  routing: StripePaymentRouting,
+) {
+  const supabase = getSupabaseAdmin();
+  let query = supabase
+    .from("orders")
+    .select(orderRecordSelection)
+    .eq(field, value)
+    .eq("stripe_environment", routing.environment);
+
+  query = routing.connectedAccountId
+    ? query.eq("stripe_connected_account_id", routing.connectedAccountId)
+    : query.is("stripe_connected_account_id", null);
+
+  const { data, error } = await query.maybeSingle();
+
+  if (error) {
+    throw error;
+  }
+
+  return data ? (data as OrderRecord) : null;
+}
+
+function assertOrderPaymentIdentifiers(
+  order: OrderRecord,
+  chargeId: string,
+  paymentIntentId?: string | null,
+) {
+  if (order.stripe_charge_id && order.stripe_charge_id !== chargeId) {
+    throw new Error("Stripe charge does not match the TourniBase order.");
+  }
+
+  if (
+    order.stripe_payment_intent_id &&
+    order.stripe_payment_intent_id !== paymentIntentId
+  ) {
+    throw new Error("Stripe PaymentIntent does not match the TourniBase order.");
+  }
+}
+
+function getOrderStripeRouting(order: OrderRecord): StripePaymentRouting {
+  return {
+    connectedAccountId: order.stripe_connected_account_id,
+    environment: order.stripe_environment,
+  };
+}
+
+async function getStripePaymentIdentifiers(
+  session: Stripe.Checkout.Session,
+  routing: StripePaymentRouting,
+) {
+  const paymentIntentId =
+    typeof session.payment_intent === "string"
+      ? session.payment_intent
+      : session.payment_intent?.id ?? null;
 
   if (!paymentIntentId) {
-    return null;
+    return { chargeId: null, paymentIntentId: null };
   }
 
   const paymentIntent = await getStripe().paymentIntents.retrieve(
     paymentIntentId,
+    {},
+    getStripeRequestOptions(routing),
+  );
+  const chargeId =
+    typeof paymentIntent.latest_charge === "string"
+      ? paymentIntent.latest_charge
+      : paymentIntent.latest_charge?.id ?? null;
+
+  return { chargeId, paymentIntentId };
+}
+
+async function synchronizeApplicationFeeRefund(
+  charge: Stripe.Charge,
+  order: OrderRecord,
+) {
+  const applicationFeeId =
+    typeof charge.application_fee === "string"
+      ? charge.application_fee
+      : charge.application_fee?.id;
+
+  if (!applicationFeeId) {
+    return 0;
+  }
+
+  const stripe = getStripe();
+  let applicationFee = await stripe.applicationFees.retrieve(
+    applicationFeeId,
   );
 
-  return parseStripeOrderIdMetadata(paymentIntent.metadata);
+  const targetRefundCents = getApplicationFeeRefundTargetCents({
+    applicationFeeCents: applicationFee.amount,
+    chargeAmountCents: charge.amount,
+    chargeAmountRefundedCents: charge.amount_refunded,
+  });
+  const missingRefundCents =
+    targetRefundCents - applicationFee.amount_refunded;
+
+  if (missingRefundCents > 0) {
+    await stripe.applicationFees.createRefund(
+      applicationFeeId,
+      {
+        amount: missingRefundCents,
+        metadata: {
+          charge_id: charge.id,
+          order_id: String(order.id),
+          source: "tournibase_refund_sync",
+        },
+      },
+      {
+        idempotencyKey: `tournibase-fee-refund-${applicationFeeId}-${charge.amount_refunded}`,
+      },
+    );
+    applicationFee = await stripe.applicationFees.retrieve(applicationFeeId);
+  }
+
+  return applicationFee.amount_refunded;
+}
+
+function isFreeCheckoutId(sessionId: string) {
+  return /^free_[a-f0-9]{32}$/.test(sessionId);
 }
 
 export async function getOrderConfirmation(
@@ -287,7 +628,7 @@ export async function getOrderConfirmation(
   const supabase = getSupabaseAdmin();
   const { data: orderRow, error: orderError } = await supabase
     .from("orders")
-    .select("id, tournament_id, buyer_name, amount_total, amount_refunded, payment_status")
+    .select(orderRecordSelection)
     .eq("id", fulfillment.orderId)
     .single();
 

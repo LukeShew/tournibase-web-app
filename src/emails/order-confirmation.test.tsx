@@ -48,6 +48,7 @@ describe("order confirmation email", () => {
     expect(html).toContain(sample.orderNumber);
     expect(html).toContain(sample.amountPaid);
     expect(html).toContain("Questions or refund requests?");
+    expect(html).toContain("is the seller for this admission order");
 
     for (const pass of sample.passes) {
       expect(html).toContain(pass.url);
@@ -62,6 +63,7 @@ describe("order confirmation email", () => {
     expect(text).toContain(sample.organizerEmail);
     expect(text).toContain(sample.venueAddress);
     expect(text).toContain("refund requests");
+    expect(text).toContain("is the seller for this admission order");
 
     for (const pass of sample.passes) {
       expect(text).toContain(pass.url);

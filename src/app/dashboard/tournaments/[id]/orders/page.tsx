@@ -15,6 +15,7 @@ import {
 } from "@/lib/dashboard-metrics";
 import { createClient } from "@/lib/supabase/server";
 import { matchesStrictText, matchesTightName } from "@/lib/search-match";
+import { getStripeEnvironment } from "@/lib/stripe-connect-payments";
 import { formatEventDateRange } from "@/lib/tournaments";
 
 export const metadata: Metadata = {
@@ -89,7 +90,7 @@ export default async function EventOrdersPage({
   const { data: orderRows, error: orderError } = await supabase
     .from("orders")
     .select(
-      "id, buyer_name, buyer_email, buyer_phone, amount_total, amount_refunded, payment_status, created_at, stripe_checkout_id, order_items!order_items_order_tournament_fk(id, ticket_name, unit_amount_cents, quantity, valid_from, valid_until), passes!passes_order_tournament_fk(id, order_item_id, public_token, status, sequence_number, ticket_types!passes_ticket_tournament_fk(name))",
+      "id, buyer_name, buyer_email, buyer_phone, amount_total, amount_refunded, payment_status, created_at, stripe_checkout_id, stripe_connected_account_id, stripe_environment, stripe_payment_intent_id, order_items!order_items_order_tournament_fk(id, ticket_name, unit_amount_cents, quantity, valid_from, valid_until), passes!passes_order_tournament_fk(id, order_item_id, public_token, status, sequence_number, ticket_types!passes_ticket_tournament_fk(name))",
     )
     .eq("tournament_id", tournamentId)
     .order("created_at", { ascending: false })
@@ -120,11 +121,6 @@ export default async function EventOrdersPage({
     );
   });
   const tournament = tournamentRow as TournamentRecord;
-  const averageOnlineOrder =
-    metrics.sales.onlineOrderCount > 0
-      ? metrics.sales.grossOnlineSales / metrics.sales.onlineOrderCount
-      : 0;
-
   return (
     <div className="pb-12">
       <Link
@@ -167,25 +163,39 @@ export default async function EventOrdersPage({
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             <DashboardMetricCard
               detail={`${metrics.sales.onlineOrderCount} captured online orders`}
-              label="Net online sales"
-              value={formatCurrency(metrics.sales.grossOnlineSales)}
+              label="Gross online sales"
+              value={formatCurrency(metrics.sales.grossCapturedOnlineSales)}
             />
             <DashboardMetricCard
-              detail={`After ${formatCurrency(metrics.sales.estimatedStripeFees)} in estimated processing fees`}
-              label="Estimated net payout"
-              value={formatCurrency(metrics.sales.estimatedNetPayout)}
+              detail="Returned to buyers"
+              label="Refunds"
+              value={formatCurrency(metrics.sales.onlineRefunds)}
+            />
+            <DashboardMetricCard
+              detail="Estimate; Stripe is authoritative"
+              label="Estimated Stripe fees"
+              value={formatCurrency(metrics.sales.estimatedStripeFees)}
+            />
+            <DashboardMetricCard
+              detail={`${formatCurrency(metrics.sales.refundedTournibasePlatformFees)} refunded`}
+              label="TourniBase fee"
+              value={formatCurrency(metrics.sales.tournibasePlatformFees)}
+            />
+            <DashboardMetricCard
+              detail="After refunds and estimated fees"
+              label="Estimated director proceeds"
+              value={formatCurrency(metrics.sales.estimatedDirectorProceeds)}
             />
             <DashboardMetricCard
               detail="Paid online admission passes"
               label="Online tickets sold"
               value={metrics.sales.onlineTicketsSold}
             />
-            <DashboardMetricCard
-              detail="Across captured online orders"
-              label="Average online order"
-              value={formatCurrency(averageOnlineOrder)}
-            />
           </div>
+          <p className="mt-4 text-xs leading-5 text-slate-500">
+            Stripe Dashboard balances and fee records are authoritative. These
+            figures are estimates for event reporting.
+          </p>
         </section>
       </section>
 
@@ -206,6 +216,7 @@ export default async function EventOrdersPage({
         </div>
 
         <OrderLogClient
+          currentStripeEnvironment={getStripeEnvironment()}
           key={query}
           orders={orders}
           tournamentId={tournamentId}

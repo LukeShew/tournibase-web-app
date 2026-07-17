@@ -7,6 +7,7 @@ import {
   type TicketTypeRecord,
 } from "@/components/ticket-type-card";
 import { requireDirector } from "@/lib/auth";
+import { isOrganizationStripeAccountReady } from "@/lib/stripe-connect";
 import { createClient } from "@/lib/supabase/server";
 import { formatEventDateRange } from "@/lib/tournaments";
 
@@ -18,6 +19,7 @@ type Tournament = {
   end_date: string;
   id: number;
   name: string;
+  organization_id: number;
   start_date: string;
   status: "draft" | "published" | "closed" | "archived";
   time_zone: string;
@@ -56,7 +58,9 @@ export default async function TicketTypesPage({
 
   const { data: tournamentRow, error: tournamentError } = await supabase
     .from("tournaments")
-    .select("id, name, start_date, end_date, status, time_zone")
+    .select(
+      "id, organization_id, name, start_date, end_date, status, time_zone",
+    )
     .eq("id", tournamentId)
     .in("organization_id", organizationIds)
     .maybeSingle();
@@ -86,6 +90,9 @@ export default async function TicketTypesPage({
   const activeCount = ticketTypes.filter(
     (ticketType) => ticketType.status === "active",
   ).length;
+  const paymentReady =
+    tournament.status !== "published" ||
+    (await isOrganizationStripeAccountReady(tournament.organization_id));
 
   return (
     <div className="pb-12">
@@ -135,6 +142,14 @@ export default async function TicketTypesPage({
         />
       </section>
 
+      {!paymentReady ? (
+        <div className="mt-6 rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 text-sm leading-6 text-amber-800">
+          Paid tickets cannot be created or activated on this published event
+          until the organization’s Stripe account is ready. Free tickets remain
+          available.
+        </div>
+      ) : null}
+
       <div className="mt-8 grid items-start gap-6 xl:grid-cols-[0.85fr_1.15fr]">
         <CreateTicketTypeForm
           tournamentId={tournamentId}
@@ -169,6 +184,7 @@ export default async function TicketTypesPage({
                 <TicketTypeCard
                   key={ticketType.id}
                   eventTimeZone={tournament.time_zone}
+                  paidActivationAllowed={paymentReady}
                   ticketType={ticketType}
                 />
               ))}

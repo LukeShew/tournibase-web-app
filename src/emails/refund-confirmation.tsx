@@ -91,6 +91,10 @@ export function RefundConfirmationEmail({
             <Hr style={divider} />
 
             <Text style={supportText}>
+              This refund was issued by {organizerName}, the event seller.
+              TourniBase provides the payment and pass tools.
+            </Text>
+            <Text style={supportText}>
               Questions? Contact{" "}
               <Link href={`mailto:${organizerEmail}`} style={supportLink}>
                 {organizerName}
@@ -146,6 +150,8 @@ export function createRefundConfirmationText({
     isFullRefund
       ? "The mobile passes for this order are no longer valid for entry."
       : "This was a partial refund. Any remaining pass access should be confirmed with the event organizer.",
+    "",
+    `This refund was issued by ${organizerName}, the event seller. TourniBase provides the payment and pass tools.`,
     "",
     `Questions? Contact ${organizerName} at ${organizerEmail} and include order ${orderNumber}.`,
     "",

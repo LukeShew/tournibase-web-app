@@ -3,6 +3,12 @@
 import { revalidatePath } from "next/cache";
 import { requireDirector } from "@/lib/auth";
 import type { PublicationState } from "@/lib/form-states";
+import { isOrganizationStripeAccountReady } from "@/lib/stripe-connect";
+import { getStripeConfigurationIssues } from "@/lib/stripe";
+import {
+  getSupabaseAdmin,
+  getSupabaseAdminConfigurationIssues,
+} from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
 export async function setTournamentPublication(
@@ -40,7 +46,7 @@ export async function setTournamentPublication(
 
   const { data: tournament, error: tournamentError } = await supabase
     .from("tournaments")
-    .select("id, public_slug, status")
+    .select("id, organization_id, public_slug, status")
     .eq("id", tournamentId)
     .in("organization_id", organizationIds)
     .maybeSingle();
@@ -60,9 +66,9 @@ export async function setTournamentPublication(
   }
 
   if (nextStatus === "published") {
-    const { count, error: ticketError } = await supabase
+    const { data: activeTickets, error: ticketError } = await supabase
       .from("ticket_types")
-      .select("id", { count: "exact", head: true })
+      .select("id, price")
       .eq("tournament_id", tournamentId)
       .eq("status", "active");
 
@@ -73,15 +79,48 @@ export async function setTournamentPublication(
       };
     }
 
-    if (!count) {
+    if (!activeTickets?.length) {
       return {
         message: "Add at least one active ticket before publishing.",
         success: false,
       };
     }
+
+    const hasPaidTickets = activeTickets.some(
+      (ticket) => Number(ticket.price) > 0,
+    );
+
+    if (
+      hasPaidTickets &&
+      !(await isOrganizationStripeAccountReady(
+        tournament.organization_id as number,
+      ))
+    ) {
+      return {
+        message:
+          "Connect a ready Stripe account in Settings before publishing paid tickets.",
+        success: false,
+      };
+    }
+
+    if (
+      hasPaidTickets &&
+      (getStripeConfigurationIssues({
+        includeConnectedPaymentsWebhookSecret: true,
+        includePublishableKey: true,
+      }).length > 0 ||
+        getSupabaseAdminConfigurationIssues().length > 0)
+    ) {
+      return {
+        message:
+          "Paid checkout setup is incomplete. Finish the Stripe and server configuration before publishing.",
+        success: false,
+      };
+    }
   }
 
-  const { data: updatedTournament, error: updateError } = await supabase
+  const { data: updatedTournament, error: updateError } =
+    await getSupabaseAdmin()
     .from("tournaments")
     .update({ status: nextStatus })
     .eq("id", tournamentId)

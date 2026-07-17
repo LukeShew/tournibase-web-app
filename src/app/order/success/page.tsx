@@ -18,8 +18,11 @@ export default async function OrderSuccessPage({
   searchParams: Promise<{ session_id?: string }>;
 }) {
   const { session_id: sessionId } = await searchParams;
+  const freeCheckout = Boolean(
+    sessionId && /^free_[a-f0-9]{32}$/.test(sessionId),
+  );
   const configurationIssues = [
-    ...getStripeConfigurationIssues(),
+    ...(freeCheckout ? [] : getStripeConfigurationIssues()),
     ...getSupabaseAdminConfigurationIssues(),
   ];
 
@@ -36,13 +39,16 @@ export default async function OrderSuccessPage({
     );
   }
 
-  if (!sessionId || !/^cs_(?:test|live)_[A-Za-z0-9]+$/.test(sessionId)) {
+  if (
+    !sessionId ||
+    (!freeCheckout && !/^cs_(?:test|live)_[A-Za-z0-9]+$/.test(sessionId))
+  ) {
     return (
       <OrderPageShell>
         <StatusPanel
           eyebrow="Order lookup"
           title="We could not find this checkout"
-          description="Open the confirmation link provided after completing Stripe Checkout."
+          description="Open the confirmation link provided after completing checkout."
           tone="warning"
         />
       </OrderPageShell>
@@ -86,6 +92,7 @@ export default async function OrderSuccessPage({
   }
 
   const { confirmation } = result;
+  const isFreeOrder = confirmation.amountTotal === 0;
 
   return (
     <OrderPageShell>
@@ -94,14 +101,14 @@ export default async function OrderSuccessPage({
           ✓
         </div>
         <p className="mt-6 text-sm font-medium text-emerald-300">
-          Payment confirmed
+          {isFreeOrder ? "Order confirmed" : "Payment confirmed"}
         </p>
         <h1 className="mt-2 text-3xl font-semibold tracking-[-0.035em] text-white sm:text-4xl">
           Your passes are ready
         </h1>
         <p className="mt-3 max-w-2xl leading-7 text-slate-300">
           {confirmation.buyerName}, your order for {confirmation.eventName} has
-          been paid and uniquely issued.
+          been {isFreeOrder ? "confirmed" : "paid"} and uniquely issued.
         </p>
 
         <dl className="mt-6 grid gap-3 sm:grid-cols-3">

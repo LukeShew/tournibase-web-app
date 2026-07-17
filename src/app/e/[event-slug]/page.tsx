@@ -10,6 +10,7 @@ import {
   PRODUCT_POSITIONING,
 } from "@/lib/product-copy";
 import { getPublicEvent } from "@/lib/public-events";
+import { isOrganizationStripeAccountReady } from "@/lib/stripe-connect";
 import { formatEventDateRange } from "@/lib/tournaments";
 
 export const dynamic = "force-dynamic";
@@ -57,7 +58,16 @@ export default async function PublicEventPage({
     notFound();
   }
 
-  const ticketOptions: PublicTicketOption[] = event.ticketTypes.map(
+  const hasPaidTickets = event.ticketTypes.some(
+    (ticket) => Number(ticket.price) > 0,
+  );
+  const paymentReady =
+    !hasPaidTickets ||
+    (await isOrganizationStripeAccountReady(event.organization_id));
+  const availableTicketTypes = paymentReady
+    ? event.ticketTypes
+    : event.ticketTypes.filter((ticket) => Number(ticket.price) === 0);
+  const ticketOptions: PublicTicketOption[] = availableTicketTypes.map(
     (ticket) => ({
       description: ticket.description,
       id: ticket.id,
@@ -126,6 +136,17 @@ export default async function PublicEventPage({
                 selection is still available below.
               </div>
             ) : null}
+            {hasPaidTickets && !paymentReady ? (
+              <div
+                role="status"
+                className="mb-5 rounded-2xl border border-amber-400/30 bg-amber-400/10 px-5 py-4 text-sm leading-6 text-amber-100"
+              >
+                Paid online checkout is temporarily unavailable while{" "}
+                {event.organizer_name} completes payment setup. Free admission
+                options, if offered, remain available below. Contact the
+                organizer for paid admission help.
+              </div>
+            ) : null}
             {ticketOptions.length > 0 ? (
               <PublicTicketForm
                 eventName={event.name}
@@ -139,8 +160,9 @@ export default async function PublicEventPage({
                   Online passes are unavailable
                 </h2>
                 <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-slate-400">
-                  This event does not currently have passes available. Contact
-                  the organizer for admission information.
+                  {hasPaidTickets && !paymentReady
+                    ? "Paid online checkout is temporarily unavailable while the organizer completes payment setup. Contact the organizer for admission information."
+                    : "This event does not currently have passes available. Contact the organizer for admission information."}
                 </p>
               </div>
             )}
@@ -150,9 +172,10 @@ export default async function PublicEventPage({
                 Passes are valid only for the event and dates shown. Each guest
                 will need their own digital pass at the gate.
               </InfoCard>
-              <InfoCard title="Refunds and support">
-                For admission help or refund requests, email the event
-                organizer and include your order number.{" "}
+              <InfoCard title="Seller, refunds, and support">
+                {event.organizer_name} is the seller for admission orders. For
+                admission help or refund requests, email the organizer and
+                include your order number.{" "}
                 <a
                   href={`mailto:${event.contact_email}`}
                   className="font-medium text-blue-300 underline decoration-blue-300/40 underline-offset-4 hover:text-blue-200"

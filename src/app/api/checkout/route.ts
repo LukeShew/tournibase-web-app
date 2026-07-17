@@ -1,9 +1,19 @@
+import { randomUUID } from "node:crypto";
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import {
   getStripe,
   getStripeConfigurationIssues,
 } from "@/lib/stripe";
+import { attemptOrderConfirmationEmail } from "@/lib/email/order-confirmation";
+import {
+  getPlatformFeeConfiguration,
+  getStripeEnvironment,
+  getStripeRequestOptions,
+  type StripeEnvironment,
+  type StripePaymentRouting,
+} from "@/lib/stripe-connect-payments";
+import { fulfillCheckoutSession } from "@/lib/orders";
 import {
   getSupabaseAdmin,
   getSupabaseAdminConfigurationIssues,
@@ -44,6 +54,10 @@ type ReservedCheckout = {
   tournament_id: number;
   tournament_name: string;
   public_slug: string;
+  platform_fee_amount_cents: number;
+  stripe_account_ready: boolean;
+  stripe_connected_account_id: string | null;
+  stripe_environment: StripeEnvironment;
   items: Array<{
     description: string | null;
     name: string;
@@ -54,13 +68,7 @@ type ReservedCheckout = {
 };
 
 export async function POST(request: NextRequest) {
-  const configurationIssues = [
-    ...getStripeConfigurationIssues({
-      includePublishableKey: true,
-      includeWebhookSecret: true,
-    }),
-    ...getSupabaseAdminConfigurationIssues(),
-  ];
+  const configurationIssues = getSupabaseAdminConfigurationIssues();
 
   if (configurationIssues.length > 0) {
     return NextResponse.json(
@@ -132,6 +140,20 @@ export async function POST(request: NextRequest) {
 
   const supabase = getSupabaseAdmin();
   const buyerName = `${parsed.data.firstName} ${parsed.data.lastName}`.trim();
+  const stripeEnvironment = getStripeEnvironment();
+  let platformFeeConfiguration: ReturnType<
+    typeof getPlatformFeeConfiguration
+  >;
+
+  try {
+    platformFeeConfiguration = getPlatformFeeConfiguration();
+  } catch (error) {
+    console.error("[checkout] invalid platform fee configuration", {
+      message: error instanceof Error ? error.message : "Unknown fee error",
+    });
+    return checkoutError();
+  }
+
   const { data: reservationData, error: reservationError } = await supabase.rpc(
     "reserve_checkout_order",
     {
@@ -144,6 +166,9 @@ export async function POST(request: NextRequest) {
         quantity: item.quantity,
         ticket_type_id: item.ticketTypeId,
       })),
+      p_platform_fee_bps: platformFeeConfiguration.basisPoints,
+      p_platform_fee_fixed_cents: platformFeeConfiguration.fixedCents,
+      p_stripe_environment: stripeEnvironment,
     },
   );
 
@@ -176,16 +201,91 @@ export async function POST(request: NextRequest) {
   const order = { id: reservation.order_id };
   const selectedTickets = reservation.items;
   const amountTotalCents = reservation.amount_total_cents;
+  const routing: StripePaymentRouting = {
+    connectedAccountId: reservation.stripe_connected_account_id,
+    environment: reservation.stripe_environment,
+  };
+  const platformFeeCents = reservation.platform_fee_amount_cents;
+
+  if (amountTotalCents > 0 && !reservation.stripe_account_ready) {
+    await markOrderFailed(order.id);
+    return NextResponse.json(
+      {
+        error:
+          "Online checkout is temporarily unavailable while the event organizer finishes payment setup.",
+      },
+      { status: 409 },
+    );
+  }
 
   const siteUrl = (
     process.env.NEXT_PUBLIC_SITE_URL || request.nextUrl.origin
   ).replace(/\/+$/, "");
+
+  if (amountTotalCents === 0) {
+    const freeCheckoutId = `free_${randomUUID().replaceAll("-", "")}`;
+    const { error: freeOrderUpdateError } = await supabase
+      .from("orders")
+      .update({ stripe_checkout_id: freeCheckoutId })
+      .eq("id", order.id)
+      .eq("payment_status", "pending");
+
+    if (freeOrderUpdateError) {
+      console.error("[checkout] free order link persistence failed", {
+        code: freeOrderUpdateError.code,
+        orderId: order.id,
+      });
+      await markOrderFailed(order.id);
+      return checkoutError();
+    }
+
+    try {
+      await fulfillCheckoutSession(freeCheckoutId);
+    } catch (error) {
+      console.error("[checkout] free order fulfillment failed", {
+        message: error instanceof Error ? error.message : "Unknown error",
+        orderId: order.id,
+      });
+      await markOrderFailed(order.id);
+      return checkoutError();
+    }
+
+    await attemptOrderConfirmationEmail(order.id).catch((error) => {
+      console.error("[checkout] free order email attempt failed", {
+        message: error instanceof Error ? error.message : "Unknown error",
+        orderId: order.id,
+      });
+    });
+
+    return NextResponse.json({
+      url: `${siteUrl}/order/success?session_id=${encodeURIComponent(
+        freeCheckoutId,
+      )}`,
+    });
+  }
+
+  const stripeIssues = getStripeConfigurationIssues({
+    includeConnectedPaymentsWebhookSecret: true,
+    includePublishableKey: true,
+  });
+
+  if (stripeIssues.length > 0) {
+    await markOrderFailed(order.id);
+    return NextResponse.json(
+      {
+        error: `Checkout setup is incomplete. Missing server variables: ${stripeIssues.join(", ")}.`,
+      },
+      { status: 503 },
+    );
+  }
+
   const stripe = getStripe();
 
   try {
     const session = await stripe.checkout.sessions.create(
       {
         mode: "payment",
+        payment_method_types: ["card"],
         customer_email: parsed.data.email,
         client_reference_id: String(order.id),
         line_items: selectedTickets.map((selection) => ({
@@ -206,6 +306,9 @@ export async function POST(request: NextRequest) {
         ...(amountTotalCents > 0
           ? {
               payment_intent_data: {
+                ...(platformFeeCents > 0
+                  ? { application_fee_amount: platformFeeCents }
+                  : {}),
                 metadata: {
                   order_id: String(order.id),
                   tournament_id: String(reservation.tournament_id),
@@ -217,9 +320,7 @@ export async function POST(request: NextRequest) {
         success_url: `${siteUrl}/order/success?session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `${siteUrl}/e/${reservation.public_slug}?checkout=cancelled`,
       },
-      {
-        idempotencyKey: `tournibase-order-${order.id}`,
-      },
+      getStripeRequestOptions(routing, `tournibase-order-${order.id}`),
     );
 
     if (!session.url) {
@@ -237,7 +338,9 @@ export async function POST(request: NextRequest) {
         code: sessionUpdateError.code,
         orderId: order.id,
       });
-      await stripe.checkout.sessions.expire(session.id).catch(() => undefined);
+      await stripe.checkout.sessions
+        .expire(session.id, {}, getStripeRequestOptions(routing))
+        .catch(() => undefined);
       await markOrderFailed(order.id);
       return checkoutError();
     }

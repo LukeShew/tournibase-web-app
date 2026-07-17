@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { requireDirector } from "@/lib/auth";
 import type { CreateTournamentState } from "@/lib/form-states";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { slugifyTournamentName } from "@/lib/tournaments";
 
@@ -149,6 +150,7 @@ export async function createTournament(
     result.data.publicSlug || result.data.name,
   );
   let tournamentId: number | null = null;
+  const admin = getSupabaseAdmin();
 
   for (let attempt = 0; attempt < 4; attempt += 1) {
     const publicSlug =
@@ -156,7 +158,7 @@ export async function createTournament(
         ? baseSlug
         : `${baseSlug.slice(0, 65)}-${crypto.randomUUID().slice(0, 6)}`;
 
-    const { data: tournament, error: tournamentError } = await supabase
+    const { data: tournament, error: tournamentError } = await admin
       .from("tournaments")
       .insert({
         organization_id: organizationId,

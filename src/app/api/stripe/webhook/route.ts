@@ -10,14 +10,21 @@ import {
 import {
   getStripe,
   getStripeConfigurationIssues,
+  getStripePaymentWebhookSecrets,
 } from "@/lib/stripe";
 import { getSupabaseAdminConfigurationIssues } from "@/lib/supabase/admin";
 
 export const runtime = "nodejs";
 
 export async function POST(request: Request) {
+  const webhookSecrets = getStripePaymentWebhookSecrets();
   const configurationIssues = [
-    ...getStripeConfigurationIssues({ includeWebhookSecret: true }),
+    ...getStripeConfigurationIssues(),
+    ...(webhookSecrets.length > 0
+      ? []
+      : [
+          "STRIPE_CONNECTED_PAYMENTS_WEBHOOK_SECRET or STRIPE_WEBHOOK_SECRET",
+        ]),
     ...getSupabaseAdminConfigurationIssues(),
   ];
 
@@ -42,17 +49,24 @@ export async function POST(request: Request) {
 
   const rawBody = await request.text();
   const stripe = getStripe();
-  let event: Stripe.Event;
+  let event: Stripe.Event | null = null;
 
-  try {
-    event = stripe.webhooks.constructEvent(
-      rawBody,
-      signature,
-      process.env.STRIPE_WEBHOOK_SECRET!,
-    );
-  } catch (error) {
+  for (const webhookSecret of webhookSecrets) {
+    try {
+      event = stripe.webhooks.constructEvent(
+        rawBody,
+        signature,
+        webhookSecret,
+      );
+      break;
+    } catch {
+      // Try the next configured endpoint secret.
+    }
+  }
+
+  if (!event) {
     console.warn("[stripe-webhook] signature verification failed", {
-      message: error instanceof Error ? error.message : "Unknown error",
+      configuredSecrets: webhookSecrets.length,
     });
     return NextResponse.json(
       { error: "Invalid Stripe signature." },
@@ -61,12 +75,15 @@ export async function POST(request: Request) {
   }
 
   try {
+    const eventConnectedAccountId = event.account ?? null;
+
     if (
       event.type === "checkout.session.completed" ||
       event.type === "checkout.session.async_payment_succeeded"
     ) {
       const fulfillment = await fulfillCheckoutSession(
         event.data.object.id,
+        eventConnectedAccountId,
       );
 
       if (fulfillment.fulfilled) {
@@ -94,12 +111,16 @@ export async function POST(request: Request) {
       event.type === "checkout.session.expired" ||
       event.type === "checkout.session.async_payment_failed"
     ) {
-      await markCheckoutFailed(event.data.object.id);
+      await markCheckoutFailed(
+        event.data.object.id,
+        eventConnectedAccountId,
+      );
     }
 
     if (event.type === "charge.refunded") {
       const refundSync = await syncStripeChargeRefund(
         event.data.object as Stripe.Charge,
+        eventConnectedAccountId,
       );
 
       if (refundSync.status === "order_not_found") {

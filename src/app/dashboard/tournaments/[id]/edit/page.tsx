@@ -5,6 +5,7 @@ import { EventDetailsEditForm } from "@/components/event-details-edit-form";
 import { EventPublicationControl } from "@/components/event-publication-control";
 import { requireDirector } from "@/lib/auth";
 import { getIdlePublicationMessage } from "@/lib/publication-message";
+import { isOrganizationStripeAccountReady } from "@/lib/stripe-connect";
 import { getStripeConfigurationIssues } from "@/lib/stripe";
 import { getSupabaseAdminConfigurationIssues } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
@@ -20,6 +21,7 @@ type EditableTournament = {
   end_date: string;
   id: number;
   name: string;
+  organization_id: number;
   organizer_name: string;
   public_slug: string;
   start_date: string;
@@ -62,7 +64,7 @@ export default async function EditTournamentPage({
   const { data: tournamentRow, error: tournamentError } = await supabase
     .from("tournaments")
     .select(
-      "id, name, start_date, end_date, venue_name, venue_address, organizer_name, contact_email, description, status, public_slug",
+      "id, organization_id, name, start_date, end_date, venue_name, venue_address, organizer_name, contact_email, description, status, public_slug",
     )
     .eq("id", tournamentId)
     .in("organization_id", organizationIds)
@@ -77,9 +79,9 @@ export default async function EditTournamentPage({
   }
 
   const tournament = tournamentRow as EditableTournament;
-  const { count: activeTicketCount, error: activeTicketError } = await supabase
+  const { data: activeTicketRows, error: activeTicketError } = await supabase
     .from("ticket_types")
-    .select("id", { count: "exact", head: true })
+    .select("id, price")
     .eq("tournament_id", tournamentId)
     .eq("status", "active");
 
@@ -87,14 +89,22 @@ export default async function EditTournamentPage({
     throw activeTicketError;
   }
 
+  const activeTicketCount = activeTicketRows?.length ?? 0;
+  const hasPaidTickets =
+    activeTicketRows?.some((ticket) => Number(ticket.price) > 0) ?? false;
+  const paymentReady =
+    !hasPaidTickets ||
+    (await isOrganizationStripeAccountReady(tournament.organization_id));
   const checkoutConfigured =
     getStripeConfigurationIssues({
+      includeConnectedPaymentsWebhookSecret: true,
       includePublishableKey: true,
-      includeWebhookSecret: true,
     }).length === 0 && getSupabaseAdminConfigurationIssues().length === 0;
   const publicationMessage = getIdlePublicationMessage({
-    activeTicketCount: activeTicketCount ?? 0,
+    activeTicketCount,
     checkoutConfigured,
+    hasPaidTickets,
+    paymentReady,
     status: tournament.status,
   });
 
@@ -149,9 +159,11 @@ export default async function EditTournamentPage({
           </div>
           <div className="w-full max-w-md">
             <EventPublicationControl
-              activeTicketCount={activeTicketCount ?? 0}
+              activeTicketCount={activeTicketCount}
               align="end"
               checkoutConfigured={checkoutConfigured}
+              hasPaidTickets={hasPaidTickets}
+              paymentReady={paymentReady}
               publicPath={`/e/${tournament.public_slug}`}
               showIdleMessage={false}
               status={tournament.status}

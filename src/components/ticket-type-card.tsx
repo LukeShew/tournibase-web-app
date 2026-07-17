@@ -25,9 +25,11 @@ export type TicketTypeRecord = {
 
 export function TicketTypeCard({
   eventTimeZone,
+  paidActivationAllowed,
   ticketType,
 }: {
   eventTimeZone: string;
+  paidActivationAllowed: boolean;
   ticketType: TicketTypeRecord;
 }) {
   const updateThisTicket = updateTicketType.bind(null, ticketType.id);
@@ -87,7 +89,14 @@ export function TicketTypeCard({
               : "Unlimited"}
           </span>
           <form action={setStatusForTicket}>
-            <TicketStatusButton nextStatus={nextStatus} />
+            <TicketStatusButton
+              disabled={
+                nextStatus === "active" &&
+                Number(ticketType.price) > 0 &&
+                !paidActivationAllowed
+              }
+              nextStatus={nextStatus}
+            />
           </form>
         </div>
       </div>
@@ -148,8 +157,10 @@ export function TicketTypeCard({
 }
 
 function TicketStatusButton({
+  disabled,
   nextStatus,
 }: {
+  disabled: boolean;
   nextStatus: "active" | "inactive";
 }) {
   const { pending } = useFormStatus();
@@ -157,7 +168,12 @@ function TicketStatusButton({
   return (
     <button
       type="submit"
-      disabled={pending}
+      disabled={pending || disabled}
+      title={
+        disabled
+          ? "Connect a ready Stripe account before activating this paid ticket."
+          : undefined
+      }
       className="inline-flex h-9 items-center justify-center rounded-lg border border-border bg-white/5 px-3 text-xs font-medium text-slate-300 transition hover:bg-white/10 hover:text-white disabled:cursor-wait disabled:opacity-70"
     >
       {pending

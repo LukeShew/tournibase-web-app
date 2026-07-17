@@ -1,15 +1,16 @@
 # TourniBase Database Schema
 
-Last verified against the live Supabase project: July 5, 2026
+Last verified against the repository migrations: July 16, 2026
 
-Current production migration:
-`20260705053201_add_order_email_delivery_foundation`
+Latest local migration:
+`20260717031932_add_stripe_connect_foundation`
 
 ## Relationship summary
 
 ```mermaid
 erDiagram
   users ||--o{ organizations : owns
+  organizations ||--o{ organization_stripe_accounts : connects
   organizations ||--o{ tournaments : runs
   tournaments ||--o{ ticket_types : offers
   tournaments ||--o{ orders : receives
@@ -69,9 +70,30 @@ Buyer and payment record for one Stripe Checkout Session.
 
 Key fields: `id`, `tournament_id`, `buyer_name`, `buyer_email`,
 `buyer_phone`, `buyer_team_name`, `stripe_checkout_id`, `amount_total`,
-`payment_status`, `created_at`.
+`payment_status`, `stripe_connected_account_id`, `stripe_environment`,
+`platform_fee_amount`, `platform_fee_refunded`,
+`stripe_payment_intent_id`, `stripe_charge_id`, `created_at`.
 
 The app formats order IDs as `TB-000001`, but the stored primary key is numeric.
+The Stripe routing and fee fields are immutable payment snapshots. Existing
+orders are classified as legacy test-platform orders with a $0 application
+fee.
+
+### `organization_stripe_accounts`
+
+One Stripe connected account per organization and environment.
+
+Key fields: `organization_id`, `stripe_account_id`, `stripe_environment`,
+`account_closed`, `onboarding_complete`, `charges_enabled`,
+`payouts_enabled`, `card_payments_status`, `payouts_status`,
+`requirements_currently_due`, `requirements_eventually_due`,
+`requirements_past_due`, `requirements_pending_verification`,
+`disabled_reason`, `last_synced_at`, `created_at`, `updated_at`.
+
+Test and live records are separate. The synchronized requirement and capability
+fields drive the Settings payment state and paid-event publishing/checkout
+rules. Connected-account switching and self-service disconnection are not
+supported during the pilot.
 
 ### `order_items`
 
@@ -162,6 +184,7 @@ can be recovered after 10 minutes.
 | `record_gate_sale` | Validates and records an in-person sale | Server secret key only |
 | `get_tournament_dashboard_metrics` | Aggregates director sales and gate reporting | Signed-in owning director |
 | `claim_order_email_delivery` | Atomically claims one order email and blocks concurrent duplicate sends | Server secret key only |
+| `organization_stripe_account_is_ready` | Checks charges, payouts, requirements, restrictions, environment, and closure for paid publishing/checkout | Server or owning director |
 
 All listed functions run as security invoker. The gate functions have execution
 revoked from anonymous and authenticated browser roles. Dashboard metrics remain
@@ -172,7 +195,7 @@ The private `handle_new_auth_user` trigger function creates a protected
 
 ## Row Level Security
 
-RLS is enabled on all 11 public application tables.
+RLS is enabled on all 12 public application tables after the Connect migration.
 
 - A director can access only their own profile and data reachable through an
   organization they own.
@@ -180,6 +203,10 @@ RLS is enabled on all 11 public application tables.
   types.
 - Orders, order items, passes, scanner sessions, check-ins, and manual sales
   have no anonymous read policy.
+- Authenticated browser roles cannot mutate orders, tournaments, or ticket
+  types. Protected Server Actions verify ownership and use the service role for
+  these writes so payment routing and paid-publication rules cannot be bypassed
+  through the Data API.
 - Email delivery records have no browser policies or browser grants. Only the
   service role can read, insert, update, or claim them.
 - Server-side fulfillment and gate operations use the Supabase secret key after
@@ -202,10 +229,18 @@ automatically expose new public tables.
 10. `20260703232057_add_phase_12_gate_sales`
 11. `20260704041441_add_phase_13_dashboard_metrics`
 12. `20260705053201_add_order_email_delivery_foundation`
+13. `20260711041323_add_tight_fuzzy_name_lookup`
+14. `20260712164325_harden_pilot_payments_and_integrity`
+15. `20260712164657_index_hardened_relationships`
+16. `20260712165422_correct_pass_relationship_index`
+17. `20260712205233_add_director_profile_avatar`
+18. `20260712214217_allow_director_avatar_updates`
+19. `20260717031932_add_stripe_connect_foundation`
 
 Migration files are the source of truth under `supabase/migrations`. New schema
 changes must be added as migrations and applied with `supabase db push`.
 
-Production and local migration histories match these 12 migrations.
+The Connect migration must be applied to hosted Supabase before deploying the
+Connect application code.
 `supabase/seed.sql` adds local service-role table and sequence permissions but
 contains no demo records and does not add migration history.
