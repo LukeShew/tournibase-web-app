@@ -99,6 +99,14 @@ export function EventPublicationControl({
                 : "Publish ticket page"}
           </button>
         </form>
+        {hasPaidTickets && !paymentReady ? (
+          <Link
+            href={`/dashboard/settings?event=${tournamentId}#payments`}
+            className="inline-flex h-11 items-center justify-center rounded-xl bg-brand-strong px-4 text-sm font-semibold text-white transition hover:bg-blue-500"
+          >
+            Connect to Stripe
+          </Link>
+        ) : null}
         {status === "published" ? (
           <Link
             href={publicPath}
