@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { LiveSearchForm } from "@/components/live-search-form";
 import { requireDirector } from "@/lib/auth";
+import { formatCurrency } from "@/lib/dashboard-metrics";
 import { DIRECTOR_PROMISE } from "@/lib/product-copy";
 import { matchesTightName } from "@/lib/search-match";
 import { createClient } from "@/lib/supabase/server";
@@ -45,20 +46,32 @@ export default async function DashboardPage({
   const organizationIds = organizations.map((organization) => organization.id);
 
   let tournaments: Tournament[] = [];
+  let lifetimeRevenue = 0;
 
   if (organizationIds.length > 0) {
-    const { data: tournamentRows, error: tournamentError } = await supabase
-      .from("tournaments")
-      .select("id, name, status, start_date, end_date, time_zone")
-      .in("organization_id", organizationIds)
-      .order("start_date", { ascending: false })
-      .limit(100);
+    const [
+      { data: tournamentRows, error: tournamentError },
+      { data: lifetimeRevenueData, error: lifetimeRevenueError },
+    ] = await Promise.all([
+      supabase
+        .from("tournaments")
+        .select("id, name, status, start_date, end_date, time_zone")
+        .in("organization_id", organizationIds)
+        .order("start_date", { ascending: false })
+        .limit(100),
+      supabase.rpc("get_director_lifetime_revenue"),
+    ]);
 
     if (tournamentError) {
       throw tournamentError;
     }
 
+    if (lifetimeRevenueError) {
+      throw lifetimeRevenueError;
+    }
+
     tournaments = (tournamentRows ?? []) as Tournament[];
+    lifetimeRevenue = Number(lifetimeRevenueData ?? 0);
   }
 
   if (organizationError) {
@@ -119,9 +132,13 @@ export default async function DashboardPage({
         </Link>
       </div>
 
-      <section className="grid gap-4 sm:grid-cols-2">
+      <section className="grid gap-4 sm:grid-cols-3">
         <DashboardStat label="Events" value={tournaments.length} />
         <DashboardStat label="Published" value={publishedCount} />
+        <DashboardStat
+          label="Lifetime revenue"
+          value={formatCurrency(lifetimeRevenue)}
+        />
       </section>
 
       <div className="rounded-[2rem] border border-border bg-card p-4 shadow-sm">
@@ -214,7 +231,13 @@ export default async function DashboardPage({
   );
 }
 
-function DashboardStat({ label, value }: { label: string; value: number }) {
+function DashboardStat({
+  label,
+  value,
+}: {
+  label: string;
+  value: number | string;
+}) {
   return (
     <div className="rounded-[2rem] border border-border bg-card p-6 shadow-sm">
       <p className="text-sm text-slate-500">{label}</p>
