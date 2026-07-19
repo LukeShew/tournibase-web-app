@@ -52,6 +52,10 @@ async function refreshConnect({
     return NextResponse.redirect(destination, 303);
   }
 
+  if (returned) {
+    destination.searchParams.set("organization", String(organizationId));
+  }
+
   try {
     const ownership =
       await getOwnedOrganizationForStripeConnect(organizationId);

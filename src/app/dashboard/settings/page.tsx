@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ProfileAvatarPicker } from "@/components/profile-avatar-picker";
+import { StripeConnectStatusPoller } from "@/components/stripe-connect-status-poller";
 import { requireDirector } from "@/lib/auth";
 import {
   getStripeConnectConfigurationIssues,
@@ -15,11 +16,16 @@ import { createClient } from "@/lib/supabase/server";
 export const metadata: Metadata = {
   title: "Settings",
 };
+export const dynamic = "force-dynamic";
 
 export default async function SettingsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ event?: string; payments?: string }>;
+  searchParams: Promise<{
+    event?: string;
+    organization?: string;
+    payments?: string;
+  }>;
 }) {
   const resolvedSearchParams = await searchParams;
   const director = await requireDirector();
@@ -69,6 +75,12 @@ export default async function SettingsPage({
       : null;
   const configurationReady =
     getStripeConnectConfigurationIssues().length === 0;
+  const finalizingOrganizationId =
+    resolvedSearchParams.payments === "onboarding_returned" &&
+    resolvedSearchParams.organization &&
+    /^\d+$/.test(resolvedSearchParams.organization)
+      ? Number(resolvedSearchParams.organization)
+      : null;
 
   return (
     <div className="mx-auto max-w-4xl pb-12">
@@ -109,7 +121,9 @@ export default async function SettingsPage({
           </div>
         </div>
 
-        {resolvedSearchParams.payments ? (
+        {resolvedSearchParams.payments &&
+        resolvedSearchParams.payments !== "onboarding_returned" &&
+        resolvedSearchParams.payments !== "synchronized" ? (
           <PaymentNotice result={resolvedSearchParams.payments} />
         ) : null}
 
@@ -119,6 +133,12 @@ export default async function SettingsPage({
               <OrganizationPayments
                 key={organization.id}
                 account={stripeAccounts.get(organization.id) ?? null}
+                finalizing={
+                  finalizingOrganizationId === organization.id &&
+                  getStripeConnectStatus(
+                    stripeAccounts.get(organization.id) ?? null,
+                  ) !== "ready"
+                }
                 configurationReady={configurationReady}
                 organization={organization}
                 selectedEvent={selectedEvent}
@@ -163,35 +183,40 @@ export default async function SettingsPage({
 function OrganizationPayments({
   account,
   configurationReady,
+  finalizing,
   organization,
   selectedEvent,
 }: {
   account: OrganizationStripeAccount | null;
   configurationReady: boolean;
+  finalizing: boolean;
   organization: { id: number; name: string };
   selectedEvent: string | null;
 }) {
   const status = getStripeConnectStatus(account);
+  const displayedStatus = finalizing ? "under_review" : status;
   const action =
-    status === "not_connected"
-      ? {
-          href: "/api/stripe/connect/start",
-          label: "Connect Stripe",
-        }
-      : status === "ready"
+    finalizing
+      ? null
+      : status === "not_connected"
         ? {
-            href: "/api/stripe/connect/dashboard",
-            label: "Open Stripe Dashboard",
+            href: "/api/stripe/connect/start",
+            label: "Connect Stripe",
           }
-        : status === "under_review"
-          ? null
-          : {
-              href: "/api/stripe/connect/start",
-              label:
-                status === "restricted"
-                  ? "Resolve in Stripe"
-                  : "Continue setup",
-            };
+        : status === "ready"
+          ? {
+              href: "/api/stripe/connect/dashboard",
+              label: "Open Stripe Dashboard",
+            }
+          : status === "under_review"
+            ? null
+            : {
+                href: "/api/stripe/connect/start",
+                label:
+                  status === "restricted"
+                    ? "Resolve in Stripe"
+                    : "Continue setup",
+              };
 
   return (
     <div className="px-6 py-6">
@@ -199,15 +224,18 @@ function OrganizationPayments({
         <div>
           <p className="font-semibold text-slate-950">{organization.name}</p>
           <div className="mt-3 flex flex-wrap items-center gap-3">
-            <PaymentStatusBadge status={status} />
+            <PaymentStatusBadge status={displayedStatus} />
             <p className="text-sm text-slate-500">
-              {getPaymentStatusDescription(status)}
+              {finalizing
+                ? "TourniBase is confirming the latest status with Stripe."
+                : getPaymentStatusDescription(status)}
             </p>
           </div>
           {account ? (
             <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-xs text-slate-500">
               <span>
-                Card payments: {formatCapabilityStatus(account.card_payments_status)}
+                Card payments:{" "}
+                {formatCapabilityStatus(account.card_payments_status)}
               </span>
               <span>
                 Payouts: {formatCapabilityStatus(account.payouts_status)}
@@ -223,7 +251,9 @@ function OrganizationPayments({
               ) : null}
             </div>
           ) : null}
-          {account &&
+          {finalizing ? (
+            <StripeConnectStatusPoller organizationId={organization.id} />
+          ) : account &&
           (account.requirements_currently_due.length > 0 ||
             account.requirements_past_due.length > 0) ? (
             <p className="mt-3 text-sm font-medium text-amber-700">
@@ -243,7 +273,7 @@ function OrganizationPayments({
               selectedEvent={selectedEvent}
             />
           ) : null}
-          {account ? (
+          {account && !finalizing ? (
             <ConnectForm
               action="/api/stripe/connect/refresh"
               disabled={!configurationReady}
@@ -342,27 +372,17 @@ function getPaymentStatusDescription(status: StripeConnectStatus) {
 }
 
 function PaymentNotice({ result }: { result: string }) {
-  const successful =
-    result === "onboarding_returned" || result === "synchronized";
   const text =
-    result === "onboarding_returned"
-      ? "Stripe setup was saved. Review the status below; Stripe may still be verifying some information."
-      : result === "synchronized"
-        ? "Stripe status refreshed."
-        : result === "not_connected"
-          ? "No Stripe account is connected yet."
-          : result === "configuration_error"
-            ? "Stripe Connect server settings are incomplete."
-            : "Stripe account setup could not be updated. Try again or contact support.";
+    result === "not_connected"
+      ? "No Stripe account is connected yet."
+      : result === "configuration_error"
+        ? "Stripe Connect server settings are incomplete."
+        : "Stripe account setup could not be updated. Try again or contact support.";
 
   return (
     <div
       role="status"
-      className={`border-b px-6 py-4 text-sm ${
-        successful
-          ? "border-emerald-200 bg-emerald-50 text-emerald-800"
-          : "border-red-200 bg-red-50 text-red-800"
-      }`}
+      className="border-b border-red-200 bg-red-50 px-6 py-4 text-sm text-red-800"
     >
       {text}
     </div>
