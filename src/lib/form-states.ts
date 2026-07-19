@@ -7,7 +7,6 @@ export type CreateTournamentState = {
       | "endDate"
       | "venueName"
       | "venueAddress"
-      | "organizerName"
       | "contactEmail"
       | "description"
       | "publicSlug",

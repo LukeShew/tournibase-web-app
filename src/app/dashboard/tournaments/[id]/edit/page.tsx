@@ -25,7 +25,6 @@ type EditableTournament = {
   id: number;
   name: string;
   organization_id: number;
-  organizer_name: string;
   public_slug: string;
   start_date: string;
   status: "draft" | "published" | "closed" | "archived";
@@ -67,7 +66,7 @@ export default async function EditTournamentPage({
   const { data: tournamentRow, error: tournamentError } = await supabase
     .from("tournaments")
     .select(
-      "id, organization_id, name, start_date, end_date, venue_name, venue_address, organizer_name, contact_email, description, status, public_slug",
+      "id, organization_id, name, start_date, end_date, venue_name, venue_address, contact_email, description, status, public_slug",
     )
     .eq("id", tournamentId)
     .in("organization_id", organizationIds)

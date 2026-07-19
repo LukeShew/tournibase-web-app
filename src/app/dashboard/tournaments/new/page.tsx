@@ -33,7 +33,6 @@ export default async function NewTournamentPage() {
 
       <TournamentForm
         defaultContactEmail={director.email}
-        defaultOrganizerName={director.name}
       />
     </div>
   );

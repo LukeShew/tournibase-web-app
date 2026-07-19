@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { updateDirectorName } from "@/app/dashboard/settings/actions";
 import { ProfileAvatarPicker } from "@/components/profile-avatar-picker";
 import { StripeConnectStatusPoller } from "@/components/stripe-connect-status-poller";
 import { requireDirector } from "@/lib/auth";
@@ -25,6 +26,7 @@ export default async function SettingsPage({
     event?: string;
     organization?: string;
     payments?: string;
+    profile?: string;
   }>;
 }) {
   const resolvedSearchParams = await searchParams;
@@ -99,10 +101,49 @@ export default async function SettingsPage({
             This is the director account currently signed in.
           </p>
         </div>
-        <dl className="grid gap-px bg-border sm:grid-cols-2">
-          <SettingsItem label="Name" value={director.name} />
-          <SettingsItem label="Email" value={director.email} />
-        </dl>
+        {resolvedSearchParams.profile ? (
+          <ProfileNotice result={resolvedSearchParams.profile} />
+        ) : null}
+        <div className="grid gap-px bg-border sm:grid-cols-2">
+          <form action={updateDirectorName} className="bg-card px-6 py-5">
+            <label
+              htmlFor="director-name"
+              className="text-xs font-medium uppercase tracking-[0.14em] text-slate-500"
+            >
+              Director name
+            </label>
+            <input
+              id="director-name"
+              name="name"
+              defaultValue={director.name}
+              required
+              minLength={2}
+              maxLength={120}
+              autoComplete="name"
+              className="mt-3 h-11 w-full rounded-xl border border-border bg-white px-3 text-sm font-semibold text-slate-950 outline-none transition focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
+            />
+            <p className="mt-2 text-xs leading-5 text-slate-500">
+              Used as the organizer name across your tournaments.
+            </p>
+            <button
+              type="submit"
+              className="mt-4 inline-flex h-10 items-center justify-center rounded-xl bg-brand-strong px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-500"
+            >
+              Save name
+            </button>
+          </form>
+          <div className="bg-card px-6 py-5">
+            <p className="text-xs font-medium uppercase tracking-[0.14em] text-slate-500">
+              Account email
+            </p>
+            <p className="mt-3 text-sm font-semibold text-slate-950">
+              {director.email}
+            </p>
+            <p className="mt-2 text-xs leading-5 text-slate-500">
+              Event contact emails are managed separately in each tournament.
+            </p>
+          </div>
+        </div>
       </section>
 
       <ProfileAvatarPicker initialAvatarId={director.avatarId} />
@@ -389,13 +430,24 @@ function PaymentNotice({ result }: { result: string }) {
   );
 }
 
-function SettingsItem({ label, value }: { label: string; value: string }) {
+function ProfileNotice({ result }: { result: string }) {
+  const success = result === "name_updated";
+  const text = success
+    ? "Director name updated across your account and tournaments."
+    : result === "invalid_name"
+      ? "Enter a director name between 2 and 120 characters."
+      : "We could not update the director name. Try again.";
+
   return (
-    <div className="bg-card px-6 py-5">
-      <dt className="text-xs font-medium uppercase tracking-[0.14em] text-slate-500">
-        {label}
-      </dt>
-      <dd className="mt-2 text-sm font-semibold text-slate-950">{value}</dd>
+    <div
+      role="status"
+      className={`border-b px-6 py-4 text-sm ${
+        success
+          ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+          : "border-red-200 bg-red-50 text-red-800"
+      }`}
+    >
+      {text}
     </div>
   );
 }

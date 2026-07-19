@@ -44,11 +44,6 @@ const updateTournamentSchema = z
       .trim()
       .min(5, "Enter the venue address.")
       .max(240, "Keep the venue address under 240 characters."),
-    organizerName: z
-      .string()
-      .trim()
-      .min(2, "Enter the organizer or director name.")
-      .max(120, "Keep the organizer name under 120 characters."),
     contactEmail: z
       .string()
       .trim()
@@ -87,7 +82,6 @@ export async function updateTournament(
     endDate: formData.get("endDate"),
     venueName: formData.get("venueName"),
     venueAddress: formData.get("venueAddress"),
-    organizerName: formData.get("organizerName"),
     contactEmail: formData.get("contactEmail"),
     description: formData.get("description"),
   });
@@ -141,7 +135,6 @@ export async function updateTournament(
       end_date: result.data.endDate,
       venue_name: result.data.venueName,
       venue_address: result.data.venueAddress,
-      organizer_name: result.data.organizerName,
       contact_email: result.data.contactEmail,
       description: result.data.description || null,
     })

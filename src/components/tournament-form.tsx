@@ -7,7 +7,6 @@ import { slugifyTournamentName } from "@/lib/tournaments";
 
 type TournamentFormProps = {
   defaultContactEmail: string;
-  defaultOrganizerName: string;
 };
 
 const inputClassName =
@@ -15,7 +14,6 @@ const inputClassName =
 
 export function TournamentForm({
   defaultContactEmail,
-  defaultOrganizerName,
 }: TournamentFormProps) {
   const [actionState, action, pending] = useActionState(
     createTournament,
@@ -233,34 +231,11 @@ export function TournamentForm({
             Event contact
           </p>
           <h2 className="mt-2 text-xl font-semibold text-white">
-            Organizer details
+            Contact details
           </h2>
         </div>
 
-        <div className="mt-6 grid gap-5 sm:grid-cols-2">
-          <FormField
-            id="organizerName"
-            label="Organizer or director name"
-            error={state.errors.organizerName}
-          >
-            <input
-              id="organizerName"
-              name="organizerName"
-              defaultValue={defaultOrganizerName}
-              autoComplete="name"
-              required
-              maxLength={120}
-              aria-invalid={Boolean(state.errors.organizerName)}
-              aria-describedby={
-                state.errors.organizerName
-                  ? "organizerName-error"
-                  : undefined
-              }
-              disabled={pending}
-              className={inputClassName}
-            />
-          </FormField>
-
+        <div className="mt-6">
           <FormField
             id="contactEmail"
             label="Contact email"
@@ -282,6 +257,9 @@ export function TournamentForm({
               className={inputClassName}
             />
           </FormField>
+          <p className="mt-2 text-xs leading-5 text-slate-500">
+            Used only for this event. It does not change your account email.
+          </p>
         </div>
       </section>
 
