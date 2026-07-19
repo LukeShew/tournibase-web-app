@@ -18,7 +18,7 @@ export function RevenueTrendCard({
   );
 
   return (
-    <section className="rounded-[2rem] border border-border bg-card p-6 shadow-sm">
+    <section className="flex h-full flex-col rounded-[2rem] border border-border bg-card p-6 shadow-sm">
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.14em] text-blue-700">
@@ -28,22 +28,22 @@ export function RevenueTrendCard({
             Sales by day
           </h2>
         </div>
-        <div className="rounded-2xl bg-brand-soft px-4 py-3 text-right">
-          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-blue-700">
+        <div className="rounded-xl bg-brand-soft px-3 py-2 text-right">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-blue-700">
             Total
           </p>
-          <p className="mt-1 font-mono text-xl font-semibold text-blue-700">
+          <p className="font-mono text-lg font-semibold text-blue-700">
             {formatCurrency(totalRevenue)}
           </p>
         </div>
       </div>
 
       {days.length === 0 ? (
-        <div className="mt-6 grid h-64 place-items-center rounded-3xl bg-card-strong text-sm font-medium text-slate-500">
+        <div className="mt-4 grid min-h-64 flex-1 place-items-center rounded-3xl bg-card-strong text-sm font-medium text-slate-500">
           No sales data yet
         </div>
       ) : (
-        <div className="mt-6 flex h-72 items-end gap-3 overflow-x-auto rounded-3xl bg-card-strong px-5 py-6">
+        <div className="mt-4 flex min-h-72 flex-1 items-end gap-3 overflow-x-auto rounded-3xl bg-card-strong px-5 py-6">
           {days.map((day) => {
             const height = Math.max(
               8,
