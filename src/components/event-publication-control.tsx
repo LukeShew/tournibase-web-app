@@ -12,7 +12,9 @@ export function EventPublicationControl({
   activeTicketCount,
   align = "start",
   checkoutConfigured,
+  connectConfigured,
   hasPaidTickets,
+  organizationId,
   paymentReady,
   publicPath,
   showIdleMessage = true,
@@ -22,7 +24,9 @@ export function EventPublicationControl({
   activeTicketCount: number;
   align?: "end" | "start";
   checkoutConfigured: boolean;
+  connectConfigured: boolean;
   hasPaidTickets: boolean;
+  organizationId: number;
   paymentReady: boolean;
   publicPath: string;
   showIdleMessage?: boolean;
@@ -100,12 +104,21 @@ export function EventPublicationControl({
           </button>
         </form>
         {hasPaidTickets && !paymentReady ? (
-          <Link
-            href={`/dashboard/settings?event=${tournamentId}#payments`}
-            className="inline-flex h-11 items-center justify-center rounded-xl bg-brand-strong px-4 text-sm font-semibold text-white transition hover:bg-blue-500"
-          >
-            Connect to Stripe
-          </Link>
+          <form action="/api/stripe/connect/start" method="post">
+            <input
+              type="hidden"
+              name="organizationId"
+              value={organizationId}
+            />
+            <input type="hidden" name="event" value={tournamentId} />
+            <button
+              type="submit"
+              disabled={!connectConfigured}
+              className="inline-flex h-11 items-center justify-center rounded-2xl bg-brand-strong px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Connect Stripe
+            </button>
+          </form>
         ) : null}
         {status === "published" ? (
           <Link

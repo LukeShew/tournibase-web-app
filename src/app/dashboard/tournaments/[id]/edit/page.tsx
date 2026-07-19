@@ -5,7 +5,10 @@ import { EventDetailsEditForm } from "@/components/event-details-edit-form";
 import { EventPublicationControl } from "@/components/event-publication-control";
 import { requireDirector } from "@/lib/auth";
 import { getIdlePublicationMessage } from "@/lib/publication-message";
-import { isOrganizationStripeAccountReady } from "@/lib/stripe-connect";
+import {
+  getStripeConnectConfigurationIssues,
+  isOrganizationStripeAccountReady,
+} from "@/lib/stripe-connect";
 import { getStripeConfigurationIssues } from "@/lib/stripe";
 import { getSupabaseAdminConfigurationIssues } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
@@ -162,7 +165,11 @@ export default async function EditTournamentPage({
               activeTicketCount={activeTicketCount}
               align="end"
               checkoutConfigured={checkoutConfigured}
+              connectConfigured={
+                getStripeConnectConfigurationIssues().length === 0
+              }
               hasPaidTickets={hasPaidTickets}
+              organizationId={tournament.organization_id}
               paymentReady={paymentReady}
               publicPath={`/e/${tournament.public_slug}`}
               showIdleMessage={false}

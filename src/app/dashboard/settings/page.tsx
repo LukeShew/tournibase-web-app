@@ -95,10 +95,7 @@ export default async function SettingsPage({
 
       <ProfileAvatarPicker initialAvatarId={director.avatarId} />
 
-      <section
-        id="payments"
-        className="mt-6 scroll-mt-6 overflow-hidden rounded-[2rem] border border-border bg-card shadow-sm"
-      >
+      <section className="mt-6 overflow-hidden rounded-[2rem] border border-border bg-card shadow-sm">
         <div className="border-b border-border bg-card-strong px-6 py-5">
           <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
             <div>
