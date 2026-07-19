@@ -18,24 +18,22 @@ export function RevenueTrendCard({
   );
 
   return (
-    <section className="flex h-full flex-col rounded-[2rem] border border-border bg-card p-6 shadow-sm">
-      <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-blue-700">
-            Revenue trend
-          </p>
-          <h2 className="mt-2 text-xl font-semibold text-slate-950">
-            Sales by day
-          </h2>
-        </div>
-        <div className="rounded-xl bg-brand-soft px-3 py-2 text-right">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-blue-700">
-            Total
-          </p>
-          <p className="font-mono text-lg font-semibold text-blue-700">
-            {formatCurrency(totalRevenue)}
-          </p>
-        </div>
+    <section className="relative flex h-full flex-col rounded-[2rem] border border-border bg-card p-6 shadow-sm">
+      <div className="pr-28">
+        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-blue-700">
+          Revenue trend
+        </p>
+        <h2 className="mt-2 text-xl font-semibold text-slate-950">
+          Sales by day
+        </h2>
+      </div>
+      <div className="absolute right-6 top-6 rounded-xl bg-brand-soft px-3 py-2 text-right">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-blue-700">
+          Total
+        </p>
+        <p className="font-mono text-lg font-semibold text-blue-700">
+          {formatCurrency(totalRevenue)}
+        </p>
       </div>
 
       {days.length === 0 ? (
