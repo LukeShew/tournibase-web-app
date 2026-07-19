@@ -21,7 +21,12 @@ export function RevenueTrendCard({
     <section className="rounded-[2rem] border border-border bg-card p-6 shadow-sm">
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
         <div>
-          <h2 className="font-semibold text-slate-950">Revenue trend</h2>
+          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-blue-700">
+            Revenue trend
+          </p>
+          <h2 className="mt-2 text-xl font-semibold text-slate-950">
+            Sales by day
+          </h2>
           <p className="mt-1 text-sm text-slate-500">
             Real ticket sales grouped by tournament time zone.
           </p>

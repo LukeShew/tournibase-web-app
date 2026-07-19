@@ -167,21 +167,6 @@ export default async function EventOrdersPage({
               value={formatCurrency(metrics.sales.grossCapturedOnlineSales)}
             />
             <DashboardMetricCard
-              detail="Returned to buyers"
-              label="Refunds"
-              value={formatCurrency(metrics.sales.onlineRefunds)}
-            />
-            <DashboardMetricCard
-              detail="Estimate; Stripe is authoritative"
-              label="Estimated Stripe fees"
-              value={formatCurrency(metrics.sales.estimatedStripeFees)}
-            />
-            <DashboardMetricCard
-              detail={`${formatCurrency(metrics.sales.refundedTournibasePlatformFees)} refunded`}
-              label="TourniBase fee"
-              value={formatCurrency(metrics.sales.tournibasePlatformFees)}
-            />
-            <DashboardMetricCard
               detail="After refunds and estimated fees"
               label="Estimated director proceeds"
               value={formatCurrency(metrics.sales.estimatedDirectorProceeds)}
@@ -191,11 +176,12 @@ export default async function EventOrdersPage({
               label="Online tickets sold"
               value={metrics.sales.onlineTicketsSold}
             />
+            <DashboardMetricCard
+              detail="Returned to buyers"
+              label="Refunds"
+              value={formatCurrency(metrics.sales.onlineRefunds)}
+            />
           </div>
-          <p className="mt-4 text-xs leading-5 text-slate-500">
-            Stripe Dashboard balances and fee records are authoritative. These
-            figures are estimates for event reporting.
-          </p>
         </section>
       </section>
 
