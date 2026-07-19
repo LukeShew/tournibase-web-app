@@ -182,6 +182,10 @@ export default async function EventOrdersPage({
               value={formatCurrency(metrics.sales.onlineRefunds)}
             />
           </div>
+          <p className="mt-4 text-xs leading-5 text-slate-500">
+            Stripe Dashboard balances and fee records are authoritative. These
+            figures are estimates for event reporting.
+          </p>
         </section>
       </section>
 

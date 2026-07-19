@@ -27,9 +27,6 @@ export function RevenueTrendCard({
           <h2 className="mt-2 text-xl font-semibold text-slate-950">
             Sales by day
           </h2>
-          <p className="mt-1 text-sm text-slate-500">
-            Real ticket sales grouped by tournament time zone.
-          </p>
         </div>
         <div className="rounded-2xl bg-brand-soft px-4 py-3 text-right">
           <p className="text-xs font-semibold uppercase tracking-[0.12em] text-blue-700">
