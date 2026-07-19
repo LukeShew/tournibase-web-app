@@ -53,10 +53,9 @@ export default function TermsPage() {
         </p>
         <p>
           TourniBase may retain an application fee from an organizer’s
-          transaction proceeds. The pilot application fee is currently $0.
-          Refund requests and decisions are handled by the event organizer.
-          Refund timing can depend on Stripe, the card network, and the buyer’s
-          bank.
+          transaction proceeds. Refund requests and decisions are handled by
+          the event organizer. Refund timing can depend on Stripe, the card
+          network, and the buyer’s bank.
         </p>
       </LegalSection>
 

@@ -106,9 +106,6 @@ export default async function SettingsPage({
                 bank payouts.
               </p>
             </div>
-            <span className="w-fit rounded-full bg-blue-50 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.12em] text-blue-700">
-              {environment === "test" ? "Stripe Sandbox" : "Stripe live"}
-            </span>
           </div>
         </div>
 
@@ -139,9 +136,9 @@ export default async function SettingsPage({
         <div className="border-t border-border bg-slate-50 px-6 py-5">
           <p className="text-sm leading-6 text-slate-600">
             The tournament organization is the seller for its admission
-            orders. TourniBase’s pilot application fee is currently $0.
-            Sandbox and live Stripe accounts are separate, so onboarding must
-            be completed again before accepting live payments.
+            orders. Stripe handles payment processing and bank payouts.
+            TourniBase application fees, when applicable, are deducted
+            automatically.
           </p>
         </div>
       </section>

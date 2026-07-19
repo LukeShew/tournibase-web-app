@@ -25,7 +25,7 @@ const nextConfig: NextConfig = {
       `connect-src ${connectSources.join(" ")}`,
       "object-src 'none'",
       "base-uri 'self'",
-      "form-action 'self' https://accounts.stripe.com https://dashboard.stripe.com",
+      "form-action 'self' https://accounts.stripe.com https://connect.stripe.com https://dashboard.stripe.com",
       "frame-ancestors 'none'",
       ...(!isDevelopment ? ["upgrade-insecure-requests"] : []),
     ].join("; ");

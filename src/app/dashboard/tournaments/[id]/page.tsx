@@ -8,6 +8,11 @@ import {
   getTournamentDashboardMetrics,
   type TournamentDashboardMetrics,
 } from "@/lib/dashboard-metrics";
+import {
+  getOrganizationStripeAccount,
+  getStripeConnectConfigurationIssues,
+  getStripeConnectStatus,
+} from "@/lib/stripe-connect";
 import { createClient } from "@/lib/supabase/server";
 import { formatEventDateRange } from "@/lib/tournaments";
 
@@ -19,6 +24,7 @@ type Tournament = {
   end_date: string;
   id: number;
   name: string;
+  organization_id: number;
   public_slug: string;
   start_date: string;
   status: "draft" | "published" | "closed" | "archived";
@@ -57,7 +63,9 @@ export default async function TournamentOverviewPage({
 
   const { data: tournamentRow, error: tournamentError } = await supabase
     .from("tournaments")
-    .select("id, name, start_date, end_date, status, public_slug")
+    .select(
+      "id, organization_id, name, start_date, end_date, status, public_slug",
+    )
     .eq("id", tournamentId)
     .in("organization_id", organizationIds)
     .maybeSingle();
@@ -70,15 +78,32 @@ export default async function TournamentOverviewPage({
     notFound();
   }
 
-  const [metrics] = await Promise.all([
+  const tournament = tournamentRow as Tournament;
+  const [metrics, stripeAccount, paidTicketResult] = await Promise.all([
     getTournamentDashboardMetrics(tournamentId),
+    getOrganizationStripeAccount(tournament.organization_id),
+    supabase
+      .from("ticket_types")
+      .select("id")
+      .eq("tournament_id", tournamentId)
+      .eq("status", "active")
+      .gt("price", 0)
+      .limit(1),
   ]);
 
   if (!metrics) {
     notFound();
   }
 
-  const tournament = tournamentRow as Tournament;
+  if (paidTicketResult.error) {
+    throw paidTicketResult.error;
+  }
+
+  const stripeStatus = getStripeConnectStatus(stripeAccount);
+  const needsStripeConnection =
+    (paidTicketResult.data?.length ?? 0) > 0 && stripeStatus !== "ready";
+  const connectConfigured =
+    getStripeConnectConfigurationIssues().length === 0;
   const publicPath = `/e/${tournament.public_slug}`;
 
   return (
@@ -130,6 +155,13 @@ export default async function TournamentOverviewPage({
             Run this event
           </h2>
           <div className="mt-5 space-y-3">
+            {needsStripeConnection ? (
+              <StripeToolForm
+                configured={connectConfigured}
+                organizationId={tournament.organization_id}
+                tournamentId={tournamentId}
+              />
+            ) : null}
             <ToolLink
               href={publicPath}
               title="View public ticket page"
@@ -255,6 +287,45 @@ function SnapshotItem({
         {value}
       </p>
     </div>
+  );
+}
+
+function StripeToolForm({
+  configured,
+  organizationId,
+  tournamentId,
+}: {
+  configured: boolean;
+  organizationId: number;
+  tournamentId: number;
+}) {
+  return (
+    <form action="/api/stripe/connect/start" method="post">
+      <input type="hidden" name="organizationId" value={organizationId} />
+      <input type="hidden" name="event" value={tournamentId} />
+      <button
+        type="submit"
+        disabled={!configured}
+        className="block w-full rounded-3xl border border-border bg-white p-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-blue-200 hover:bg-blue-50/70 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        <span className="flex items-start justify-between gap-3">
+          <span>
+            <span className="block font-semibold text-slate-950">
+              Connect Stripe
+            </span>
+            <span className="mt-1 block text-sm leading-6 text-slate-500">
+              Complete Stripe setup to accept paid orders.
+            </span>
+          </span>
+          <span
+            aria-hidden="true"
+            className="grid h-9 w-9 shrink-0 place-items-center rounded-2xl bg-card-strong text-slate-500"
+          >
+            →
+          </span>
+        </span>
+      </button>
+    </form>
   );
 }
 
