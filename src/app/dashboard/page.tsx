@@ -47,11 +47,13 @@ export default async function DashboardPage({
 
   let tournaments: Tournament[] = [];
   let lifetimeRevenue = 0;
+  let lifetimeTicketsSold = 0;
 
   if (organizationIds.length > 0) {
     const [
       { data: tournamentRows, error: tournamentError },
       { data: lifetimeRevenueData, error: lifetimeRevenueError },
+      { data: lifetimeTicketsData, error: lifetimeTicketsError },
     ] = await Promise.all([
       supabase
         .from("tournaments")
@@ -60,6 +62,7 @@ export default async function DashboardPage({
         .order("start_date", { ascending: false })
         .limit(100),
       supabase.rpc("get_director_lifetime_revenue"),
+      supabase.rpc("get_director_lifetime_tickets_sold"),
     ]);
 
     if (tournamentError) {
@@ -70,8 +73,13 @@ export default async function DashboardPage({
       throw lifetimeRevenueError;
     }
 
+    if (lifetimeTicketsError) {
+      throw lifetimeTicketsError;
+    }
+
     tournaments = (tournamentRows ?? []) as Tournament[];
     lifetimeRevenue = Number(lifetimeRevenueData ?? 0);
+    lifetimeTicketsSold = Number(lifetimeTicketsData ?? 0);
   }
 
   if (organizationError) {
@@ -132,12 +140,16 @@ export default async function DashboardPage({
         </Link>
       </div>
 
-      <section className="grid gap-4 sm:grid-cols-3">
+      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <DashboardStat label="Events" value={tournaments.length} />
         <DashboardStat label="Published" value={publishedCount} />
         <DashboardStat
           label="Lifetime revenue"
           value={formatCurrency(lifetimeRevenue)}
+        />
+        <DashboardStat
+          label="Lifetime tickets sold"
+          value={lifetimeTicketsSold}
         />
       </section>
 
