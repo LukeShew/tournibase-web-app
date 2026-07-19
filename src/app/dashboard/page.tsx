@@ -119,6 +119,11 @@ export default async function DashboardPage({
         </Link>
       </div>
 
+      <section className="grid gap-4 sm:grid-cols-2">
+        <DashboardStat label="Events" value={tournaments.length} />
+        <DashboardStat label="Published" value={publishedCount} />
+      </section>
+
       <div className="rounded-[2rem] border border-border bg-card p-4 shadow-sm">
         <LiveSearchForm
           defaultValue={query}
@@ -158,11 +163,6 @@ export default async function DashboardPage({
                 <span className="inline-flex h-11 items-center justify-center rounded-2xl bg-brand-strong px-4 text-sm font-semibold text-white shadow-sm">
                   Open event
                 </span>
-              </div>
-              <div className="mt-8 grid gap-3 sm:grid-cols-3">
-                <DashboardStat label="Organizations" value={organizations.length} />
-                <DashboardStat label="Events" value={tournaments.length} />
-                <DashboardStat label="Published" value={publishedCount} />
               </div>
             </Link>
           ) : (
@@ -216,7 +216,7 @@ export default async function DashboardPage({
 
 function DashboardStat({ label, value }: { label: string; value: number }) {
   return (
-    <div className="rounded-3xl bg-card-strong p-4">
+    <div className="rounded-[2rem] border border-border bg-card p-6 shadow-sm">
       <p className="text-sm text-slate-500">{label}</p>
       <p className="mt-2 font-mono text-3xl font-semibold text-blue-700">
         {value}
