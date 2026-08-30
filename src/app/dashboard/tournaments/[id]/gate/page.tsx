@@ -7,6 +7,7 @@ import {
   type LiveCheckIn,
 } from "@/components/live-check-in-feed";
 import { RevokeScannerSessionButton } from "@/components/revoke-scanner-session-button";
+import { getAppEnvironment } from "@/lib/app-environment";
 import { requireDirector } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { formatEventDateRange } from "@/lib/tournaments";
@@ -73,7 +74,8 @@ export default async function GateAccessPage({
   const { data: organizationRows, error: organizationError } = await supabase
     .from("organizations")
     .select("id")
-    .eq("owner_user_id", director.id);
+    .eq("owner_user_id", director.id)
+    .eq("operating_environment", getAppEnvironment());
 
   if (organizationError) {
     throw organizationError;

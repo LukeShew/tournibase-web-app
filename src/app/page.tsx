@@ -1,12 +1,14 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Brand } from "@/components/brand";
-import { getDirector } from "@/lib/auth";
+import { getPublicSignupHref } from "@/lib/app-environment";
+import { getDirectorWorkspace } from "@/lib/auth";
 
 export default async function Home() {
-  const director = await getDirector();
+  const workspace = await getDirectorWorkspace();
+  const signupHref = getPublicSignupHref();
 
-  if (director) {
+  if (workspace) {
     redirect("/dashboard");
   }
 
@@ -15,7 +17,7 @@ export default async function Home() {
       <header className="relative z-10 mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-6 lg:px-8">
         <Brand tone="light" />
         <div className="flex items-center gap-3">
-          <PrimaryLink href="/signup">Get started</PrimaryLink>
+          <PrimaryLink href={signupHref}>Get started</PrimaryLink>
           <SecondaryLink href="/login">Sign in</SecondaryLink>
         </div>
       </header>
@@ -35,7 +37,7 @@ export default async function Home() {
             gate staff one simple scanner.
           </p>
           <div className="mt-9 flex flex-col gap-3 sm:flex-row">
-            <PrimaryLink href="/signup" large>
+            <PrimaryLink href={signupHref} large>
               Get started
             </PrimaryLink>
             <SecondaryLink href="/login" large>
@@ -149,7 +151,7 @@ export default async function Home() {
               </p>
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
                 <Link
-                  href="/signup"
+                  href={signupHref}
                   className="inline-flex min-h-12 items-center justify-center rounded-2xl bg-white px-5 text-sm font-semibold text-blue-700 shadow-sm transition hover:bg-blue-50"
                 >
                   Get started

@@ -2,6 +2,10 @@
 
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import {
+  getAppEnvironment,
+  isPublicSignupEnabled,
+} from "@/lib/app-environment";
 import { getAuthEmailRedirectUrl } from "@/lib/auth-email-url";
 import { ensureDirectorSetup } from "@/lib/director-setup";
 import { checkRateLimit, getRequestIp } from "@/lib/rate-limit";
@@ -21,6 +25,10 @@ export async function signup(
   _state: SignupState,
   formData: FormData,
 ): Promise<SignupState> {
+  if (!isPublicSignupEnabled()) {
+    return { message: "New account creation is not available here." };
+  }
+
   const parsed = schema.safeParse(Object.fromEntries(formData));
 
   if (!parsed.success) {
@@ -61,7 +69,9 @@ export async function signup(
   }
 
   const { error: setupError } = await ensureDirectorSetup({
+    allowOrganizationCreation: true,
     email: parsed.data.email,
+    environment: getAppEnvironment(),
     name: parsed.data.name,
     organizationName: parsed.data.organization,
     userId: data.user.id,

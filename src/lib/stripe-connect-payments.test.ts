@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  assertStripeEventMatchesAppEnvironment,
   assertStripeRoutingMatches,
   calculatePlatformFeeCents,
   getApplicationFeeRefundTargetCents,
@@ -103,6 +104,18 @@ describe("Stripe Connect payment helpers", () => {
         routing,
       }),
     ).toThrow("event mode");
+  });
+
+  it("rejects Stripe events delivered to the wrong app environment", () => {
+    expect(assertStripeEventMatchesAppEnvironment(false, "sk_test_secret")).toBe(
+      "test",
+    );
+    expect(assertStripeEventMatchesAppEnvironment(true, "sk_live_secret")).toBe(
+      "live",
+    );
+    expect(() =>
+      assertStripeEventMatchesAppEnvironment(true, "sk_test_secret"),
+    ).toThrow("delivered to the test TourniBase environment");
   });
 
   it("builds connected-account dashboard payment links", () => {

@@ -1,6 +1,7 @@
 import "server-only";
 
 import { z } from "zod";
+import { getAppEnvironment } from "@/lib/app-environment";
 import type {
   ManualLookupCheckInInput,
   ManualLookupCheckInResult,
@@ -103,6 +104,7 @@ export async function lookupManualGateOrders(
   try {
     const supabase = getSupabaseAdmin();
     const { data, error } = await supabase.rpc("lookup_gate_orders", {
+      p_app_environment: getAppEnvironment(),
       p_query: parsedQuery.data,
       p_scanner_token_hash: hashScannerToken(scannerToken),
     });

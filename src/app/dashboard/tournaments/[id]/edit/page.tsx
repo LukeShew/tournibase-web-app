@@ -3,6 +3,10 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { EventDetailsEditForm } from "@/components/event-details-edit-form";
 import { EventPublicationControl } from "@/components/event-publication-control";
+import {
+  getAppEnvironment,
+  isPaidCheckoutEnabled,
+} from "@/lib/app-environment";
 import { requireDirector } from "@/lib/auth";
 import { getIdlePublicationMessage } from "@/lib/publication-message";
 import {
@@ -49,7 +53,8 @@ export default async function EditTournamentPage({
   const { data: organizationRows, error: organizationError } = await supabase
     .from("organizations")
     .select("id")
-    .eq("owner_user_id", director.id);
+    .eq("owner_user_id", director.id)
+    .eq("operating_environment", getAppEnvironment());
 
   if (organizationError) {
     throw organizationError;
@@ -98,7 +103,9 @@ export default async function EditTournamentPage({
     !hasPaidTickets ||
     (await isOrganizationStripeAccountReady(tournament.organization_id));
   const checkoutConfigured =
+    isPaidCheckoutEnabled() &&
     getStripeConfigurationIssues({
+      includeConnectAccountWebhookSecret: true,
       includeConnectedPaymentsWebhookSecret: true,
       includePublishableKey: true,
     }).length === 0 && getSupabaseAdminConfigurationIssues().length === 0;

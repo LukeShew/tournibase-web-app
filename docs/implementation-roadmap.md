@@ -1,6 +1,6 @@
 # TourniBase Web MVP Implementation Roadmap
 
-Last updated: July 6, 2026
+Last updated: August 30, 2026
 
 ## Current status
 
@@ -8,12 +8,15 @@ Last updated: July 6, 2026
 - Completed: All 19 numbered phases
 - Current production URL:
   [tournibase.com](https://tournibase.com)
-- Payment status: Stripe Connect Sandbox implemented locally; production
-  rollout pending
+- Payment status: Connect direct charges are deployed against the current test
+  configuration; the staging/live environment split is implemented locally
+- Environment rollout: Additive migration and ordered deployment are prepared,
+  but neither has been applied
 - Transactional email: Live through Resend and end-to-end tested
 - Offline access: Downloadable PNG for every paid pass
 - Refund support: Basic organizer support flow and Stripe refund sync built
-- Next phase: None
+- Next phase: Deploy and verify the staging/production split, then run the live
+  payment gate
 - Not started: No numbered phases
 
 The waitlist website and a native mobile app are postponed, separate products.
@@ -96,18 +99,15 @@ Completed July 4, 2026:
 
 These are required before accepting real customer payments:
 
-- Apply Connect migration 19 to production.
-- Configure the separate connected-payment and Connect account-status
-  webhooks.
-- Complete Sandbox onboarding and verify ready, incomplete, restricted, and
-  multi-director isolation states.
-- Test a direct charge with the $0 pilot fee and a temporary nonzero
-  percentage-plus-fixed fee.
-- Verify completed, asynchronous, failed, expired, duplicate, full-refund, and
-  pass-refund webhook flows.
-- Switch all Stripe variables and webhooks to live mode together.
-- Have the pilot director repeat hosted onboarding in live mode.
-- Run one low-value live purchase using a real card.
+- Follow the complete [staging and production rollout](./environment-rollout.md)
+  without applying the contract migration early.
+- Verify the permanent staging workspace, $0 application fee, forced test-email
+  recipient, host isolation, refunds, and multi-director isolation.
+- Configure live keys and both live webhook destinations with production
+  checkout disabled.
+- Have the pilot director complete hosted onboarding in live mode.
+- Run one low-value live purchase using a real card and confirm the 2% plus
+  30-cent TourniBase application fee.
 - Confirm pass creation, email, scanning, duplicate blocking, refund email,
   refunded-pass rejection, and dashboard totals.
 - Follow the basic support and refund procedure for tournament day.
@@ -118,8 +118,9 @@ These are required before accepting real customer payments:
 - Full-order and pass-specific refunds are initiated in TourniBase, synchronized
   from the connected Stripe account, reflected in revenue, and followed by a
   buyer refund email.
-- Stripe Connect is configured for Sandbox/test operation locally. Production
-  remains on the pre-Connect release until rollout.
+- The staging/production split is implemented locally but not deployed. Until
+  the additive and contract migrations and both environment-aware deployments
+  are complete, the shared hosted system does not enforce the final boundary.
 - Saved pass PNGs work offline for buyers, but scanner devices still require
   internet for authoritative validation and duplicate prevention.
 - Apple Wallet and Google Wallet passes are postponed.
@@ -128,7 +129,8 @@ These are required before accepting real customer payments:
   partial refunds created directly in Stripe remain order-level only.
 - Dispute workflows are not automated.
 - Ticket quantities use an atomic pending reservation during checkout.
-- Directors can create an account from the public signup page.
+- Directors can create an account from the production signup page. Staging
+  public signup is disabled.
 
 ## MVP-ready definition
 
@@ -138,7 +140,8 @@ The web MVP is ready for a controlled real tournament only when:
 - Phase 18 checks pass.
 - Phase 19 handoff is complete.
 - Transactional pass email remains healthy in production.
-- Stripe live mode and its webhook pass an end-to-end test.
+- The environment rollout is complete and Stripe live mode plus both live
+  webhooks pass an end-to-end test.
 - Stripe refund sync passes an end-to-end test.
 - The event director can create tickets, publish, sell, scan, recover a buyer
   through lookup, and read the dashboard without developer intervention.

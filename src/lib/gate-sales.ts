@@ -1,6 +1,7 @@
 import "server-only";
 
 import { z } from "zod";
+import { getAppEnvironment } from "@/lib/app-environment";
 import type {
   GateSaleTicketOption,
   RecordGateSaleInput,
@@ -109,6 +110,7 @@ export async function recordGateSale(
   try {
     const supabase = getSupabaseAdmin();
     const { data, error } = await supabase.rpc("record_gate_sale", {
+      p_app_environment: getAppEnvironment(),
       p_buyer_name: parsedInput.data.buyerName || null,
       p_notes: parsedInput.data.notes || null,
       p_payment_method: parsedInput.data.paymentMethod,

@@ -2,6 +2,7 @@ import "server-only";
 
 import { createHash } from "node:crypto";
 import { z } from "zod";
+import { getAppEnvironment } from "@/lib/app-environment";
 import { extractPassToken } from "@/lib/pass-tokens";
 import {
   type OverridePassInput,
@@ -158,6 +159,7 @@ export async function validatePassForEntry(
   );
   const supabase = getSupabaseAdmin();
   const { data, error } = await supabase.rpc("validate_pass_for_entry", {
+    p_app_environment: getAppEnvironment(),
     p_attempted_token_hash: attemptedTokenHash,
     p_pass_token: passToken,
     p_scanner_token_hash: hashScannerToken(scannerToken),
@@ -232,6 +234,7 @@ export async function overrideDuplicatePassEntry(
   const { data, error } = await supabase.rpc(
     "override_duplicate_pass_entry",
     {
+      p_app_environment: getAppEnvironment(),
       p_attempted_token_hash: attemptedTokenHash,
       p_pass_id: parsedInput.data.passId,
       p_reason: parsedInput.data.reason,
@@ -325,6 +328,7 @@ export async function undoPassCheckIn(
   }
 
   const { data, error } = await supabase.rpc("undo_pass_check_in", {
+    p_app_environment: getAppEnvironment(),
     p_check_in_id: parsedInput.data.checkInId,
     p_scanner_token_hash: hashScannerToken(scannerToken),
   });

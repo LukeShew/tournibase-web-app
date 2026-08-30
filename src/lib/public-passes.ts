@@ -1,5 +1,6 @@
 import "server-only";
 
+import { getAppEnvironment } from "@/lib/app-environment";
 import { isValidPassToken } from "@/lib/pass-tokens";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
@@ -65,6 +66,7 @@ export async function getPublicPass(
   }
 
   const supabase = getSupabaseAdmin();
+  const appEnvironment = getAppEnvironment();
   const { data: passRow, error: passError } = await supabase
     .from("passes")
     .select(
@@ -91,13 +93,15 @@ export async function getPublicPass(
       .from("orders")
       .select("id, buyer_name, payment_status")
       .eq("id", pass.order_id)
+      .eq("stripe_environment", appEnvironment)
       .maybeSingle(),
     supabase
       .from("tournaments")
       .select(
-        "name, venue_name, venue_address, organizer_name, contact_email, time_zone",
+        "name, venue_name, venue_address, organizer_name, contact_email, time_zone, organizations!inner(operating_environment)",
       )
       .eq("id", pass.tournament_id)
+      .eq("organizations.operating_environment", appEnvironment)
       .maybeSingle(),
     supabase
       .from("ticket_types")

@@ -2,8 +2,10 @@ import { NextResponse } from "next/server";
 import {
   getStripe,
   getStripeConfigurationIssues,
+  getVerifiedStripe,
 } from "@/lib/stripe";
 import { synchronizeStripeAccountById } from "@/lib/stripe-connect";
+import { assertStripeEventMatchesAppEnvironment } from "@/lib/stripe-connect-payments";
 import { getSupabaseAdminConfigurationIssues } from "@/lib/supabase/admin";
 
 export const runtime = "nodejs";
@@ -62,6 +64,22 @@ export async function POST(request: Request) {
     });
     return NextResponse.json(
       { error: "Invalid Stripe signature." },
+      { status: 400 },
+    );
+  }
+
+  try {
+    assertStripeEventMatchesAppEnvironment(notification.livemode);
+    await getVerifiedStripe();
+  } catch (error) {
+    console.warn("[stripe-connect-webhook] environment mismatch", {
+      eventId: notification.id,
+      eventType: notification.type,
+      livemode: notification.livemode,
+      message: error instanceof Error ? error.message : "Unknown error",
+    });
+    return NextResponse.json(
+      { error: "Stripe event does not match this deployment." },
       { status: 400 },
     );
   }

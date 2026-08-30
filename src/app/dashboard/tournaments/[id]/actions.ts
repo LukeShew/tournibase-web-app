@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { getAppEnvironment, isPaidCheckoutEnabled } from "@/lib/app-environment";
 import { requireDirector } from "@/lib/auth";
 import type { PublicationState } from "@/lib/form-states";
 import { isOrganizationStripeAccountReady } from "@/lib/stripe-connect";
@@ -21,10 +22,12 @@ export async function setTournamentPublication(
   void _formData;
   const director = await requireDirector();
   const supabase = await createClient();
+  const appEnvironment = getAppEnvironment();
   const { data: organizationRows, error: organizationError } = await supabase
     .from("organizations")
     .select("id")
-    .eq("owner_user_id", director.id);
+    .eq("owner_user_id", director.id)
+    .eq("operating_environment", appEnvironment);
 
   if (organizationError) {
     return {
@@ -90,6 +93,13 @@ export async function setTournamentPublication(
       (ticket) => Number(ticket.price) > 0,
     );
 
+    if (hasPaidTickets && !isPaidCheckoutEnabled()) {
+      return {
+        message: "Paid checkout is not enabled for this TourniBase environment.",
+        success: false,
+      };
+    }
+
     if (
       hasPaidTickets &&
       !(await isOrganizationStripeAccountReady(
@@ -106,6 +116,7 @@ export async function setTournamentPublication(
     if (
       hasPaidTickets &&
       (getStripeConfigurationIssues({
+        includeConnectAccountWebhookSecret: true,
         includeConnectedPaymentsWebhookSecret: true,
         includePublishableKey: true,
       }).length > 0 ||

@@ -1,6 +1,6 @@
 # TourniBase Overview
 
-Last updated and verified: July 16, 2026
+Last updated and verified against the local repository: August 30, 2026
 
 ## Current direction
 
@@ -32,34 +32,37 @@ before expanding into a larger platform.
 | Item | Current state |
 | --- | --- |
 | Progress | All 19 numbered phases complete |
-| Current phase | Phase 19 final Git review and MVP handoff complete |
-| Next phase | No numbered build phase remains |
+| Current phase | Staging/production environment rollout preparation |
+| Next phase | Deploy and verify the environment split, then run the first live-payment gate |
 | Production app | [tournibase.com](https://tournibase.com) |
-| Payments | Stripe Connect Sandbox with direct charges to director accounts |
-| Database | Connect migration added locally; production rollout still required |
+| Payments | Direct charges to director accounts; staging stays in the Sandbox and production will use live Connect |
+| Environment split | Implemented locally with one Vercel project and one Supabase project; not deployed |
+| Database | Additive environment migration prepared locally but not applied; contract SQL is held for post-deploy |
 | Email | Live through Resend and end-to-end tested |
 | Offline access | Downloadable pass PNG for Photos or Files |
 | Refund support | TourniBase full-order and pass-specific refunds with connected-account webhook synchronization |
 | Legal/support pages | Footer links to Terms, Privacy, Refund Policy, and Support |
-| Launch dependency | Director live onboarding, Connect live-mode setup, live purchase test, and refund test |
+| Launch dependency | Safe environment rollout, live webhooks, director live onboarding, and a controlled purchase/scan/refund test |
 
 No numbered phases remain. See the [Final MVP Handoff](./mvp-handoff.md) for
 routes, environment variables, database state, local testing, and launch work.
 
-Before accepting real customer payments, TourniBase must apply the Connect
-migration, configure the production Connect webhooks and live keys, have the
-pilot director complete live onboarding, and complete one controlled live
-purchase and gate/refund test.
+Before accepting real customer payments, TourniBase must complete the ordered
+[staging and production rollout](./environment-rollout.md), configure the live
+webhooks and keys, have the pilot director complete live onboarding, and pass
+one controlled real-money purchase, email, gate, duplicate-scan, and refund
+test.
 
 Keep this section current after every phase or material product change. The
 [Implementation Roadmap](./implementation-roadmap.md) is the detailed progress
 tracker.
 
-## What is live now
+## Current product capabilities
 
 ### Director tools
 
-- Invite-only Supabase password login
+- Public production signup with email confirmation and protected password login
+- Disabled public signup on the permanent staging environment
 - Protected dashboard and organization ownership
 - Tournament creation with venue, dates, organizer, contact, and public slug
 - Ticket type creation, editing, activation, and deactivation
@@ -75,8 +78,8 @@ tracker.
 
 - Public tournament ticket page
 - Ticket quantity selection and buyer contact collection
-- Stripe-hosted direct-charge test checkout on the event organizer's connected
-  account
+- Stripe-hosted direct-charge checkout on the event organizer's connected
+  account, scoped to the application's test or live environment
 - One individual mobile pass per purchased admission
 - Branded QR code on each pass
 - Pass delivery by email
@@ -177,17 +180,30 @@ gate staff can use it without installing anything.
   flows
 - Tournament-local time-zone handling, currently defaulting to
   `America/New_York`
+- One Vercel project with `main` for production and a branch-scoped `staging`
+  target
+- One canonical Supabase project with immutable organization environment
+  routing
+- Test checkout at a $0 application fee; live checkout at exactly 2% plus 30
+  cents after its launch gate
+
+The environment-isolation application code, additive migration, and
+post-deploy contract are prepared locally but are not deployed or applied yet.
 
 See [MVP Architecture](./mvp-architecture.md) and
 [Database Schema](./database-schema.md) for implementation details.
 
 ## Security status
 
-- All 12 public application tables have RLS enabled after the Connect migration.
-- Anonymous users can read only published tournaments and active ticket types.
-- Orders, passes, scanner sessions, check-ins, and manual sales are not
-  anonymously readable.
+- All 13 public application tables have RLS enabled in the current schema.
+- Public event and ticket reads move through the server-side,
+  environment-aware data layer after the contract rollout; the old anonymous
+  Data API policies are then removed.
+- Orders, passes, scanner sessions, check-ins, manual sales, and email delivery
+  records are not anonymously readable.
 - Director data is restricted through organization ownership.
+- Organization ownership and test/live routing become immutable after the
+  additive migration.
 - The Supabase secret key and Stripe secret keys stay on the server.
 - Scanner links expire and can be revoked.
 - Gate validation functions are unavailable to anonymous and authenticated
@@ -196,23 +212,27 @@ See [MVP Architecture](./mvp-architecture.md) and
 
 ## Known limitations
 
-- Stripe Connect remains in a Sandbox. Sandbox and live connected accounts are
-  separate, so every pilot director must complete live onboarding before the
-  first tournament.
+- The staging/production split is not deployed and its database migrations are
+  not applied yet.
+- Sandbox and live connected accounts are separate, so every production
+  director must complete live onboarding before the first tournament.
 - TourniBase does not hold tournament proceeds. Stripe deducts processing fees
   from the director's connected account and controls bank payout timing.
-- The TourniBase application fee is configurable but remains $0 during the
-  pilot.
-- Directors can create an account from the public signup page.
+- Staging charges no TourniBase fee. Production is configured for exactly 2%
+  plus 30 cents once its paid-checkout kill switch is enabled.
+- Directors can create an account only from the production signup page.
+- The signed-out staging entrance uses the normal public design, exposes no
+  test-event listing or staging label, and is marked not to be indexed.
 - Supabase leaked-password protection is unavailable on the current plan, so
-  invited directors must use strong, unique passwords.
+  directors must use strong, unique passwords.
 - Gate-sale recording tracks external payment but does not charge a card.
 - Full Stripe refunds automatically invalidate active or checked-in passes and
   send the buyer a refund confirmation email.
 - Directors can refund a specific paid pass from order details. Generic partial
   refunds created directly in Stripe cannot identify a specific pass.
 - Dispute operations are not automated.
-- Demo data is available only through the guarded local seed command.
+- The permanent staging workspace contains hosted test tournaments and orders.
+  A separate guarded seed command remains available for local development.
 - Saved pass images work without buyer internet, but scanner devices still need
   internet to prevent duplicate or reused entry.
 - Apple Wallet and Google Wallet passes are postponed.
@@ -228,4 +248,5 @@ See [MVP Architecture](./mvp-architecture.md) and
 - [Transactional Email](./transactional-email.md)
 - [Refund and Support Process](./refund-support.md)
 - [Final MVP Handoff](./mvp-handoff.md)
+- [Staging and Production Rollout](./environment-rollout.md)
 - [Repository setup and test guide](../README.md)

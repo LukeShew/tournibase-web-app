@@ -60,8 +60,9 @@ form. The browser never receives the Supabase secret key or Stripe secret keys.
 - Event organizers are the sellers and merchants of record.
 - Checkout Sessions are direct charges on the order's connected account.
 - Stripe processing fees and payout timing belong to the connected account.
-- TourniBase calculates an optional percentage-plus-fixed application fee. Both
-  fee settings are `0` during the pilot.
+- TourniBase calculates a percentage-plus-fixed application fee. Permanent
+  staging uses `0`; production uses exactly 2% plus 30 cents after its launch
+  gate passes.
 - The app stores the connected account, environment, fee, PaymentIntent, and
   charge on the order so later API calls cannot route to a different merchant.
 - Connected-payment and account-status webhook signatures are verified against
@@ -74,7 +75,8 @@ form. The browser never receives the Supabase secret key or Stripe secret keys.
   partially refunded, subtract the refund from net revenue, and void the
   selected pass. Generic partial refunds created directly in Stripe update the
   order total but cannot identify which pass to void.
-- Test mode remains active until production launch checks are complete.
+- The permanent staging workspace stays in the onboarding Sandbox. Production
+  uses live Connect only after the ordered environment rollout and launch checks.
 
 ### Transactional email
 
@@ -115,7 +117,7 @@ form. The browser never receives the Supabase secret key or Stripe secret keys.
 | `/dashboard/tournaments/[id]/edit` | Edit event details |
 | `/dashboard/tournaments/[id]/tickets` | Manage ticket types |
 | `/dashboard/tournaments/[id]/gate` | Create and revoke scanner links |
-| `/dashboard/tournaments/[id]/sales` | Sales dashboard |
+| `/dashboard/tournaments/[id]/orders` | Searchable order details and connected-payment refunds |
 | `/dashboard/tournaments/[id]/scans` | Gate-activity dashboard |
 | `/dashboard/tournaments/[id]/share` | Coach and parent sharing tools |
 | `/dashboard/settings` | Director profile and organization payment onboarding/status |
@@ -135,7 +137,7 @@ form. The browser never receives the Supabase secret key or Stripe secret keys.
 | Route | Purpose |
 | --- | --- |
 | `POST /api/checkout` | Validate an order and create Stripe Checkout |
-| `POST /api/stripe/webhook` | Verify legacy or connected payment events, fulfill orders, and sync refunds |
+| `POST /api/stripe/webhook` | Verify connected-account payment events, fulfill orders, and sync refunds |
 | `GET/POST /api/stripe/connect/start` | Create a connected account when authorized and open hosted onboarding |
 | `GET/POST /api/stripe/connect/refresh` | Synchronize Connect status and return to settings |
 | `POST /api/stripe/connect/dashboard` | Open the exact connected account in Stripe Dashboard |
@@ -297,8 +299,8 @@ This is reporting-only and does not process payment.
 
 - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` is safe for browser use because RLS
   controls accessible rows.
-- `SUPABASE_SECRET_KEY`, `STRIPE_SECRET_KEY`, and
-  `STRIPE_WEBHOOK_SECRET` are server-only.
+- `SUPABASE_SECRET_KEY`, `STRIPE_SECRET_KEY`, and Stripe webhook signing
+  secrets are server-only.
 - Email delivery records and the claim function have no anonymous or
   authenticated browser access.
 - Director authorization is enforced in server code and RLS, not only in

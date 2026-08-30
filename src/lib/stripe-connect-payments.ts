@@ -1,4 +1,9 @@
 import type Stripe from "stripe";
+import {
+  assertStripeKeysMatchAppEnvironment,
+  getAppEnvironment,
+  getStripeEnvironmentFromKey,
+} from "./app-environment";
 
 export type StripeEnvironment = "live" | "test";
 
@@ -18,7 +23,21 @@ const MAX_FIXED_FEE_CENTS = 100_000_000;
 export function getStripeEnvironment(
   secretKey = process.env.STRIPE_SECRET_KEY,
 ): StripeEnvironment {
-  return secretKey?.startsWith("sk_live_") ? "live" : "test";
+  if (secretKey === process.env.STRIPE_SECRET_KEY) {
+    assertStripeKeysMatchAppEnvironment();
+  }
+
+  if (!secretKey) {
+    return getAppEnvironment();
+  }
+
+  const environment = getStripeEnvironmentFromKey(secretKey);
+
+  if (!environment) {
+    throw new Error("STRIPE_SECRET_KEY does not have a supported Stripe key prefix.");
+  }
+
+  return environment;
 }
 
 export function isCurrentStripeEnvironment(
@@ -26,6 +45,21 @@ export function isCurrentStripeEnvironment(
   secretKey = process.env.STRIPE_SECRET_KEY,
 ) {
   return environment === getStripeEnvironment(secretKey);
+}
+
+export function assertStripeEventMatchesAppEnvironment(
+  livemode: boolean,
+  secretKey = process.env.STRIPE_SECRET_KEY,
+): StripeEnvironment {
+  const eventEnvironment: StripeEnvironment = livemode ? "live" : "test";
+
+  if (!isCurrentStripeEnvironment(eventEnvironment, secretKey)) {
+    throw new Error(
+      `Stripe ${eventEnvironment} event was delivered to the ${getStripeEnvironment(secretKey)} TourniBase environment.`,
+    );
+  }
+
+  return eventEnvironment;
 }
 
 export function getApplicationFeeRefundTargetCents({

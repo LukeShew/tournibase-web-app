@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { LegalFooter } from "@/components/legal-footer";
+import { getAppEnvironment } from "@/lib/app-environment";
 import { PRODUCT_POSITIONING } from "@/lib/product-copy";
 import "./globals.css";
 
@@ -14,13 +15,20 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-export const metadata: Metadata = {
-  title: {
-    default: "TourniBase",
-    template: "%s | TourniBase",
-  },
-  description: PRODUCT_POSITIONING,
-};
+export function generateMetadata(): Metadata {
+  const isTestEnvironment = getAppEnvironment() === "test";
+
+  return {
+    title: {
+      default: "TourniBase",
+      template: "%s | TourniBase",
+    },
+    description: PRODUCT_POSITIONING,
+    robots: isTestEnvironment
+      ? { follow: false, index: false, nocache: true }
+      : { follow: true, index: true },
+  };
+}
 
 export default function RootLayout({
   children,

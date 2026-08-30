@@ -1,6 +1,6 @@
 # TourniBase Refund and Support Process
 
-Last updated: July 16, 2026
+Last updated: August 30, 2026
 
 ## Current MVP policy
 
@@ -11,6 +11,11 @@ TourniBase scopes the refund to the order's immutable connected account,
 reverses any application fee, syncs the refunded amount, updates revenue
 totals, invalidates the affected pass or passes, and sends the buyer a refund
 confirmation email.
+
+The 19 historical orders created on Stripe's old Test-mode platform are
+reporting-only. Their refund controls are hidden, and the server rejects refund
+requests for them because the onboarding Sandbox cannot access old Test-mode
+payment objects.
 
 This is intentionally simple for the MVP:
 
@@ -79,9 +84,10 @@ checkout.session.expired
 charge.refunded
 ```
 
-Endpoint:
+Endpoints:
 
 ```text
+https://staging.tournibase.com/api/stripe/webhook
 https://tournibase.com/api/stripe/webhook
 ```
 
@@ -100,5 +106,5 @@ Run one test-mode refund before switching to live mode:
 
 Then have the director complete live Connect onboarding and repeat this once in
 live mode with a low-value real transaction before using TourniBase for a real
-tournament. Confirm the gross charge, Stripe fee, $0 pilot TourniBase fee,
-director proceeds, refund, and dashboard totals.
+tournament. Confirm the gross charge, Stripe fee, 2% plus 30-cent TourniBase
+application fee, director proceeds, refund, and dashboard totals.

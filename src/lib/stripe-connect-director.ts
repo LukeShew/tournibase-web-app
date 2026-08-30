@@ -1,18 +1,24 @@
 import "server-only";
 
-import { requireDirector } from "@/lib/auth";
+import { requireDirectorWorkspace } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 
 export async function getOwnedOrganizationForStripeConnect(
   organizationId: number,
 ) {
-  const director = await requireDirector();
+  const { director, organization } = await requireDirectorWorkspace();
+
+  if (organization.id !== organizationId) {
+    return null;
+  }
+
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("organizations")
     .select("id, name")
     .eq("id", organizationId)
     .eq("owner_user_id", director.id)
+    .eq("operating_environment", organization.operatingEnvironment)
     .maybeSingle();
 
   if (error) {

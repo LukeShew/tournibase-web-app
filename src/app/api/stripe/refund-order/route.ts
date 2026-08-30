@@ -1,9 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
-import { getDirector } from "@/lib/auth";
+import { getDirectorWorkspace } from "@/lib/auth";
 import { attemptRefundConfirmationEmail } from "@/lib/email/refund-confirmation";
 import { syncStripeChargeRefund } from "@/lib/orders";
-import { getStripe } from "@/lib/stripe";
+import { getVerifiedStripe } from "@/lib/stripe";
 import {
   assertStripeRoutingMatches,
   getStripeRequestOptions,
@@ -19,9 +19,9 @@ const schema = z.object({
 });
 
 export async function POST(request: NextRequest) {
-  const director = await getDirector();
+  const workspace = await getDirectorWorkspace();
 
-  if (!director) {
+  if (!workspace) {
     return NextResponse.json(
       { error: "Sign in again to continue." },
       { status: 401 },
@@ -41,9 +41,15 @@ export async function POST(request: NextRequest) {
   const { data: orderRow, error: orderError } = await supabase
     .from("orders")
     .select(
-      "id, amount_total, amount_refunded, payment_status, stripe_checkout_id, stripe_connected_account_id, stripe_environment, stripe_payment_intent_id, tournaments!inner(organizations!inner(owner_user_id))",
+      "id, amount_total, amount_refunded, payment_status, stripe_checkout_id, stripe_connected_account_id, stripe_environment, stripe_payment_intent_id, tournaments!inner(organizations!inner(id, owner_user_id, operating_environment))",
     )
     .eq("id", parsed.data.orderId)
+    .eq("stripe_environment", workspace.organization.operatingEnvironment)
+    .eq("tournaments.organizations.id", workspace.organization.id)
+    .eq(
+      "tournaments.organizations.operating_environment",
+      workspace.organization.operatingEnvironment,
+    )
     .maybeSingle();
 
   if (orderError || !orderRow) {
@@ -62,10 +68,22 @@ export async function POST(request: NextRequest) {
     stripe_connected_account_id: string | null;
     stripe_environment: StripeEnvironment;
     stripe_payment_intent_id: string | null;
-    tournaments: { organizations: { owner_user_id: string } };
+    tournaments: {
+      organizations: {
+        id: number;
+        operating_environment: StripeEnvironment;
+        owner_user_id: string;
+      };
+    };
   };
 
-  if (order.tournaments.organizations.owner_user_id !== director.id) {
+  if (
+    order.tournaments.organizations.owner_user_id !== workspace.director.id ||
+    order.tournaments.organizations.id !== workspace.organization.id ||
+    order.tournaments.organizations.operating_environment !==
+      workspace.organization.operatingEnvironment ||
+    order.stripe_environment !== workspace.organization.operatingEnvironment
+  ) {
     return NextResponse.json(
       { error: "You do not have access to that order." },
       { status: 403 },
@@ -99,6 +117,16 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  if (!order.stripe_connected_account_id) {
+    return NextResponse.json(
+      {
+        error:
+          "This historical payment is read-only and cannot be refunded here.",
+      },
+      { status: 409 },
+    );
+  }
+
   const routing = {
     connectedAccountId: order.stripe_connected_account_id,
     environment: order.stripe_environment,
@@ -114,7 +142,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const stripe = getStripe();
+  const stripe = await getVerifiedStripe();
   let paymentIntentId = order.stripe_payment_intent_id;
 
   try {
@@ -147,9 +175,7 @@ export async function POST(request: NextRequest) {
       {
         metadata: { order_id: String(order.id) },
         payment_intent: paymentIntentId,
-        ...(routing.connectedAccountId
-          ? { refund_application_fee: true }
-          : {}),
+        refund_application_fee: true,
       },
       getStripeRequestOptions(
         routing,

@@ -1,6 +1,7 @@
 import "server-only";
 
 import { z } from "zod";
+import { getAppEnvironment } from "@/lib/app-environment";
 import { createClient } from "@/lib/supabase/server";
 
 const moneySchema = z.number().finite().nonnegative();
@@ -84,6 +85,7 @@ export async function getTournamentDashboardMetrics(
   const { data, error } = await supabase.rpc(
     "get_tournament_dashboard_metrics",
     {
+      p_app_environment: getAppEnvironment(),
       p_tournament_id: tournamentId,
     },
   );

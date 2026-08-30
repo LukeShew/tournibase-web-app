@@ -1,6 +1,10 @@
 import "server-only";
 
 import { Resend, type ErrorResponse } from "resend";
+import {
+  assertEmailEnvironmentConfiguration,
+  type AppEnvironment,
+} from "../app-environment";
 
 export type EmailSendRequest = {
   html: string;
@@ -146,6 +150,7 @@ export function createResendEmailProvider({
 }
 
 export function getEmailProvider(): EmailProvider {
+  const emailEnvironment = assertEmailEnvironmentConfiguration();
   const providerName =
     process.env.EMAIL_PROVIDER?.trim().toLowerCase() || "disabled";
 
@@ -154,12 +159,67 @@ export function getEmailProvider(): EmailProvider {
   }
 
   if (providerName === "resend") {
-    return createResendEmailProvider();
+    return routeEmailProviderForEnvironment(
+      createResendEmailProvider(),
+      emailEnvironment,
+    );
   }
 
   throw new Error(
     `Unsupported EMAIL_PROVIDER "${providerName}". Use "disabled" or "resend".`,
   );
+}
+
+export function routeEmailRequestForEnvironment(
+  request: EmailSendRequest,
+  {
+    appEnvironment,
+    overrideTo,
+  }: {
+    appEnvironment: AppEnvironment;
+    overrideTo: string | null;
+  },
+): EmailSendRequest {
+  if (appEnvironment === "live") {
+    if (overrideTo) {
+      throw new Error(
+        "Live transactional email cannot use a recipient override.",
+      );
+    }
+
+    return request;
+  }
+
+  if (!overrideTo) {
+    throw new Error(
+      "Test transactional email requires a recipient override.",
+    );
+  }
+
+  return {
+    ...request,
+    subject: request.subject.startsWith("[TEST] ")
+      ? request.subject
+      : `[TEST] ${request.subject}`,
+    to: overrideTo,
+  };
+}
+
+function routeEmailProviderForEnvironment(
+  provider: EmailProvider,
+  emailEnvironment: {
+    appEnvironment: AppEnvironment;
+    overrideTo: string | null;
+  },
+): EmailProvider {
+  return {
+    ...provider,
+    async send(request) {
+      return provider.send(
+        routeEmailRequestForEnvironment(request, emailEnvironment),
+      );
+    },
+  };
 }
 
 export function normalizeEmailSendError(error: unknown) {

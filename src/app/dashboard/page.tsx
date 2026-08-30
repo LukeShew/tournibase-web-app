@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { LiveSearchForm } from "@/components/live-search-form";
+import { getAppEnvironment } from "@/lib/app-environment";
 import { requireDirector } from "@/lib/auth";
 import { formatCurrency } from "@/lib/dashboard-metrics";
 import { DIRECTOR_PROMISE } from "@/lib/product-copy";
@@ -35,11 +36,13 @@ export default async function DashboardPage({
   const query = ((await searchParams)?.q ?? "").trim();
   const director = await requireDirector();
   const supabase = await createClient();
+  const appEnvironment = getAppEnvironment();
 
   const { data: organizationRows, error: organizationError } = await supabase
     .from("organizations")
     .select("id, name")
     .eq("owner_user_id", director.id)
+    .eq("operating_environment", appEnvironment)
     .order("created_at", { ascending: true });
 
   const organizations = (organizationRows ?? []) as Organization[];
@@ -61,8 +64,12 @@ export default async function DashboardPage({
         .in("organization_id", organizationIds)
         .order("start_date", { ascending: false })
         .limit(100),
-      supabase.rpc("get_director_lifetime_revenue"),
-      supabase.rpc("get_director_lifetime_tickets_sold"),
+      supabase.rpc("get_director_lifetime_revenue", {
+        p_app_environment: appEnvironment,
+      }),
+      supabase.rpc("get_director_lifetime_tickets_sold", {
+        p_app_environment: appEnvironment,
+      }),
     ]);
 
     if (tournamentError) {

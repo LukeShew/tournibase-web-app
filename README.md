@@ -14,13 +14,15 @@ Production app:
 ## Current status
 
 - All 19 numbered web MVP phases complete
-- Stripe Connect Sandbox with hosted director onboarding and direct charges
+- Stripe Connect hosted onboarding and direct-charge payments
 - Final repository review and MVP handoff complete
 - Transactional pass email is live through Resend and passed a real test order
 - Buyers can download each QR pass as a PNG for offline access
 - Full Stripe refunds sync back into TourniBase and invalidate active passes
 - Tournament organizers are the sellers and receive online proceeds in their
-  connected Stripe accounts; the TourniBase pilot application fee is $0
+  connected Stripe accounts
+- A one-Vercel-project, one-Supabase-project staging/production split is
+  implemented locally but is not deployed and its migrations are not applied
 
 Current progress and remaining work:
 [Implementation Roadmap](docs/implementation-roadmap.md)
@@ -36,6 +38,7 @@ Current progress and remaining work:
 - [Transactional Email](docs/transactional-email.md)
 - [Refund and Support Process](docs/refund-support.md)
 - [Final MVP Handoff](docs/mvp-handoff.md)
+- [Staging and Production Rollout](docs/environment-rollout.md)
 
 ## What the MVP does
 
@@ -68,8 +71,8 @@ Current progress and remaining work:
 
 - Node.js 20.9 or newer
 - npm
-- A separate Supabase project for the web app
-- A Stripe platform account with Connect enabled in a Sandbox
+- The canonical TourniBase Supabase project
+- A Stripe platform account with Connect enabled in a Sandbox and live mode
 - Stripe CLI for local webhook testing
 - Docker only if you want to run the full Supabase stack locally
 
@@ -109,27 +112,35 @@ Current progress and remaining work:
 
 | Variable | Exposure | Purpose |
 | --- | --- | --- |
+| `TOURNIBASE_APP_ENVIRONMENT` | Server and build | `test` for staging or `live` for production |
+| `TOURNIBASE_PAID_CHECKOUT_ENABLED` | Server only | Hosted paid-checkout kill switch |
 | `NEXT_PUBLIC_SUPABASE_URL` | Browser and server | Web-app Supabase project URL |
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Browser and server | Supabase publishable key protected by RLS |
 | `SUPABASE_SECRET_KEY` | Server only | Paid-order fulfillment, pass lookup, and gate operations |
 | `STRIPE_SECRET_KEY` | Server only | TourniBase Connect platform key used for Accounts v2 and direct-charge API calls |
-| `STRIPE_WEBHOOK_SECRET` | Server only | Verifies legacy platform-payment webhook requests |
+| `TOURNIBASE_STRIPE_PLATFORM_ACCOUNT_ID` | Server only | Expected Stripe platform account for this target; API calls fail if the key belongs to another Test mode, Sandbox, or live account |
 | `STRIPE_CONNECTED_PAYMENTS_WEBHOOK_SECRET` | Server only | Verifies connected-account Checkout and refund events |
 | `STRIPE_CONNECT_ACCOUNT_WEBHOOK_SECRET` | Server only | Verifies Accounts v2 onboarding, requirement, capability, and closure events |
 | `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Browser-safe configuration | Matching Stripe mode and account |
-| `TOURNIBASE_PLATFORM_FEE_BPS` | Server only | Percentage application fee in basis points; `0` during the pilot |
-| `TOURNIBASE_PLATFORM_FEE_FIXED_CENTS` | Server only | Fixed application fee in cents; `0` during the pilot |
+| `TOURNIBASE_PLATFORM_FEE_BPS` | Server only | `0` in staging and exactly `200` in production |
+| `TOURNIBASE_PLATFORM_FEE_FIXED_CENTS` | Server only | `0` in staging and exactly `30` in production |
 | `NEXT_PUBLIC_SITE_URL` | Browser and server | Base URL used for pass, scanner, success, and cancel links |
-| `EMAIL_PROVIDER` | Server only | `disabled` locally; use `resend` only after production activation |
+| `EMAIL_PROVIDER` | Server only | `disabled` locally; all hosted targets require `resend` |
 | `RESEND_API_KEY` | Server only | Sending-only Resend API key |
 | `EMAIL_FROM` | Server only | Verified sender, such as `TourniBase <passes@tournibase.com>` |
+| `TOURNIBASE_EMAIL_OVERRIDE_TO` | Server only | Staging-only forced recipient; must be `lsautomates@gmail.com` |
 
 Local values must use:
 
 ```text
+TOURNIBASE_APP_ENVIRONMENT=test
+TOURNIBASE_PAID_CHECKOUT_ENABLED=true
 NEXT_PUBLIC_SITE_URL=http://localhost:3000
 STRIPE_SECRET_KEY=sk_test_...
+TOURNIBASE_STRIPE_PLATFORM_ACCOUNT_ID=acct_...
 NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_...
+TOURNIBASE_PLATFORM_FEE_BPS=0
+TOURNIBASE_PLATFORM_FEE_FIXED_CENTS=0
 ```
 
 Use the Supabase **publishable** key in the browser variable and the
@@ -151,12 +162,16 @@ test:
 EMAIL_PROVIDER=disabled
 ```
 
-Production uses the verified `tournibase.com` domain with
+Both hosted targets use the verified `tournibase.com` domain with
 `EMAIL_PROVIDER=resend`, a sending-only `RESEND_API_KEY`, and:
 
 ```text
 EMAIL_FROM=TourniBase <passes@tournibase.com>
 ```
+
+Staging additionally forces all deliveries to `lsautomates@gmail.com` and adds
+`[TEST]` to every subject. Production sends to the actual buyer and must not
+define an override recipient.
 
 With the development server running, preview the email at:
 
@@ -203,8 +218,9 @@ The schema is managed by the SQL files in `supabase/migrations`.
    npx supabase migration list --linked
    ```
 
-The current production project ref is `khwaafsdtgiymucppkmo`. Do not link this
-repository to the waitlist project.
+The shared staging/production project ref is `khwaafsdtgiymucppkmo`. Hosted
+runtime validation rejects a different project URL. Do not link this repository
+to the waitlist project.
 
 ### Optional full local Supabase stack
 
@@ -231,24 +247,26 @@ npm run seed
 See [Local Demo Data](docs/demo-data.md) for its safety guard, records, login,
 and repeatable setup.
 
-## First director account
+## Director accounts
 
-Self-service sign-up is disabled.
-
-1. Open the web-app project in Supabase.
-2. Go to **Authentication → Users**.
-3. Click **Add user**.
-4. Enter the director’s email and password.
-5. Create the user.
+Public signup is enabled only on production. It creates a live organization for
+the new director. Staging signup is disabled; the existing
+`lsautomates@gmail.com` test account remains the permanent staging workspace.
+The signed-out staging entrance uses the normal public design, lists no test
+data, sends account-creation links to production, and disables search indexing.
+Hosted staging submits only the permanent test email to Supabase Auth; other
+emails receive a generic rejection before password authentication.
 
 The database trigger creates the matching protected `public.users` profile with
-the `director` role.
+the `director` role. Confirm the shared Supabase Auth redirect allowlist contains
+the production `/email-confirmed` URL listed in
+[Staging and Production Rollout](docs/environment-rollout.md).
 
 ## Stripe setup
 
-Keep all Stripe values in the same environment. Accounts v2 onboarding must be
-tested in a Stripe Sandbox. Use that Sandbox's `sk_test_...`, `pk_test_...`,
-and webhook destinations together.
+Keep every Stripe key, account, and webhook secret in its matching environment.
+Staging uses the TourniBase onboarding Sandbox. Production uses the Connect
+platform's live mode.
 
 TourniBase is the Connect platform. Each organization creates one connected
 Stripe account from **Settings → Payments** and completes Stripe-hosted
@@ -257,24 +275,32 @@ Sessions use direct charges on that organizer's connected account, so Stripe
 deducts its processing fees and pays out the remaining balance according to
 the organizer's Stripe payout schedule.
 
-The pilot application fee is controlled by:
+The application fee is calculated as
+`round(order total × basis points / 10,000) + fixed cents`.
+
+Staging must use:
 
 ```text
 TOURNIBASE_PLATFORM_FEE_BPS=0
 TOURNIBASE_PLATFORM_FEE_FIXED_CENTS=0
 ```
 
-The fee is calculated as
-`round(order total × basis points / 10,000) + fixed cents`. Keep both values at
-zero until TourniBase intentionally begins charging a fee.
+Production must use exactly:
 
-### Hosted Sandbox endpoints
+```text
+TOURNIBASE_PLATFORM_FEE_BPS=200
+TOURNIBASE_PLATFORM_FEE_FIXED_CENTS=30
+```
+
+### Hosted endpoints
 
 Create a connected-account payment webhook endpoint at:
 
 ```text
-https://tournibase.com/api/stripe/webhook
+https://<environment-host>/api/stripe/webhook
 ```
+
+Set **Events from** to **Connected accounts** and use **Snapshot** payloads.
 
 Subscribe it to:
 
@@ -284,22 +310,23 @@ Subscribe it to:
 - `checkout.session.expired`
 - `charge.refunded`
 
-Enable delivery for events from connected accounts. Copy that endpoint's
-`whsec_...` signing secret into
-`STRIPE_CONNECTED_PAYMENTS_WEBHOOK_SECRET`. Keep
-`STRIPE_WEBHOOK_SECRET` configured while legacy platform test orders still
-exist.
+Enable delivery for events from connected accounts. Copy each endpoint's
+`whsec_...` signing secret into that target's
+`STRIPE_CONNECTED_PAYMENTS_WEBHOOK_SECRET`. The 19 old Test-mode
+platform-account orders are historical reporting data. Do not configure their
+old webhook secret against the new onboarding Sandbox.
 
 Create a second Accounts v2 webhook endpoint at:
 
 ```text
-https://tournibase.com/api/stripe/connect/webhook
+https://<environment-host>/api/stripe/connect/webhook
 ```
 
-Subscribe it to account creation, account closure, account updates, merchant
-configuration/capability updates, current requirements, and future
-requirements. Put that endpoint's signing secret in
-`STRIPE_CONNECT_ACCOUNT_WEBHOOK_SECRET`.
+Set **Events from** to **Connected accounts** and use **Thin** payloads.
+
+Use the exact Accounts v2 subscriptions and rollout order in
+[Staging and Production Rollout](docs/environment-rollout.md). Put that
+endpoint's signing secret in `STRIPE_CONNECT_ACCOUNT_WEBHOOK_SECRET`.
 
 TourniBase syncs full Stripe refunds back into order and pass statuses. See
 [Refund and Support Process](docs/refund-support.md).
@@ -333,8 +360,8 @@ Test card:
 
 Use any future expiration date, any three-digit CVC, and any valid postal code.
 
-Do not switch to live keys until the complete flow passes the final launch
-checks.
+Keep production paid checkout disabled until the complete real-money launch
+test passes.
 
 ## End-to-end test flow
 
@@ -469,9 +496,11 @@ npm run build
 
 ## Known limitations
 
-- Stripe Connect is in a Sandbox. Every pilot director must repeat onboarding
-  in live mode before TourniBase accepts real tournament payments.
-- Director accounts are invite-only.
+- The environment split is implemented locally but is not deployed, and its
+  additive and post-deploy contract migrations are not applied.
+- Existing Sandbox accounts do not become live accounts. Every production
+  director must complete live onboarding before accepting real payments.
+- Staging signup is disabled; production signup is enabled.
 - Directors initiate refunds in TourniBase. Stripe refund events then
   synchronize order and pass status, reverse the application fee when
   applicable, and trigger the buyer refund email. Dispute handling is not

@@ -1,8 +1,15 @@
 # Local Demo Data
 
-Last updated: July 4, 2026
+Last updated: August 29, 2026
 
-Phase 17 adds a repeatable demo tournament for local development only.
+TourniBase has two distinct kinds of test data:
+
+- The permanent hosted staging workspace belongs to `lsautomates@gmail.com`
+  and contains Luke Events, two test tournaments, and 39 test orders.
+- The guarded local seed creates a separate repeatable demo tournament for
+  local development.
+
+Neither set is live production data.
 
 ## Safety
 
@@ -16,7 +23,7 @@ these local hostnames:
 The automatic `supabase/seed.sql` file contains only the server-role grants
 needed by the local Supabase stack. It contains no demo accounts, tournaments,
 tickets, orders, or passes. The guarded JavaScript seed remains the only process
-that creates demo records.
+that creates local demo records. It explicitly creates a `test` organization.
 
 ## Demo records
 
@@ -106,3 +113,5 @@ npm run seed
 
 Never use `--linked`, a hosted Supabase URL, or production environment values
 for this demo flow.
+
+Do not use the local seed to create or repair the permanent hosted staging data.

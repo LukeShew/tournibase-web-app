@@ -1,5 +1,11 @@
 import { ImageResponse } from "next/og";
+import type { NextRequest } from "next/server";
 import QRCode from "qrcode";
+import {
+  assertRequestHostMatchesAppEnvironment,
+  getRequestHostname,
+  validateAppRuntimeConfiguration,
+} from "@/lib/app-environment";
 import {
   formatPassValidity,
   getOfflinePassFilename,
@@ -13,13 +19,26 @@ export const revalidate = 0;
 export const runtime = "nodejs";
 
 export async function GET(
-  request: Request,
+  request: NextRequest,
   {
     params,
   }: {
     params: Promise<{ "pass-token": string }>;
   },
 ) {
+  try {
+    validateAppRuntimeConfiguration();
+    assertRequestHostMatchesAppEnvironment(
+      getRequestHostname({
+        fallbackHostname: request.nextUrl.hostname,
+        forwardedHost: request.headers.get("x-forwarded-host"),
+        host: request.headers.get("host"),
+      }),
+    );
+  } catch {
+    return unavailableResponse(503);
+  }
+
   const { "pass-token": token } = await params;
 
   if (!isValidPassToken(token)) {

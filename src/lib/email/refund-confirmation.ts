@@ -12,6 +12,7 @@ import {
   normalizeEmailSendError,
   type EmailProvider,
 } from "@/lib/email/provider";
+import { getAppEnvironment } from "@/lib/app-environment";
 import { getSiteUrl } from "@/lib/site-url";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
@@ -86,10 +87,12 @@ async function loadRefundEmail(
   recipient: string;
 }> {
   const supabase = getSupabaseAdmin();
+  const appEnvironment = getAppEnvironment();
   const { data: orderRow, error: orderError } = await supabase
     .from("orders")
     .select("id, tournament_id, buyer_name, buyer_email")
     .eq("id", input.orderId)
+    .eq("stripe_environment", appEnvironment)
     .maybeSingle();
 
   if (orderError) {
@@ -106,8 +109,11 @@ async function loadRefundEmail(
   const order = orderRow as OrderRecord;
   const { data: tournamentRow, error: tournamentError } = await supabase
     .from("tournaments")
-    .select("name, start_date, end_date, venue_name, organizer_name, contact_email")
+    .select(
+      "name, start_date, end_date, venue_name, organizer_name, contact_email, organizations!inner(operating_environment)",
+    )
     .eq("id", order.tournament_id)
+    .eq("organizations.operating_environment", appEnvironment)
     .maybeSingle();
 
   if (tournamentError) {

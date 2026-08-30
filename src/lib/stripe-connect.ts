@@ -1,8 +1,8 @@
 import "server-only";
 
 import type Stripe from "stripe";
-import { getStripe } from "@/lib/stripe";
-import { getStripeEnvironment } from "@/lib/stripe-connect-payments";
+import { getAppEnvironment } from "@/lib/app-environment";
+import { getVerifiedStripe } from "@/lib/stripe";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
 export type StripeConnectStatus =
@@ -41,6 +41,9 @@ const ACCOUNT_INCLUDES: Stripe.V2.Core.AccountRetrieveParams.Include[] = [
 export function getStripeConnectConfigurationIssues() {
   return [
     ...(process.env.STRIPE_SECRET_KEY ? [] : ["STRIPE_SECRET_KEY"]),
+    ...(process.env.TOURNIBASE_STRIPE_PLATFORM_ACCOUNT_ID
+      ? []
+      : ["TOURNIBASE_STRIPE_PLATFORM_ACCOUNT_ID"]),
     ...(process.env.NEXT_PUBLIC_SITE_URL ? [] : ["NEXT_PUBLIC_SITE_URL"]),
   ];
 }
@@ -114,7 +117,7 @@ export async function getOrganizationStripeAccount(
       "organization_id, stripe_account_id, stripe_environment, account_closed, onboarding_complete, charges_enabled, payouts_enabled, card_payments_status, payouts_status, requirements_currently_due, requirements_eventually_due, requirements_past_due, requirements_pending_verification, disabled_reason, last_synced_at",
     )
     .eq("organization_id", organizationId)
-    .eq("stripe_environment", getStripeEnvironment())
+    .eq("stripe_environment", getAppEnvironment())
     .maybeSingle();
 
   if (error) {
@@ -132,7 +135,7 @@ export async function isOrganizationStripeAccountReady(
     "organization_stripe_account_is_ready",
     {
       p_organization_id: organizationId,
-      p_stripe_environment: getStripeEnvironment(),
+      p_stripe_environment: getAppEnvironment(),
     },
   );
 
@@ -152,8 +155,8 @@ export async function createOrganizationStripeAccount({
   displayName: string;
   organizationId: number;
 }) {
-  const stripe = getStripe();
-  const environment = getStripeEnvironment();
+  const stripe = await getVerifiedStripe();
+  const environment = getAppEnvironment();
   const account = await stripe.v2.core.accounts.create(
     {
       configuration: {
@@ -185,6 +188,7 @@ export async function createOrganizationStripeAccount({
       },
       include: ACCOUNT_INCLUDES,
       metadata: {
+        operating_environment: environment,
         organization_id: String(organizationId),
         platform: "tournibase",
       },
@@ -206,7 +210,8 @@ export async function synchronizeOrganizationStripeAccount(
     "organization_id" | "stripe_account_id"
   >,
 ) {
-  const account = await getStripe().v2.core.accounts.retrieve(
+  const stripe = await getVerifiedStripe();
+  const account = await stripe.v2.core.accounts.retrieve(
     record.stripe_account_id,
     {
       include: ACCOUNT_INCLUDES,
@@ -228,7 +233,9 @@ export async function createStripeConnectOnboardingLink({
   refreshUrl: string;
   returnUrl: string;
 }) {
-  return getStripe().v2.core.accountLinks.create({
+  const stripe = await getVerifiedStripe();
+
+  return stripe.v2.core.accountLinks.create({
     account: accountId,
     use_case: {
       account_onboarding: {
@@ -246,11 +253,13 @@ export async function createStripeConnectOnboardingLink({
 }
 
 export async function synchronizeStripeAccountById(accountId: string) {
+  const environment = getAppEnvironment();
   const admin = getSupabaseAdmin();
   const { data: record, error } = await admin
     .from("organization_stripe_accounts")
     .select("organization_id, stripe_account_id")
     .eq("stripe_account_id", accountId)
+    .eq("stripe_environment", environment)
     .maybeSingle();
 
   if (error) {
@@ -275,7 +284,32 @@ async function persistStripeAccountState({
   organizationId: number;
 }) {
   const snapshot = mapStripeAccountState(account, organizationId);
+  const environment = getAppEnvironment();
   const admin = getSupabaseAdmin();
+
+  if (snapshot.stripe_environment !== environment) {
+    throw new Error(
+      `Stripe account ${account.id} is in ${snapshot.stripe_environment} mode, not the ${environment} TourniBase environment.`,
+    );
+  }
+
+  const { data: organization, error: organizationError } = await admin
+    .from("organizations")
+    .select("id")
+    .eq("id", organizationId)
+    .eq("operating_environment", environment)
+    .maybeSingle();
+
+  if (organizationError) {
+    throw organizationError;
+  }
+
+  if (!organization) {
+    throw new Error(
+      "Stripe account does not belong to an organization in this TourniBase environment.",
+    );
+  }
+
   const { data, error } = await admin
     .from("organization_stripe_accounts")
     .upsert(snapshot, {

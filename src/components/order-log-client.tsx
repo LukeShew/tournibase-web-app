@@ -235,8 +235,11 @@ function OrderDetailsModal({
   const [refundError, setRefundError] = useState<string | null>(null);
   const isHistoricalStripeEnvironment =
     order.stripe_environment !== currentStripeEnvironment;
+  const isHistoricalStripePayment =
+    Number(order.amount_total) > 0 &&
+    (isHistoricalStripeEnvironment || !order.stripe_connected_account_id);
   const canRefundStripePayment =
-    !isHistoricalStripeEnvironment &&
+    !isHistoricalStripePayment &&
     Boolean(order.stripe_checkout_id) &&
     Number(order.amount_total) > 0;
 
@@ -452,11 +455,10 @@ function OrderDetailsModal({
             </p>
           ) : null}
 
-          {isHistoricalStripeEnvironment ? (
+          {isHistoricalStripePayment ? (
             <p className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-800">
-              This {order.stripe_environment} payment is historical and
-              read-only while TourniBase is running in{" "}
-              {currentStripeEnvironment} mode.
+              This historical payment is read-only and cannot be opened or
+              refunded here.
             </p>
           ) : order.stripe_checkout_id && Number(order.amount_total) > 0 ? (
             <p className="mt-4 rounded-2xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-medium text-blue-800">
@@ -564,7 +566,7 @@ function getPaymentActionLabel(
   }
 
   if (!order.stripe_connected_account_id) {
-    return "Legacy Stripe payment — use order details";
+    return "Historical Stripe payment — read-only";
   }
 
   return "Stripe payment link unavailable";

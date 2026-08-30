@@ -1,9 +1,13 @@
 # TourniBase Database Schema
 
-Last verified against the repository migrations: July 16, 2026
+Last verified against the local repository migrations: August 29, 2026
 
 Latest local migration:
-`20260717031932_add_stripe_connect_foundation`
+`20260829002309_add_app_environment_isolation`
+
+That additive migration is prepared locally but has not been applied to hosted
+Supabase. The contract SQL remains in `supabase/post-deploy` until the same
+environment-aware build is active on staging and production.
 
 ## Relationship summary
 
@@ -38,9 +42,12 @@ The current `user_role` enum contains only `director`.
 
 Ownership boundary for director data.
 
-Key fields: `id`, `name`, `owner_user_id`, `created_at`.
+Key fields: `id`, `name`, `owner_user_id`, `operating_environment`,
+`created_at`.
 
-Deleting a user cascades to that user’s organizations.
+`operating_environment` is `test` or `live` and cannot change after creation.
+One user can own one organization during the pilot. Deleting a user cascades to
+that user’s organization.
 
 ### `tournaments`
 
@@ -75,9 +82,10 @@ Key fields: `id`, `tournament_id`, `buyer_name`, `buyer_email`,
 `stripe_payment_intent_id`, `stripe_charge_id`, `created_at`.
 
 The app formats order IDs as `TB-000001`, but the stored primary key is numeric.
-The Stripe routing and fee fields are immutable payment snapshots. Existing
-orders are classified as legacy test-platform orders with a $0 application
-fee.
+The Stripe routing and fee fields are immutable payment snapshots. The 19 old
+Test-mode platform-account orders are classified as historical test reporting
+data with a $0 application fee. They do not receive new webhook or refund
+synchronization through the onboarding Sandbox.
 
 ### `organization_stripe_accounts`
 
@@ -90,10 +98,10 @@ Key fields: `organization_id`, `stripe_account_id`, `stripe_environment`,
 `requirements_past_due`, `requirements_pending_verification`,
 `disabled_reason`, `last_synced_at`, `created_at`, `updated_at`.
 
-Test and live records are separate. The synchronized requirement and capability
-fields drive the Settings payment state and paid-event publishing/checkout
-rules. Connected-account switching and self-service disconnection are not
-supported during the pilot.
+The account environment must match its organization's immutable environment.
+The synchronized requirement and capability fields drive the Settings payment
+state and paid-event publishing/checkout rules. Connected-account switching and
+self-service disconnection are not supported during the pilot.
 
 ### `order_items`
 
@@ -159,6 +167,15 @@ The primary key allows only one delivery record per order. The server claims a
 pending or retryable row before contacting a provider. A stale `sending` claim
 can be recovered after 10 minutes.
 
+### `rate_limit_buckets`
+
+Server-only counters for public checkout and other guarded request paths.
+
+Key fields: `bucket_key`, `window_started_at`, `request_count`, `updated_at`.
+
+The table has RLS enabled and no browser access. Only the server-side rate-limit
+function can use it through the application flow.
+
 ## Enum values
 
 | Enum | Values |
@@ -182,25 +199,32 @@ can be recovered after 10 minutes.
 | `lookup_gate_orders` | Searches buyer/order data within one scanner tournament | Server secret key only |
 | `get_recent_scans` | Returns recent activity for one scanner session | Server secret key only |
 | `record_gate_sale` | Validates and records an in-person sale | Server secret key only |
-| `get_tournament_dashboard_metrics` | Aggregates director sales and gate reporting | Signed-in owning director |
+| `get_tournament_dashboard_metrics` | Aggregates director sales and gate reporting for one app environment | Signed-in owning director |
+| `get_director_lifetime_revenue` | Returns captured revenue for the owner's current app environment | Signed-in owning director |
+| `get_director_lifetime_tickets_sold` | Returns paid passes for the owner's current app environment | Signed-in owning director |
 | `claim_order_email_delivery` | Atomically claims one order email and blocks concurrent duplicate sends | Server secret key only |
 | `organization_stripe_account_is_ready` | Checks charges, payouts, requirements, restrictions, environment, and closure for paid publishing/checkout | Server or owning director |
+| `consume_rate_limit` | Atomically enforces a bounded server-side request bucket | Server secret key only |
 
-All listed functions run as security invoker. The gate functions have execution
-revoked from anonymous and authenticated browser roles. Dashboard metrics remain
-subject to director ownership checks and RLS.
+The environment-aware RPC overloads require a matching `test` or `live`
+argument. The post-deploy contract retains only those entry points and removes
+direct execution of their environment-unaware predecessors. Gate functions are
+unavailable to anonymous and authenticated browser roles. Dashboard functions
+also check the signed-in director's ownership.
 
 The private `handle_new_auth_user` trigger function creates a protected
-`public.users` profile when an invited Auth user is created.
+`public.users` profile when an Auth user is created.
 
 ## Row Level Security
 
-RLS is enabled on all 12 public application tables after the Connect migration.
+RLS is enabled on all 13 public application tables.
 
 - A director can access only their own profile and data reachable through an
-  organization they own.
-- Anonymous users can select only published tournaments and active ticket
-  types.
+  organization they own. The application additionally checks that organization's
+  environment on every protected route.
+- After the post-deploy contract, anonymous users cannot query tournaments or
+  ticket types through the Data API. Public buyer pages use the server-side,
+  environment-aware data layer.
 - Orders, order items, passes, scanner sessions, check-ins, and manual sales
   have no anonymous read policy.
 - Authenticated browser roles cannot mutate orders, tournaments, or ticket
@@ -236,11 +260,22 @@ automatically expose new public tables.
 17. `20260712205233_add_director_profile_avatar`
 18. `20260712214217_allow_director_avatar_updates`
 19. `20260717031932_add_stripe_connect_foundation`
+20. `20260719044155_add_director_lifetime_revenue`
+21. `20260719045851_add_director_lifetime_tickets_sold`
+22. `20260719053841_add_director_profile_name_update`
+23. `20260719054223_secure_director_profile_name_update`
+24. `20260719054443_allow_director_organizer_name_propagation`
+25. `20260719054844_synchronize_existing_tournament_organizer_names`
+26. `20260829002309_add_app_environment_isolation` (local only; not applied)
 
 Migration files are the source of truth under `supabase/migrations`. New schema
 changes must be added as migrations and applied with `supabase db push`.
 
-The Connect migration must be applied to hosted Supabase before deploying the
-Connect application code.
+The additive environment migration is the only new rollout file in migration
+history. Apply it first during the documented maintenance window. The reviewed
+contract at `supabase/post-deploy/finalize_app_environment_isolation.sql` must be
+copied into a new timestamped migration only after the same environment-aware
+build is deployed to staging and production. See
+[Staging and Production Rollout](./environment-rollout.md).
 `supabase/seed.sql` adds local service-role table and sequence permissions but
 contains no demo records and does not add migration history.

@@ -2,8 +2,13 @@ import { randomUUID } from "node:crypto";
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import {
-  getStripe,
+  assertPlatformFeeEnvironmentConfiguration,
+  getAppEnvironment,
+  isPaidCheckoutEnabled,
+} from "@/lib/app-environment";
+import {
   getStripeConfigurationIssues,
+  getVerifiedStripe,
 } from "@/lib/stripe";
 import { attemptOrderConfirmationEmail } from "@/lib/email/order-confirmation";
 import {
@@ -68,6 +73,23 @@ type ReservedCheckout = {
 };
 
 export async function POST(request: NextRequest) {
+  let appEnvironment: StripeEnvironment;
+  let paidCheckoutEnabled: boolean;
+
+  try {
+    appEnvironment = getAppEnvironment();
+    paidCheckoutEnabled = isPaidCheckoutEnabled();
+    assertPlatformFeeEnvironmentConfiguration();
+  } catch (error) {
+    console.error("[checkout] environment configuration is invalid", {
+      message: error instanceof Error ? error.message : "Unknown configuration error",
+    });
+    return NextResponse.json(
+      { error: "Online checkout is temporarily unavailable." },
+      { status: 503 },
+    );
+  }
+
   const configurationIssues = getSupabaseAdminConfigurationIssues();
 
   if (configurationIssues.length > 0) {
@@ -114,6 +136,38 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  const supabase = getSupabaseAdmin();
+  const { data: selectedTicketRows, error: selectedTicketError } = await supabase
+    .from("ticket_types")
+    .select(
+      "id, price, tournaments!inner(public_slug, status, organizations!inner(operating_environment))",
+    )
+    .in("id", [...uniqueTicketIds])
+    .eq("tournaments.public_slug", parsed.data.eventSlug)
+    .eq("tournaments.status", "published")
+    .eq("tournaments.organizations.operating_environment", appEnvironment);
+
+  if (
+    selectedTicketError ||
+    (selectedTicketRows?.length ?? 0) !== uniqueTicketIds.size
+  ) {
+    return NextResponse.json(
+      { error: "The selected tickets are not available." },
+      { status: 409 },
+    );
+  }
+
+  const hasPaidTickets = selectedTicketRows!.some(
+    (ticket) => Number(ticket.price) > 0,
+  );
+
+  if (hasPaidTickets && !paidCheckoutEnabled) {
+    return NextResponse.json(
+      { error: "Online paid checkout is temporarily unavailable." },
+      { status: 503 },
+    );
+  }
+
   const forwardedIp =
     request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
     request.headers.get("x-real-ip") ||
@@ -138,9 +192,15 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const supabase = getSupabaseAdmin();
   const buyerName = `${parsed.data.firstName} ${parsed.data.lastName}`.trim();
   const stripeEnvironment = getStripeEnvironment();
+
+  if (stripeEnvironment !== appEnvironment) {
+    return NextResponse.json(
+      { error: "Online checkout is temporarily unavailable." },
+      { status: 503 },
+    );
+  }
   let platformFeeConfiguration: ReturnType<
     typeof getPlatformFeeConfiguration
   >;
@@ -161,6 +221,7 @@ export async function POST(request: NextRequest) {
       p_buyer_name: buyerName,
       p_buyer_phone: parsed.data.phone || null,
       p_buyer_team_name: parsed.data.teamName || null,
+      p_app_environment: appEnvironment,
       p_event_slug: parsed.data.eventSlug,
       p_items: parsed.data.items.map((item) => ({
         quantity: item.quantity,
@@ -206,6 +267,11 @@ export async function POST(request: NextRequest) {
     environment: reservation.stripe_environment,
   };
   const platformFeeCents = reservation.platform_fee_amount_cents;
+
+  if (reservation.stripe_environment !== appEnvironment) {
+    await markOrderFailed(order.id);
+    return checkoutError();
+  }
 
   if (amountTotalCents > 0 && !reservation.stripe_account_ready) {
     await markOrderFailed(order.id);
@@ -265,6 +331,7 @@ export async function POST(request: NextRequest) {
   }
 
   const stripeIssues = getStripeConfigurationIssues({
+    includeConnectAccountWebhookSecret: true,
     includeConnectedPaymentsWebhookSecret: true,
     includePublishableKey: true,
   });
@@ -279,7 +346,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const stripe = getStripe();
+  const stripe = await getVerifiedStripe();
 
   try {
     const session = await stripe.checkout.sessions.create(

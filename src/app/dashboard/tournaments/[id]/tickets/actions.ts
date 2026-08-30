@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import { getAppEnvironment, isPaidCheckoutEnabled } from "@/lib/app-environment";
 import { requireDirector } from "@/lib/auth";
 import { eventDayEnd, eventDayStart } from "@/lib/event-time";
 import type { TicketTypeFormState } from "@/lib/form-states";
@@ -392,7 +393,8 @@ async function getOwnedTournament(
   const { data: organizationRows, error: organizationError } = await supabase
     .from("organizations")
     .select("id")
-    .eq("owner_user_id", directorId);
+    .eq("owner_user_id", directorId)
+    .eq("operating_environment", getAppEnvironment());
 
   if (organizationError) {
     throw organizationError;
@@ -462,13 +464,19 @@ async function validatePaidTicketActivation(
 }
 
 function paidCheckoutConfigurationReady() {
-  return (
-    getStripeConfigurationIssues({
-      includeConnectedPaymentsWebhookSecret: true,
-      includePublishableKey: true,
-    }).length === 0 &&
-    getSupabaseAdminConfigurationIssues().length === 0
-  );
+  try {
+    return (
+      isPaidCheckoutEnabled() &&
+      getStripeConfigurationIssues({
+        includeConnectAccountWebhookSecret: true,
+        includeConnectedPaymentsWebhookSecret: true,
+        includePublishableKey: true,
+      }).length === 0 &&
+      getSupabaseAdminConfigurationIssues().length === 0
+    );
+  } catch {
+    return false;
+  }
 }
 
 function validateTicketDates(

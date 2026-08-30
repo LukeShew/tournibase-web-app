@@ -3,6 +3,13 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import {
+  getAppEnvironment,
+  isHostedDeployment,
+  isDirectorLoginEmailAllowed,
+  isPublicSignupEnabled,
+} from "@/lib/app-environment";
+import { getDirectorWorkspace } from "@/lib/auth";
 import { getAuthEmailRedirectUrl } from "@/lib/auth-email-url";
 import { ensureDirectorSetup } from "@/lib/director-setup";
 import {
@@ -80,6 +87,19 @@ export async function login(
     };
   }
 
+  const environment = getAppEnvironment();
+  const isHostedTestEnvironment =
+    isHostedDeployment() && environment === "test";
+
+  if (!isDirectorLoginEmailAllowed(result.data.email)) {
+    return {
+      message: "Email or password is incorrect.",
+      email: result.data.email,
+      focusPassword: true,
+      focusPasswordAt: Date.now(),
+    };
+  }
+
   const ip = await getRequestIp();
   const allowed = await checkRateLimit({
     key: `login:${ip}:${result.data.email}`,
@@ -111,15 +131,20 @@ export async function login(
       };
     }
 
-    const admin = getSupabaseAdmin();
-    const { data: account, error: lookupError } = await admin
-      .from("users")
-      .select("id")
-      .ilike("email", result.data.email)
-      .limit(1)
-      .maybeSingle();
+    let accountExists: boolean | null = null;
 
-    const accountExists = lookupError ? null : Boolean(account);
+    if (!isHostedTestEnvironment) {
+      const admin = getSupabaseAdmin();
+      const { data: account, error: lookupError } = await admin
+        .from("users")
+        .select("id")
+        .ilike("email", result.data.email)
+        .limit(1)
+        .maybeSingle();
+
+      accountExists = lookupError ? null : Boolean(account);
+    }
+
     return {
       message: getLoginFailureMessage({
         accountExists,
@@ -136,7 +161,9 @@ export async function login(
     organization_name?: string;
   };
   const { error: setupError } = await ensureDirectorSetup({
+    allowOrganizationCreation: environment === "live",
     email: user.email ?? result.data.email,
+    environment,
     name: metadata.name?.trim() || user.email?.split("@")[0] || "Director",
     organizationName: metadata.organization_name?.trim() || "My organization",
     userId: user.id,
@@ -146,7 +173,19 @@ export async function login(
     await supabase.auth.signOut();
     return {
       message:
-        "Your account exists, but we could not finish loading it. Try signing in again.",
+        "This account cannot be used here. Check the address and try again.",
+      email: result.data.email,
+      focusPassword: true,
+      focusPasswordAt: Date.now(),
+    };
+  }
+
+  const workspace = await getDirectorWorkspace();
+
+  if (!workspace || workspace.director.id !== user.id) {
+    await supabase.auth.signOut();
+    return {
+      message: "This account cannot be used here. Check the address and try again.",
       email: result.data.email,
       focusPassword: true,
       focusPasswordAt: Date.now(),
@@ -158,6 +197,10 @@ export async function login(
 }
 
 export async function resendSignupConfirmation(formData: FormData) {
+  if (!isPublicSignupEnabled()) {
+    redirect("/login");
+  }
+
   const parsed = z
     .email()
     .trim()

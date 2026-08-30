@@ -1,5 +1,6 @@
 import "server-only";
 
+import { getAppEnvironment } from "@/lib/app-environment";
 import {
   hashScannerToken,
   isValidScannerToken,
@@ -75,18 +76,13 @@ export async function getScannerSessionByToken(
 
   const scanner = scannerRow as ScannerSessionRecord;
 
-  if (scanner.revoked_at) {
-    return { status: "revoked" };
-  }
-
-  if (new Date(scanner.expires_at).getTime() <= Date.now()) {
-    return { status: "expired" };
-  }
-
   const { data: tournamentRow, error: tournamentError } = await supabase
     .from("tournaments")
-    .select("name, start_date, end_date, venue_name, status, time_zone")
+    .select(
+      "name, start_date, end_date, venue_name, status, time_zone, organizations!inner(operating_environment)",
+    )
     .eq("id", scanner.tournament_id)
+    .eq("organizations.operating_environment", getAppEnvironment())
     .maybeSingle();
 
   if (tournamentError) {
@@ -95,6 +91,14 @@ export async function getScannerSessionByToken(
 
   if (!tournamentRow) {
     return { status: "invalid" };
+  }
+
+  if (scanner.revoked_at) {
+    return { status: "revoked" };
+  }
+
+  if (new Date(scanner.expires_at).getTime() <= Date.now()) {
+    return { status: "expired" };
   }
 
   const tournament = tournamentRow as TournamentRecord;

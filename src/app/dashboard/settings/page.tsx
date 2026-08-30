@@ -3,7 +3,8 @@ import Link from "next/link";
 import { updateDirectorName } from "@/app/dashboard/settings/actions";
 import { ProfileAvatarPicker } from "@/components/profile-avatar-picker";
 import { StripeConnectStatusPoller } from "@/components/stripe-connect-status-poller";
-import { requireDirector } from "@/lib/auth";
+import { getAppEnvironment } from "@/lib/app-environment";
+import { requireDirectorWorkspace } from "@/lib/auth";
 import {
   getStripeConnectConfigurationIssues,
   getStripeConnectStatus,
@@ -11,7 +12,6 @@ import {
   type OrganizationStripeAccount,
   type StripeConnectStatus,
 } from "@/lib/stripe-connect";
-import { getStripeEnvironment } from "@/lib/stripe-connect-payments";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = {
@@ -30,26 +30,13 @@ export default async function SettingsPage({
   }>;
 }) {
   const resolvedSearchParams = await searchParams;
-  const director = await requireDirector();
+  const { director, organization } = await requireDirectorWorkspace();
   const supabase = await createClient();
-  const { data: organizationRows, error: organizationError } = await supabase
-    .from("organizations")
-    .select("id, name")
-    .eq("owner_user_id", director.id)
-    .order("created_at", { ascending: true });
-
-  if (organizationError) {
-    throw organizationError;
-  }
-
-  const organizations = (organizationRows ?? []) as Array<{
-    id: number;
-    name: string;
-  }>;
+  const organizations = [{ id: organization.id, name: organization.name }];
   const organizationIds = organizations.map(
     (organization) => organization.id,
   );
-  const environment = getStripeEnvironment();
+  const environment = getAppEnvironment();
   const { data: stripeAccountRows, error: stripeAccountError } =
     organizationIds.length > 0
       ? await supabase

@@ -12,6 +12,7 @@ import {
   normalizeEmailSendError,
   type EmailProvider,
 } from "@/lib/email/provider";
+import { getAppEnvironment } from "@/lib/app-environment";
 import { getOfflinePassSaveUrl } from "@/lib/pass-display";
 import { getSiteUrl } from "@/lib/site-url";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
@@ -34,6 +35,7 @@ type OrderRecord = {
   buyer_name: string;
   id: number;
   payment_status: "pending" | "paid" | "failed" | "refunded" | "partial_refund";
+  stripe_environment: "live" | "test";
   tournament_id: number;
 };
 
@@ -74,6 +76,7 @@ export async function attemptOrderConfirmationEmail(
   provider: EmailProvider = getEmailProvider(),
 ): Promise<OrderEmailAttempt> {
   const supabase = getSupabaseAdmin();
+  await assertOrderEmailEnvironment(orderId, supabase);
   const { error: ensureError } = await supabase
     .from("order_email_deliveries")
     .upsert(
@@ -182,6 +185,33 @@ export async function attemptOrderConfirmationEmail(
   }
 }
 
+async function assertOrderEmailEnvironment(
+  orderId: number,
+  supabase: ReturnType<typeof getSupabaseAdmin>,
+) {
+  const appEnvironment = getAppEnvironment();
+  const { data, error } = await supabase
+    .from("orders")
+    .select(
+      "id, stripe_environment, tournaments!inner(organizations!inner(operating_environment))",
+    )
+    .eq("id", orderId)
+    .eq("stripe_environment", appEnvironment)
+    .eq("tournaments.organizations.operating_environment", appEnvironment)
+    .maybeSingle();
+
+  if (error) {
+    throw databaseError("email_order_environment_lookup_failed", error);
+  }
+
+  if (!data) {
+    throw permanentDataError(
+      "email_order_environment_mismatch",
+      "The order is not available in this TourniBase environment.",
+    );
+  }
+}
+
 async function getExistingAttemptResult(
   orderId: number,
 ): Promise<OrderEmailAttempt> {
@@ -221,12 +251,14 @@ async function loadOrderEmail(
   recipient: string;
 }> {
   const supabase = getSupabaseAdmin();
+  const appEnvironment = getAppEnvironment();
   const { data: orderRow, error: orderError } = await supabase
     .from("orders")
     .select(
-      "id, tournament_id, buyer_name, buyer_email, amount_total, payment_status",
+      "id, tournament_id, buyer_name, buyer_email, amount_total, payment_status, stripe_environment",
     )
     .eq("id", orderId)
+    .eq("stripe_environment", appEnvironment)
     .maybeSingle();
 
   if (orderError) {
@@ -257,9 +289,10 @@ async function loadOrderEmail(
     supabase
       .from("tournaments")
       .select(
-        "name, start_date, end_date, venue_name, venue_address, organizer_name, contact_email",
+        "name, start_date, end_date, venue_name, venue_address, organizer_name, contact_email, organizations!inner(operating_environment)",
       )
       .eq("id", order.tournament_id)
+      .eq("organizations.operating_environment", appEnvironment)
       .maybeSingle(),
     supabase
       .from("order_items")

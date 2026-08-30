@@ -2,6 +2,7 @@ import "server-only";
 
 import { createHash } from "node:crypto";
 import { headers } from "next/headers";
+import { scopeToAppEnvironment } from "@/lib/app-environment";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
 export async function getRequestIp() {
@@ -28,8 +29,8 @@ export async function checkRateLimit({
 }) {
   const supabase = getSupabaseAdmin();
   const { data, error } = await supabase.rpc("consume_rate_limit", {
-    p_bucket_key: hashRateLimitValue(key),
-    p_limit: limit,
+    p_bucket_key: hashRateLimitValue(scopeToAppEnvironment(key)),
+    p_max_requests: limit,
     p_window_seconds: windowSeconds,
   });
 

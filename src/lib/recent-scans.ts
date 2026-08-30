@@ -1,6 +1,7 @@
 import "server-only";
 
 import { z } from "zod";
+import { getAppEnvironment } from "@/lib/app-environment";
 import type { RecentScansResult } from "@/lib/recent-scans-types";
 import {
   hashScannerToken,
@@ -64,6 +65,7 @@ export async function getRecentScannerActivity(
   try {
     const supabase = getSupabaseAdmin();
     const { data, error } = await supabase.rpc("get_recent_scans", {
+      p_app_environment: getAppEnvironment(),
       p_limit: 50,
       p_scanner_token_hash: hashScannerToken(scannerToken),
     });

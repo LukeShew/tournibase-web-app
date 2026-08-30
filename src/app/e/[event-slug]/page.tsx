@@ -9,6 +9,7 @@ import {
   PARENT_PROMISE,
   PRODUCT_POSITIONING,
 } from "@/lib/product-copy";
+import { isPaidCheckoutEnabled } from "@/lib/app-environment";
 import { getPublicEvent } from "@/lib/public-events";
 import { isOrganizationStripeAccountReady } from "@/lib/stripe-connect";
 import { formatEventDateRange } from "@/lib/tournaments";
@@ -61,9 +62,13 @@ export default async function PublicEventPage({
   const hasPaidTickets = event.ticketTypes.some(
     (ticket) => Number(ticket.price) > 0,
   );
-  const paymentReady =
+  const paidCheckoutEnabled = isPaidCheckoutEnabled();
+  const connectedAccountReady =
     !hasPaidTickets ||
     (await isOrganizationStripeAccountReady(event.organization_id));
+  const paymentReady =
+    !hasPaidTickets ||
+    (paidCheckoutEnabled && connectedAccountReady);
   const availableTicketTypes = paymentReady
     ? event.ticketTypes
     : event.ticketTypes.filter((ticket) => Number(ticket.price) === 0);
@@ -141,10 +146,11 @@ export default async function PublicEventPage({
                 role="status"
                 className="mb-5 rounded-2xl border border-amber-400/30 bg-amber-400/10 px-5 py-4 text-sm leading-6 text-amber-100"
               >
-                Paid online checkout is temporarily unavailable while{" "}
-                {event.organizer_name} completes payment setup. Free admission
-                options, if offered, remain available below. Contact the
-                organizer for paid admission help.
+                {paidCheckoutEnabled
+                  ? `Paid online checkout is temporarily unavailable while ${event.organizer_name} completes payment setup.`
+                  : "Paid online checkout is temporarily unavailable."}{" "}
+                Free admission options, if offered, remain available below.
+                Contact the organizer for paid admission help.
               </div>
             ) : null}
             {ticketOptions.length > 0 ? (
@@ -161,7 +167,9 @@ export default async function PublicEventPage({
                 </h2>
                 <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-slate-400">
                   {hasPaidTickets && !paymentReady
-                    ? "Paid online checkout is temporarily unavailable while the organizer completes payment setup. Contact the organizer for admission information."
+                    ? paidCheckoutEnabled
+                      ? "Paid online checkout is temporarily unavailable while the organizer completes payment setup. Contact the organizer for admission information."
+                      : "Paid online checkout is temporarily unavailable. Contact the organizer for admission information."
                     : "This event does not currently have passes available. Contact the organizer for admission information."}
                 </p>
               </div>

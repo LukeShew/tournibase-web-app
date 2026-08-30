@@ -6,6 +6,7 @@ import {
   createResendEmailProvider,
   EmailSendError,
   getEmailProvider,
+  routeEmailRequestForEnvironment,
 } from "./provider";
 
 const request = {
@@ -110,6 +111,7 @@ describe("Resend email provider", () => {
   });
 
   it("selects Resend from the provider environment", () => {
+    vi.stubEnv("TOURNIBASE_APP_ENVIRONMENT", "live");
     vi.stubEnv("EMAIL_PROVIDER", "resend");
     vi.stubEnv("RESEND_API_KEY", "re_test");
     vi.stubEnv("EMAIL_FROM", "TourniBase <passes@tournibase.com>");
@@ -118,5 +120,33 @@ describe("Resend email provider", () => {
       isConfigured: true,
       name: "resend",
     });
+  });
+
+  it("forces test email to the safe inbox and marks the subject", () => {
+    expect(
+      routeEmailRequestForEnvironment(request, {
+        appEnvironment: "test",
+        overrideTo: "lsautomates@gmail.com",
+      }),
+    ).toMatchObject({
+      subject: "[TEST] Your passes are ready",
+      to: "lsautomates@gmail.com",
+    });
+    expect(request.to).toBe("buyer@example.com");
+  });
+
+  it("keeps live recipients unchanged and rejects live overrides", () => {
+    expect(
+      routeEmailRequestForEnvironment(request, {
+        appEnvironment: "live",
+        overrideTo: null,
+      }),
+    ).toBe(request);
+    expect(() =>
+      routeEmailRequestForEnvironment(request, {
+        appEnvironment: "live",
+        overrideTo: "lsautomates@gmail.com",
+      }),
+    ).toThrow("cannot use a recipient override");
   });
 });

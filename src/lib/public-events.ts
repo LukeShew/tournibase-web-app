@@ -1,5 +1,6 @@
 import { cache } from "react";
-import { createClient } from "@/lib/supabase/server";
+import { getAppEnvironment } from "@/lib/app-environment";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
 export type PublicTicketType = {
   description: string | null;
@@ -29,14 +30,15 @@ export type PublicEvent = {
 
 export const getPublicEvent = cache(
   async (eventSlug: string): Promise<PublicEvent | null> => {
-    const supabase = await createClient();
+    const supabase = getSupabaseAdmin();
     const { data: tournamentRow, error: tournamentError } = await supabase
       .from("tournaments")
       .select(
-        "id, organization_id, name, start_date, end_date, venue_name, venue_address, organizer_name, contact_email, description, public_slug, time_zone",
+        "id, organization_id, name, start_date, end_date, venue_name, venue_address, organizer_name, contact_email, description, public_slug, time_zone, organizations!inner(operating_environment)",
       )
       .eq("public_slug", eventSlug)
       .eq("status", "published")
+      .eq("organizations.operating_environment", getAppEnvironment())
       .maybeSingle();
 
     if (tournamentError) {
@@ -63,7 +65,18 @@ export const getPublicEvent = cache(
     }
 
     return {
-      ...(tournamentRow as Omit<PublicEvent, "ticketTypes">),
+      id: tournamentRow.id as number,
+      organization_id: tournamentRow.organization_id as number,
+      name: tournamentRow.name as string,
+      start_date: tournamentRow.start_date as string,
+      end_date: tournamentRow.end_date as string,
+      venue_name: tournamentRow.venue_name as string,
+      venue_address: tournamentRow.venue_address as string | null,
+      organizer_name: tournamentRow.organizer_name as string,
+      contact_email: tournamentRow.contact_email as string,
+      description: tournamentRow.description as string | null,
+      public_slug: tournamentRow.public_slug as string,
+      time_zone: tournamentRow.time_zone as string,
       ticketTypes: (ticketRows ?? []) as PublicTicketType[],
     };
   },

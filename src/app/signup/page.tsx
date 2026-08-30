@@ -3,12 +3,17 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Brand } from "@/components/brand";
 import { SignupForm } from "@/components/signup-form";
-import { getDirector } from "@/lib/auth";
+import {
+  getPublicSignupHref,
+  isPublicSignupEnabled,
+} from "@/lib/app-environment";
+import { getDirectorWorkspace } from "@/lib/auth";
 
 export const metadata: Metadata = { title: "Create director account" };
 
 export default async function SignupPage() {
-  if (await getDirector()) redirect("/dashboard");
+  if (!isPublicSignupEnabled()) redirect(getPublicSignupHref());
+  if (await getDirectorWorkspace()) redirect("/dashboard");
 
   return <main className="min-h-screen bg-[#f7f8fb] px-6 py-6 text-slate-950 sm:px-10">
     <header className="mx-auto flex max-w-6xl items-center justify-between"><Brand tone="light" /><Link href="/login" className="rounded-full border border-border bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm">Sign in</Link></header>

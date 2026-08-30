@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { requireDirector } from "@/lib/auth";
+import { requireDirectorWorkspace } from "@/lib/auth";
 import { PROFILE_AVATAR_OPTIONS } from "@/lib/profile-avatar-options";
 import { createClient } from "@/lib/supabase/server";
 
@@ -24,7 +24,7 @@ export async function updateDirectorName(formData: FormData) {
     redirect("/dashboard/settings?profile=invalid_name");
   }
 
-  await requireDirector();
+  await requireDirectorWorkspace();
   const supabase = await createClient();
   const { error } = await supabase.rpc("update_director_profile_name", {
     p_name: result.data,
@@ -47,7 +47,7 @@ export async function updateProfileAvatar(avatarId: string) {
     return { message: "Choose a valid profile icon.", success: false };
   }
 
-  const director = await requireDirector();
+  const { director } = await requireDirectorWorkspace();
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("users")

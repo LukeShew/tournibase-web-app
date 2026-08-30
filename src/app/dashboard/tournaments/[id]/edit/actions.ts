@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import { getAppEnvironment } from "@/lib/app-environment";
 import { requireDirector } from "@/lib/auth";
 import type { CreateTournamentState } from "@/lib/form-states";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
@@ -106,7 +107,8 @@ export async function updateTournament(
   const { data: organizationRows, error: organizationError } = await supabase
     .from("organizations")
     .select("id")
-    .eq("owner_user_id", director.id);
+    .eq("owner_user_id", director.id)
+    .eq("operating_environment", getAppEnvironment());
 
   if (organizationError) {
     return {

@@ -10,21 +10,19 @@ import {
 import {
   getStripe,
   getStripeConfigurationIssues,
-  getStripePaymentWebhookSecrets,
+  getStripePaymentWebhookSecret,
+  getVerifiedStripe,
 } from "@/lib/stripe";
+import { assertStripeEventMatchesAppEnvironment } from "@/lib/stripe-connect-payments";
 import { getSupabaseAdminConfigurationIssues } from "@/lib/supabase/admin";
 
 export const runtime = "nodejs";
 
 export async function POST(request: Request) {
-  const webhookSecrets = getStripePaymentWebhookSecrets();
+  const webhookSecret = getStripePaymentWebhookSecret();
   const configurationIssues = [
     ...getStripeConfigurationIssues(),
-    ...(webhookSecrets.length > 0
-      ? []
-      : [
-          "STRIPE_CONNECTED_PAYMENTS_WEBHOOK_SECRET or STRIPE_WEBHOOK_SECRET",
-        ]),
+    ...(webhookSecret ? [] : ["STRIPE_CONNECTED_PAYMENTS_WEBHOOK_SECRET"]),
     ...getSupabaseAdminConfigurationIssues(),
   ];
 
@@ -49,27 +47,32 @@ export async function POST(request: Request) {
 
   const rawBody = await request.text();
   const stripe = getStripe();
-  let event: Stripe.Event | null = null;
+  let event: Stripe.Event;
 
-  for (const webhookSecret of webhookSecrets) {
-    try {
-      event = stripe.webhooks.constructEvent(
-        rawBody,
-        signature,
-        webhookSecret,
-      );
-      break;
-    } catch {
-      // Try the next configured endpoint secret.
-    }
-  }
-
-  if (!event) {
-    console.warn("[stripe-webhook] signature verification failed", {
-      configuredSecrets: webhookSecrets.length,
-    });
+  try {
+    event = stripe.webhooks.constructEvent(rawBody, signature, webhookSecret!);
+  } catch {
+    console.warn("[stripe-webhook] signature verification failed");
     return NextResponse.json(
       { error: "Invalid Stripe signature." },
+      { status: 400 },
+    );
+  }
+
+  let eventEnvironment: "live" | "test";
+
+  try {
+    eventEnvironment = assertStripeEventMatchesAppEnvironment(event.livemode);
+    await getVerifiedStripe();
+  } catch (error) {
+    console.warn("[stripe-webhook] environment mismatch", {
+      eventId: event.id,
+      eventType: event.type,
+      livemode: event.livemode,
+      message: error instanceof Error ? error.message : "Unknown error",
+    });
+    return NextResponse.json(
+      { error: "Stripe event does not match this deployment." },
       { status: 400 },
     );
   }
@@ -84,6 +87,7 @@ export async function POST(request: Request) {
       const fulfillment = await fulfillCheckoutSession(
         event.data.object.id,
         eventConnectedAccountId,
+        eventEnvironment,
       );
 
       if (fulfillment.fulfilled) {
@@ -114,6 +118,7 @@ export async function POST(request: Request) {
       await markCheckoutFailed(
         event.data.object.id,
         eventConnectedAccountId,
+        eventEnvironment,
       );
     }
 

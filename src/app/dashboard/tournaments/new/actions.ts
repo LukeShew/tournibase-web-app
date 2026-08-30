@@ -3,10 +3,9 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { requireDirector } from "@/lib/auth";
+import { requireDirectorWorkspace } from "@/lib/auth";
 import type { CreateTournamentState } from "@/lib/form-states";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
-import { createClient } from "@/lib/supabase/server";
 import { slugifyTournamentName } from "@/lib/tournaments";
 
 const isoDate = z
@@ -72,7 +71,7 @@ export async function createTournament(
   _previousState: CreateTournamentState,
   formData: FormData,
 ): Promise<CreateTournamentState> {
-  const director = await requireDirector();
+  const { director, organization } = await requireDirectorWorkspace();
   const result = tournamentSchema.safeParse({
     name: formData.get("name"),
     startDate: formData.get("startDate"),
@@ -100,46 +99,6 @@ export async function createTournament(
     };
   }
 
-  const supabase = await createClient();
-  const { data: existingOrganization, error: organizationLookupError } =
-    await supabase
-      .from("organizations")
-      .select("id")
-      .eq("owner_user_id", director.id)
-      .order("created_at", { ascending: true })
-      .limit(1)
-      .maybeSingle();
-
-  if (organizationLookupError) {
-    return {
-      message: "We could not load your organization. Try again.",
-      errors: {},
-    };
-  }
-
-  let organizationId = existingOrganization?.id as number | undefined;
-
-  if (!organizationId) {
-    const { data: newOrganization, error: organizationCreateError } =
-      await supabase
-        .from("organizations")
-        .insert({
-          name: `${director.name} Events`,
-          owner_user_id: director.id,
-        })
-        .select("id")
-        .single();
-
-    if (organizationCreateError || !newOrganization) {
-      return {
-        message: "We could not create your organization. Try again.",
-        errors: {},
-      };
-    }
-
-    organizationId = newOrganization.id as number;
-  }
-
   const baseSlug = slugifyTournamentName(
     result.data.publicSlug || result.data.name,
   );
@@ -155,7 +114,7 @@ export async function createTournament(
     const { data: tournament, error: tournamentError } = await admin
       .from("tournaments")
       .insert({
-        organization_id: organizationId,
+        organization_id: organization.id,
         name: result.data.name,
         sport: "youth_basketball",
         start_date: result.data.startDate,

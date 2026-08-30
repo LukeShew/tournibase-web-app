@@ -1,12 +1,13 @@
 import "server-only";
 
 import type Stripe from "stripe";
+import { getAppEnvironment } from "@/lib/app-environment";
 import { attemptOrderConfirmationEmail } from "@/lib/email/order-confirmation";
 import {
   getRefundPaymentStatusForCharge,
   parseStripeOrderIdMetadata,
 } from "@/lib/order-refunds";
-import { getStripe } from "@/lib/stripe";
+import { getVerifiedStripe } from "@/lib/stripe";
 import {
   assertStripeRoutingMatches,
   getApplicationFeeRefundTargetCents,
@@ -32,10 +33,15 @@ type OrderRecord = {
   stripe_environment: StripeEnvironment;
   stripe_payment_intent_id: string | null;
   tournament_id: number;
+  tournaments: {
+    organizations: {
+      operating_environment: StripeEnvironment;
+    };
+  };
 };
 
 const orderRecordSelection =
-  "id, tournament_id, buyer_name, amount_total, amount_refunded, payment_status, stripe_connected_account_id, stripe_environment, platform_fee_amount, platform_fee_refunded, stripe_payment_intent_id, stripe_charge_id";
+  "id, tournament_id, buyer_name, amount_total, amount_refunded, payment_status, stripe_connected_account_id, stripe_environment, platform_fee_amount, platform_fee_refunded, stripe_payment_intent_id, stripe_charge_id, tournaments!inner(organizations!inner(operating_environment))";
 
 type OrderItemRecord = {
   id: number;
@@ -80,12 +86,19 @@ export type OrderConfirmation = {
 export async function fulfillCheckoutSession(
   sessionId: string,
   eventConnectedAccountId?: string | null,
+  eventEnvironment?: StripeEnvironment,
 ) {
+  const appEnvironment = getAppEnvironment();
   const supabase = getSupabaseAdmin();
   const { data: orderRow, error: orderError } = await supabase
     .from("orders")
     .select(orderRecordSelection)
     .eq("stripe_checkout_id", sessionId)
+    .eq("stripe_environment", appEnvironment)
+    .eq(
+      "tournaments.organizations.operating_environment",
+      appEnvironment,
+    )
     .maybeSingle();
 
   if (orderError) {
@@ -96,10 +109,12 @@ export async function fulfillCheckoutSession(
     throw new Error("Paid checkout does not match a TourniBase order.");
   }
 
-  const order = orderRow as OrderRecord;
+  const order = orderRow as unknown as OrderRecord;
+  assertOrderMatchesAppEnvironment(order);
   const routing = getOrderStripeRouting(order);
 
   assertStripeRoutingMatches({
+    actualEnvironment: eventEnvironment,
     eventConnectedAccountId,
     routing,
   });
@@ -112,26 +127,12 @@ export async function fulfillCheckoutSession(
     paymentIntentId: order.stripe_payment_intent_id,
   };
 
-  if (!isCurrentStripeEnvironment(routing.environment)) {
-    if (
-      order.payment_status === "paid" ||
-      order.payment_status === "refunded" ||
-      order.payment_status === "partial_refund"
-    ) {
-      return { fulfilled: true as const, orderId: order.id };
-    }
-
-    throw new Error(
-      "This checkout belongs to a different Stripe environment and is read-only.",
-    );
-  }
-
   if (isFreeCheckoutId(sessionId)) {
     if (Number(order.amount_total) !== 0 || routing.connectedAccountId) {
       throw new Error("Free checkout routing does not match the TourniBase order.");
     }
   } else {
-    const stripe = getStripe();
+    const stripe = await getVerifiedStripe();
     const session = await stripe.checkout.sessions.retrieve(
       sessionId,
       {},
@@ -230,12 +231,19 @@ export async function fulfillCheckoutSession(
 export async function markCheckoutFailed(
   sessionId: string,
   eventConnectedAccountId?: string | null,
+  eventEnvironment?: StripeEnvironment,
 ) {
+  const appEnvironment = getAppEnvironment();
   const supabase = getSupabaseAdmin();
   const { data: orderRow, error: orderLookupError } = await supabase
     .from("orders")
     .select(orderRecordSelection)
     .eq("stripe_checkout_id", sessionId)
+    .eq("stripe_environment", appEnvironment)
+    .eq(
+      "tournaments.organizations.operating_environment",
+      appEnvironment,
+    )
     .maybeSingle();
 
   if (orderLookupError) {
@@ -246,9 +254,11 @@ export async function markCheckoutFailed(
     return;
   }
 
-  const order = orderRow as OrderRecord;
+  const order = orderRow as unknown as OrderRecord;
+  assertOrderMatchesAppEnvironment(order);
 
   assertStripeRoutingMatches({
+    actualEnvironment: eventEnvironment,
     eventConnectedAccountId,
     routing: getOrderStripeRouting(order),
   });
@@ -268,11 +278,18 @@ export async function syncStripeChargeRefund(
   charge: Stripe.Charge,
   eventConnectedAccountId: string | null = null,
 ): Promise<StripeRefundSyncResult> {
-  const stripe = getStripe();
+  const stripe = await getVerifiedStripe();
   const eventRouting: StripePaymentRouting = {
     connectedAccountId: eventConnectedAccountId,
     environment: charge.livemode ? "live" : "test",
   };
+
+  if (!isCurrentStripeEnvironment(eventRouting.environment)) {
+    throw new Error(
+      "Stripe refund event belongs to a different TourniBase environment.",
+    );
+  }
+
   const latestCharge = await stripe.charges.retrieve(
     charge.id,
     {},
@@ -294,6 +311,7 @@ export async function syncStripeChargeRefund(
   }
 
   const routing = getOrderStripeRouting(order);
+  assertOrderMatchesAppEnvironment(order);
 
   assertStripeRoutingMatches({
     actualEnvironment: latestCharge.livemode ? "live" : "test",
@@ -428,7 +446,8 @@ async function resolveOrderForStripeCharge(
   let paymentIntentMetadataOrderId: number | null = null;
 
   if (paymentIntentId) {
-    const paymentIntent = await getStripe().paymentIntents.retrieve(
+    const stripe = await getVerifiedStripe();
+    const paymentIntent = await stripe.paymentIntents.retrieve(
       paymentIntentId,
       {},
       getStripeRequestOptions(routing),
@@ -465,6 +484,11 @@ async function resolveOrderForStripeCharge(
     .from("orders")
     .select(orderRecordSelection)
     .eq("id", metadataOrderId)
+    .eq("stripe_environment", routing.environment)
+    .eq(
+      "tournaments.organizations.operating_environment",
+      routing.environment,
+    )
     .maybeSingle();
 
   if (error) {
@@ -475,7 +499,7 @@ async function resolveOrderForStripeCharge(
     return null;
   }
 
-  const metadataOrder = data as OrderRecord;
+  const metadataOrder = data as unknown as OrderRecord;
 
   assertStripeRoutingMatches({
     actualEnvironment: charge.livemode ? "live" : "test",
@@ -497,7 +521,11 @@ async function findOrderByStripeIdentifier(
     .from("orders")
     .select(orderRecordSelection)
     .eq(field, value)
-    .eq("stripe_environment", routing.environment);
+    .eq("stripe_environment", routing.environment)
+    .eq(
+      "tournaments.organizations.operating_environment",
+      routing.environment,
+    );
 
   query = routing.connectedAccountId
     ? query.eq("stripe_connected_account_id", routing.connectedAccountId)
@@ -509,7 +537,7 @@ async function findOrderByStripeIdentifier(
     throw error;
   }
 
-  return data ? (data as OrderRecord) : null;
+  return data ? (data as unknown as OrderRecord) : null;
 }
 
 function assertOrderPaymentIdentifiers(
@@ -536,6 +564,22 @@ function getOrderStripeRouting(order: OrderRecord): StripePaymentRouting {
   };
 }
 
+function assertOrderMatchesAppEnvironment(order: OrderRecord) {
+  const appEnvironment = getAppEnvironment();
+  const organizationEnvironment =
+    order.tournaments.organizations.operating_environment;
+
+  if (
+    order.stripe_environment !== appEnvironment ||
+    organizationEnvironment !== appEnvironment ||
+    organizationEnvironment !== order.stripe_environment
+  ) {
+    throw new Error(
+      "TourniBase order routing does not match this application environment.",
+    );
+  }
+}
+
 async function getStripePaymentIdentifiers(
   session: Stripe.Checkout.Session,
   routing: StripePaymentRouting,
@@ -549,7 +593,8 @@ async function getStripePaymentIdentifiers(
     return { chargeId: null, paymentIntentId: null };
   }
 
-  const paymentIntent = await getStripe().paymentIntents.retrieve(
+  const stripe = await getVerifiedStripe();
+  const paymentIntent = await stripe.paymentIntents.retrieve(
     paymentIntentId,
     {},
     getStripeRequestOptions(routing),
@@ -575,7 +620,7 @@ async function synchronizeApplicationFeeRefund(
     return 0;
   }
 
-  const stripe = getStripe();
+  const stripe = await getVerifiedStripe();
   let applicationFee = await stripe.applicationFees.retrieve(
     applicationFeeId,
   );
@@ -626,17 +671,24 @@ export async function getOrderConfirmation(
   }
 
   const supabase = getSupabaseAdmin();
+  const appEnvironment = getAppEnvironment();
   const { data: orderRow, error: orderError } = await supabase
     .from("orders")
     .select(orderRecordSelection)
     .eq("id", fulfillment.orderId)
+    .eq("stripe_environment", appEnvironment)
+    .eq(
+      "tournaments.organizations.operating_environment",
+      appEnvironment,
+    )
     .single();
 
   if (orderError) {
     throw orderError;
   }
 
-  const order = orderRow as OrderRecord;
+  const order = orderRow as unknown as OrderRecord;
+  assertOrderMatchesAppEnvironment(order);
   const [
     { data: tournament, error: tournamentError },
     { data: itemRows, error: itemError },

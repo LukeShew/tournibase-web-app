@@ -3,7 +3,8 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Brand } from "@/components/brand";
 import { LoginForm } from "@/components/login-form";
-import { getDirector } from "@/lib/auth";
+import { getPublicSignupHref } from "@/lib/app-environment";
+import { getDirectorWorkspace } from "@/lib/auth";
 import { CONFIRMATION_RESEND_COOLDOWN_SECONDS } from "@/lib/confirmation-resend";
 
 export const metadata: Metadata = {
@@ -14,13 +15,15 @@ export default async function LoginPage({
   searchParams,
 }: {
   searchParams?: Promise<{
+    access?: string;
     created?: string;
     confirmation?: string;
     email?: string;
   }>;
 }) {
-  const director = await getDirector();
-  const { created, confirmation, email } = (await searchParams) ?? {};
+  const workspace = await getDirectorWorkspace();
+  const { access, created, confirmation, email } = (await searchParams) ?? {};
+  const signupHref = getPublicSignupHref();
   const canResendConfirmation = [
     "required",
     "resent",
@@ -30,7 +33,7 @@ export default async function LoginPage({
   const showConfirmationNotice =
     created === "1" || confirmation === "required" || confirmation === "resent";
 
-  if (director) {
+  if (workspace) {
     redirect("/dashboard");
   }
 
@@ -39,7 +42,7 @@ export default async function LoginPage({
       <header className="mx-auto flex w-full max-w-6xl items-center justify-between">
         <Brand tone="light" />
         <Link
-          href="/signup"
+          href={signupHref}
           className="rounded-full border border-border bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700"
         >
           Create account
@@ -54,6 +57,14 @@ export default async function LoginPage({
         <p className="mt-3 leading-7 text-slate-500">
           Use the director account connected to your tournament dashboard.
         </p>
+        {access === "unavailable" ? (
+          <div
+            aria-live="polite"
+            className="mt-6 rounded-2xl border border-red-300 bg-red-50 px-4 py-3 text-sm font-medium text-red-800"
+          >
+            This account cannot be used here. Check the address and try again.
+          </div>
+        ) : null}
         {showConfirmationNotice ? (
           <div
             aria-live="polite"
@@ -93,7 +104,7 @@ export default async function LoginPage({
         <p className="mt-6 text-center text-sm leading-6 text-slate-500">
           Need an account?{" "}
           <Link
-            href="/signup"
+            href={signupHref}
             className="font-semibold text-blue-700 hover:text-blue-500"
           >
             Create account

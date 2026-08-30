@@ -2,7 +2,7 @@ import { Brand } from "@/components/brand";
 import { DashboardSidebar } from "@/components/dashboard-sidebar";
 import { DashboardMobileNavigation } from "@/components/dashboard-mobile-navigation";
 import { logout } from "@/app/login/actions";
-import { requireDirector } from "@/lib/auth";
+import { requireDirectorWorkspace } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -11,7 +11,7 @@ export default async function DashboardLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const director = await requireDirector();
+  const { director } = await requireDirectorWorkspace();
 
   return (
     <div className="min-h-screen bg-background text-foreground">

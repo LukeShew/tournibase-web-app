@@ -1,17 +1,25 @@
 import "server-only";
 
 import Stripe from "stripe";
+import {
+  assertStripePlatformAccountIdMatches,
+  assertStripeKeysMatchAppEnvironment,
+  requireExpectedStripePlatformAccountId,
+} from "@/lib/app-environment";
 
 let stripeClient: Stripe | null = null;
+let stripePlatformIdentityCheck:
+  | { accountId: string; promise: Promise<void> }
+  | null = null;
 
 export function getStripeConfigurationIssues({
+  includeConnectAccountWebhookSecret = false,
   includeConnectedPaymentsWebhookSecret = false,
   includePublishableKey = false,
-  includeWebhookSecret = false,
 }: {
+  includeConnectAccountWebhookSecret?: boolean;
   includeConnectedPaymentsWebhookSecret?: boolean;
   includePublishableKey?: boolean;
-  includeWebhookSecret?: boolean;
 } = {}) {
   const issues: string[] = [];
 
@@ -26,8 +34,11 @@ export function getStripeConfigurationIssues({
     issues.push("NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY");
   }
 
-  if (includeWebhookSecret && !process.env.STRIPE_WEBHOOK_SECRET) {
-    issues.push("STRIPE_WEBHOOK_SECRET");
+  if (
+    includeConnectAccountWebhookSecret &&
+    !process.env.STRIPE_CONNECT_ACCOUNT_WEBHOOK_SECRET
+  ) {
+    issues.push("STRIPE_CONNECT_ACCOUNT_WEBHOOK_SECRET");
   }
 
   if (
@@ -40,14 +51,8 @@ export function getStripeConfigurationIssues({
   return issues;
 }
 
-export function getStripePaymentWebhookSecrets() {
-  return [
-    process.env.STRIPE_CONNECTED_PAYMENTS_WEBHOOK_SECRET,
-    process.env.STRIPE_WEBHOOK_SECRET,
-  ].filter(
-    (secret, index, secrets): secret is string =>
-      Boolean(secret) && secrets.indexOf(secret) === index,
-  );
+export function getStripePaymentWebhookSecret() {
+  return process.env.STRIPE_CONNECTED_PAYMENTS_WEBHOOK_SECRET?.trim() || null;
 }
 
 export function getStripe() {
@@ -57,6 +62,8 @@ export function getStripe() {
     throw new Error(`Missing Stripe configuration: ${issues.join(", ")}.`);
   }
 
+  assertStripeKeysMatchAppEnvironment();
+
   if (!stripeClient) {
     stripeClient = new Stripe(process.env.STRIPE_SECRET_KEY!, {
       typescript: true,
@@ -64,4 +71,29 @@ export function getStripe() {
   }
 
   return stripeClient;
+}
+
+export async function getVerifiedStripe() {
+  const stripe = getStripe();
+  const expectedAccountId = requireExpectedStripePlatformAccountId();
+
+  if (stripePlatformIdentityCheck?.accountId !== expectedAccountId) {
+    const promise = stripe.accounts.retrieveCurrent().then((account) => {
+      assertStripePlatformAccountIdMatches(account.id);
+    });
+
+    stripePlatformIdentityCheck = {
+      accountId: expectedAccountId,
+      promise,
+    };
+  }
+
+  try {
+    await stripePlatformIdentityCheck.promise;
+  } catch (error) {
+    stripePlatformIdentityCheck = null;
+    throw error;
+  }
+
+  return stripe;
 }

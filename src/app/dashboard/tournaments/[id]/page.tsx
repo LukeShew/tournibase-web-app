@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { RevenueTrendCard } from "@/components/revenue-trend-card";
+import { getAppEnvironment } from "@/lib/app-environment";
 import { requireDirector } from "@/lib/auth";
 import {
   formatCurrency,
@@ -47,7 +48,8 @@ export default async function TournamentOverviewPage({
   const { data: organizationRows, error: organizationError } = await supabase
     .from("organizations")
     .select("id")
-    .eq("owner_user_id", director.id);
+    .eq("owner_user_id", director.id)
+    .eq("operating_environment", getAppEnvironment());
 
   if (organizationError) {
     throw organizationError;

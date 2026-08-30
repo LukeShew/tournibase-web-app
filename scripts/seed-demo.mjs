@@ -4,6 +4,7 @@ const DEMO_EMAIL = "demo.director@tournibase.test";
 const DEMO_PASSWORD = "TourniBaseDemo123!";
 const DEMO_DIRECTOR_NAME = "TourniBase Demo Director";
 const DEMO_ORGANIZATION_NAME = "TourniBase Demo Events";
+const DEMO_APP_ENVIRONMENT = "test";
 const DEMO_TOURNAMENT_NAME = "DMV Summer Tip-Off Classic";
 const DEMO_PUBLIC_SLUG = "dmv-summer-tip-off-classic";
 const DEMO_TIME_ZONE = "America/New_York";
@@ -112,6 +113,7 @@ async function ensureDemoOrganization(client, directorId) {
     .select("id")
     .eq("owner_user_id", directorId)
     .eq("name", DEMO_ORGANIZATION_NAME)
+    .eq("operating_environment", DEMO_APP_ENVIRONMENT)
     .limit(1)
     .maybeSingle();
 
@@ -129,6 +131,7 @@ async function ensureDemoOrganization(client, directorId) {
     .from("organizations")
     .insert({
       name: DEMO_ORGANIZATION_NAME,
+      operating_environment: DEMO_APP_ENVIRONMENT,
       owner_user_id: directorId,
     })
     .select("id")

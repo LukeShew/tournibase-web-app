@@ -1,9 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
-import { getDirector } from "@/lib/auth";
+import { getDirectorWorkspace } from "@/lib/auth";
 import { attemptRefundConfirmationEmail } from "@/lib/email/refund-confirmation";
 import { syncStripeChargeRefund } from "@/lib/orders";
-import { getStripe } from "@/lib/stripe";
+import { getVerifiedStripe } from "@/lib/stripe";
 import {
   assertStripeRoutingMatches,
   getStripeRequestOptions,
@@ -21,9 +21,9 @@ const schema = z.object({
 });
 
 export async function POST(request: NextRequest) {
-  const director = await getDirector();
+  const workspace = await getDirectorWorkspace();
 
-  if (!director) {
+  if (!workspace) {
     return NextResponse.json({ error: "Sign in again to continue." }, { status: 401 });
   }
 
@@ -36,9 +36,18 @@ export async function POST(request: NextRequest) {
   const supabase = getSupabaseAdmin();
   const { data: pass, error } = await supabase
     .from("passes")
-    .select("id, order_id, order_item_id, status, orders!inner(stripe_checkout_id, stripe_connected_account_id, stripe_environment, platform_fee_amount, tournaments!inner(organizations!inner(owner_user_id))), order_items!inner(unit_amount_cents)")
+    .select("id, order_id, order_item_id, status, orders!inner(stripe_checkout_id, stripe_connected_account_id, stripe_environment, platform_fee_amount, tournaments!inner(organizations!inner(id, owner_user_id, operating_environment))), order_items!inner(unit_amount_cents)")
     .eq("id", parsed.data.passId)
     .eq("order_id", parsed.data.orderId)
+    .eq(
+      "orders.stripe_environment",
+      workspace.organization.operatingEnvironment,
+    )
+    .eq("orders.tournaments.organizations.id", workspace.organization.id)
+    .eq(
+      "orders.tournaments.organizations.operating_environment",
+      workspace.organization.operatingEnvironment,
+    )
     .maybeSingle();
 
   if (error || !pass) {
@@ -53,12 +62,26 @@ export async function POST(request: NextRequest) {
       stripe_connected_account_id: string | null;
       stripe_environment: StripeEnvironment;
       platform_fee_amount: number | string;
-      tournaments: { organizations: { owner_user_id: string } };
+      tournaments: {
+        organizations: {
+          id: number;
+          operating_environment: StripeEnvironment;
+          owner_user_id: string;
+        };
+      };
     };
     order_items: { unit_amount_cents: number };
   };
 
-  if (relation.orders.tournaments.organizations.owner_user_id !== director.id) {
+  if (
+    relation.orders.tournaments.organizations.owner_user_id !==
+      workspace.director.id ||
+    relation.orders.tournaments.organizations.id !== workspace.organization.id ||
+    relation.orders.tournaments.organizations.operating_environment !==
+      workspace.organization.operatingEnvironment ||
+    relation.orders.stripe_environment !==
+      workspace.organization.operatingEnvironment
+  ) {
     return NextResponse.json({ error: "You do not have access to that order." }, { status: 403 });
   }
 
@@ -77,6 +100,16 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "This order does not have a Stripe payment." }, { status: 409 });
   }
 
+  if (!relation.orders.stripe_connected_account_id) {
+    return NextResponse.json(
+      {
+        error:
+          "This historical payment is read-only and cannot be refunded here.",
+      },
+      { status: 409 },
+    );
+  }
+
   const routing = {
     connectedAccountId: relation.orders.stripe_connected_account_id,
     environment: relation.orders.stripe_environment,
@@ -92,7 +125,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const stripe = getStripe();
+  const stripe = await getVerifiedStripe();
   const session = await stripe.checkout.sessions.retrieve(
     relation.orders.stripe_checkout_id,
     {},
@@ -122,9 +155,7 @@ export async function POST(request: NextRequest) {
           pass_id: String(parsed.data.passId),
         },
         payment_intent: paymentIntent,
-        ...(routing.connectedAccountId
-          ? { refund_application_fee: true }
-          : {}),
+        refund_application_fee: true,
       },
       getStripeRequestOptions(
         routing,
