@@ -17,7 +17,7 @@
     "@supabase/supabase-js": "2.110.0",
     "@zxing/browser": "0.2.0",
     "@zxing/library": "0.22.0",
-    "next": "16.2.10",
+    "next": "16.3.3",
     "qrcode": "^1.5.4",
     "react": "19.2.4",
     "react-dom": "19.2.4",
@@ -33,13 +33,13 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
-    "eslint-config-next": "16.2.10",
+    "eslint-config-next": "16.3.3",
     "supabase": "2.109.0",
     "tailwindcss": "^4",
     "typescript": "^5",
     "vitest": "4.1.9"
   },
   "overrides": {
-    "postcss": "8.5.16"
+    "postcss": "8.5.26"
   }
 }

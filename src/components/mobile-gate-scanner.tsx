@@ -8,6 +8,7 @@ import {
   useState,
 } from "react";
 import type { IScannerControls } from "@zxing/browser";
+import { useRouter } from "next/navigation";
 import type {
   OverridePassInput,
   PassValidationResult,
@@ -66,6 +67,7 @@ export function MobileGateScanner({
   validatePass: (input: ValidatePassInput) => Promise<PassValidationResult>;
   venueName: string;
 }) {
+  const router = useRouter();
   const videoRef = useRef<HTMLVideoElement>(null);
   const manualInputRef = useRef<HTMLInputElement>(null);
   const scannerControlsRef = useRef<IScannerControls | null>(null);
@@ -292,21 +294,15 @@ export function MobileGateScanner({
   }
 
   function openManualLookup() {
-    window.location.assign(
-      `${window.location.pathname.replace(/\/+$/, "")}/lookup`,
-    );
+    router.push(`${window.location.pathname.replace(/\/+$/, "")}/lookup`);
   }
 
   function openRecentScans() {
-    window.location.assign(
-      `${window.location.pathname.replace(/\/+$/, "")}/recent`,
-    );
+    router.push(`${window.location.pathname.replace(/\/+$/, "")}/recent`);
   }
 
   function openGateSale() {
-    window.location.assign(
-      `${window.location.pathname.replace(/\/+$/, "")}/sale`,
-    );
+    router.push(`${window.location.pathname.replace(/\/+$/, "")}/sale`);
   }
 
   const canLookup = permissions.includes("lookup");
