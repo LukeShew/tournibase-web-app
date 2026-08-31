@@ -1,11 +1,12 @@
 # Local Demo Data
 
-Last updated: August 29, 2026
+Last updated: August 31, 2026
 
 TourniBase has two distinct kinds of test data:
 
 - The permanent hosted staging workspace belongs to `lsautomates@gmail.com`
-  and contains Luke Events, two test tournaments, and 39 test orders.
+  and contains Luke Events, two test tournaments, and hosted test orders,
+  including Sandbox regression orders.
 - The guarded local seed creates a separate repeatable demo tournament for
   local development.
 

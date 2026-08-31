@@ -1,6 +1,6 @@
 # TourniBase Web MVP Architecture
 
-Last verified: July 16, 2026
+Last verified: August 31, 2026
 
 ## System overview
 
@@ -44,16 +44,17 @@ form. The browser never receives the Supabase secret key or Stripe secret keys.
 - Postgres stores organizations, tournaments, tickets, orders, passes, scanner
   sessions, check-ins, and manual sales.
 - Row Level Security limits directors to organizations they own.
-- Anonymous access is limited to published tournaments and their active ticket
-  types.
+- Signed-out buyer pages read published events and active tickets through the
+  server-side, environment-aware data layer. Anonymous Data API access to those
+  tables is removed.
 - Sensitive gate functions are callable only by the server-side Supabase secret
   key.
 
 ### Stripe Connect
 
 - TourniBase's existing Stripe account is the Connect platform.
-- Each organization has one Accounts v2 connected account in each Stripe
-  environment.
+- Each organization is permanently assigned to `test` or `live` and has at
+  most one Accounts v2 connected account in that environment.
 - Directors complete Stripe-hosted onboarding. Connected accounts receive the
   full Stripe Dashboard; TourniBase does not support switching or disconnecting
   accounts during the pilot.
@@ -75,8 +76,10 @@ form. The browser never receives the Supabase secret key or Stripe secret keys.
   partially refunded, subtract the refund from net revenue, and void the
   selected pass. Generic partial refunds created directly in Stripe update the
   order total but cannot identify which pass to void.
-- The permanent staging workspace stays in the onboarding Sandbox. Production
-  uses live Connect only after the ordered environment rollout and launch checks.
+- The permanent staging workspace uses the onboarding Sandbox at a $0
+  TourniBase fee. Production is deployed behind the live data boundary with
+  paid checkout disabled until live Stripe keys, webhooks, onboarding, and the
+  controlled real-money gate are complete.
 
 ### Transactional email
 
@@ -155,8 +158,8 @@ form. The browser never receives the Supabase secret key or Stripe secret keys.
 5. Publishing is blocked until at least one active ticket type exists. If any
    active ticket is paid, the organization's current-environment connected
    account must be ready for both charges and payouts.
-6. Only published tournaments and active ticket types are visible to anonymous
-   buyers.
+6. Only published tournaments and active ticket types are returned to
+   signed-out buyers through the environment-aware server data layer.
 7. A published event stays visible if its connected account later becomes
    restricted, but paid ticket options and paid checkout are disabled. Free
    ticket options remain available.

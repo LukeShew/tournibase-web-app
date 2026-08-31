@@ -26,6 +26,7 @@ import {
 import { checkRateLimit } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
+const CHECKOUT_INTEGRATION_IDENTIFIER = "tournibase_dhkgywdx";
 
 const checkoutSchema = z.object({
   eventSlug: z
@@ -352,7 +353,7 @@ export async function POST(request: NextRequest) {
     const session = await stripe.checkout.sessions.create(
       {
         mode: "payment",
-        payment_method_types: ["card"],
+        integration_identifier: CHECKOUT_INTEGRATION_IDENTIFIER,
         customer_email: parsed.data.email,
         client_reference_id: String(order.id),
         line_items: selectedTickets.map((selection) => ({

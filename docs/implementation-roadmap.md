@@ -1,6 +1,6 @@
 # TourniBase Web MVP Implementation Roadmap
 
-Last updated: August 30, 2026
+Last updated: August 31, 2026
 
 ## Current status
 
@@ -8,15 +8,17 @@ Last updated: August 30, 2026
 - Completed: All 19 numbered phases
 - Current production URL:
   [tournibase.com](https://tournibase.com)
-- Payment status: Connect direct charges are deployed against the current test
-  configuration; the staging/live environment split is implemented locally
-- Environment rollout: Additive migration and ordered deployment are prepared,
-  but neither has been applied
+- Payment status: Staging Connect direct charges use the onboarding Sandbox at
+  a $0 TourniBase fee; production checkout remains disabled
+- Environment rollout: Dual Vercel targets are deployed and both Supabase
+  environment-isolation migrations are applied
 - Transactional email: Live through Resend and end-to-end tested
 - Offline access: Downloadable PNG for every paid pass
 - Refund support: Basic organizer support flow and Stripe refund sync built
-- Next phase: Deploy and verify the staging/production split, then run the live
-  payment gate
+- Next phase: Configure live Stripe keys and webhooks, complete live director
+  onboarding, then run the live payment gate
+- Signup maintenance: The trusted server organization-creation path is restored
+  and verified; re-enable the Supabase Auth signup toggle
 - Not started: No numbered phases
 
 The waitlist website and a native mobile app are postponed, separate products.
@@ -88,8 +90,8 @@ Completed July 4, 2026:
 - Confirmed no real secrets or private environment files are tracked or present
   in Git history.
 - Confirmed production and local migration histories matched at the July 4
-  handoff. The later Connect foundation is local migration 19 and still needs
-  to be applied to production.
+  handoff. The later Connect and environment-isolation migrations have since
+  been applied to hosted Supabase.
 - Rebuilt and reseeded the local Docker database from scratch.
 - Recorded final routes, environment variables, schema state, local test
   instructions, verification results, and known limitations in the
@@ -99,12 +101,15 @@ Completed July 4, 2026:
 
 These are required before accepting real customer payments:
 
-- Follow the complete [staging and production rollout](./environment-rollout.md)
-  without applying the contract migration early.
+- Finish the remaining [staging and production rollout](./environment-rollout.md)
+  verification; the dual deployment and both migrations are complete.
 - Verify the permanent staging workspace, $0 application fee, forced test-email
   recipient, host isolation, refunds, and multi-director isolation.
 - Configure live keys and both live webhook destinations with production
   checkout disabled.
+- Re-enable the Supabase Auth signup toggle. The trusted server
+  organization-creation path is restored and verified, and direct authenticated
+  inserts remain blocked.
 - Have the pilot director complete hosted onboarding in live mode.
 - Run one low-value live purchase using a real card and confirm the 2% plus
   30-cent TourniBase application fee.
@@ -118,9 +123,9 @@ These are required before accepting real customer payments:
 - Full-order and pass-specific refunds are initiated in TourniBase, synchronized
   from the connected Stripe account, reflected in revenue, and followed by a
   buyer refund email.
-- The staging/production split is implemented locally but not deployed. Until
-  the additive and contract migrations and both environment-aware deployments
-  are complete, the shared hosted system does not enforce the final boundary.
+- The staging/production split is deployed and the shared hosted database
+  enforces the final `test`/`live` boundary. Live Stripe keys and production
+  webhook destinations remain unfinished, so production checkout stays off.
 - Saved pass PNGs work offline for buyers, but scanner devices still require
   internet for authoritative validation and duplicate prevention.
 - Apple Wallet and Google Wallet passes are postponed.
@@ -129,8 +134,9 @@ These are required before accepting real customer payments:
   partial refunds created directly in Stripe remain order-level only.
 - Dispute workflows are not automated.
 - Ticket quantities use an atomic pending reservation during checkout.
-- Directors can create an account from the production signup page. Staging
-  public signup is disabled.
+- Staging public signup is disabled. The trusted production organization-
+  creation path is restored and verified, but Supabase Auth signup remains
+  maintenance-disabled pending its final dashboard toggle.
 
 ## MVP-ready definition
 

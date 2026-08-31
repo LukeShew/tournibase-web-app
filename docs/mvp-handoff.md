@@ -1,6 +1,6 @@
 # TourniBase Web MVP Handoff
 
-Last verified against the local repository: August 30, 2026
+Last verified against the local repository: August 31, 2026
 
 ## Handoff status
 
@@ -8,11 +8,16 @@ All 19 numbered web MVP phases are complete. Stripe Connect direct charges are
 deployed against the current test configuration.
 
 The one-Vercel-project, one-Supabase-project staging/production split is
-implemented locally but is not deployed. Its additive migration is prepared but
-not applied, and the post-deploy contract remains outside migration history.
-The app is not ready to accept real customer payments until the ordered
-[environment rollout](./environment-rollout.md), live onboarding, and controlled
-real-money test are complete.
+deployed. The additive and contract migrations are applied, and organizations
+are isolated as `test` or `live`. Staging uses the onboarding Sandbox with a $0
+TourniBase fee and forced test-email delivery. Production uses the live data
+boundary with paid checkout disabled.
+
+The trusted server organization-creation path is restored and verified. The app
+is not ready to accept real customer payments until Supabase Auth signup is
+re-enabled, live Stripe keys and both live webhook destinations are configured,
+the pilot director completes live onboarding, and the controlled real-money
+test passes.
 
 Production app:
 [tournibase.com](https://tournibase.com)
@@ -25,7 +30,7 @@ Production app:
 | Local web app | `apps/tournibase-web-app` |
 | Production hosting | Vercel project `tournibase-web-app` |
 | Production database | Supabase project `khwaafsdtgiymucppkmo` |
-| Payments | Direct charges to organizer accounts; onboarding Sandbox for staging and live Connect for production after rollout |
+| Payments | Direct charges to organizer accounts; onboarding Sandbox for staging and live Connect for production after final live setup |
 | Transactional email | Resend from `passes@tournibase.com` |
 | Refund support | TourniBase full-order and pass-specific refunds with connected-account webhook synchronization |
 
@@ -121,11 +126,14 @@ authorized gate staff.
 
 ## Database handoff
 
-Production matches the 25 committed product migrations, including Stripe
-Connect. The additive environment-isolation migration is prepared locally as
-`20260829002309_add_app_environment_isolation.sql` but has not been applied.
-The contract SQL stays under `supabase/post-deploy` until the same
-environment-aware build is verified on both stable hosts.
+Hosted Supabase matches the 28 product and rollout migrations. The environment
+split is recorded by:
+
+- `20260829002309_add_app_environment_isolation.sql`
+- `20260831003839_finalize_app_environment_isolation.sql`
+- `20260831024917_restore_trusted_organization_creation.sql`
+
+The same environment-aware application build is deployed to both stable hosts.
 
 The current 13 public application tables are:
 
@@ -143,12 +151,11 @@ The current 13 public application tables are:
 - `order_email_deliveries`
 - `rate_limit_buckets`
 
-RLS is enabled on all 13 tables. Anonymous access is currently limited to published
-tournaments and active ticket types. Orders, passes, scanner records, and buyer
-data remain private. Email delivery records and their atomic claim function are
-available only to the server-side service role. The post-deploy contract removes
-the remaining anonymous Data API path after both stable hosts are environment
-aware.
+RLS is enabled on all 13 tables. Anonymous Data API access to tournaments and
+ticket types is removed; public buyer pages use the server-side,
+environment-aware data layer. Orders, passes, scanner records, and buyer data
+remain private. Email delivery records and their atomic claim function are
+available only to the server-side service role.
 
 `supabase/seed.sql` contains local service-role grants but no demo records. The
 guarded `npm run seed` command creates demo data only when the Supabase URL uses
@@ -219,7 +226,7 @@ Verified July 5, 2026:
 - `npm audit --omit=dev` found zero vulnerabilities.
 - The production URL returned HTTP 200 from Vercel.
 - At that time, production and local Supabase had all 12 migrations and RLS on
-  all 11 public tables. Production now matches 25 migrations and all 13 public
+  all 11 public tables. Hosted Supabase now matches 28 migrations and all 13 public
   application tables have RLS enabled.
 - The email delivery table blocks anonymous and signed-in browser access while
   allowing only the service role to claim deliveries.
@@ -249,8 +256,9 @@ Verified July 5, 2026:
   tournament proceeds.
 - Staging takes no application fee. Production is configured for exactly 2%
   plus 30 cents after its launch gate passes.
-- Directors create accounts from the production signup page. Staging signup is
-  disabled.
+- Staging signup is disabled. The trusted production organization-creation path
+  is restored and verified, but Supabase Auth signup remains maintenance-
+  disabled pending its final dashboard toggle.
 - Supabase leaked-password protection is disabled because it is unavailable on
   the current plan. Use strong, unique passwords for invited directors. Enable
   it when the plan supports it. See
@@ -270,23 +278,25 @@ Verified July 5, 2026:
 
 ## Requirements before real customer payments
 
-1. Complete the ordered [staging and production rollout](./environment-rollout.md),
-   including its additive migration, dual environment-aware deployments, and
-   post-deploy contract migration.
-2. Configure live Connect settings and separate connected-payment and
+1. Re-enable Supabase Auth signup. The trusted server organization-creation path
+   is restored and verified, and the dual deployment plus all database
+   migrations are complete.
+2. Finish the remaining [staging and production rollout](./environment-rollout.md)
+   Sandbox and host-isolation regression.
+3. Configure live Connect keys and separate connected-payment and
    account-status webhook endpoints while production checkout is disabled.
-3. Have the pilot director complete Stripe-hosted onboarding in live mode.
-4. Enable production checkout only for the controlled gate and run one
+4. Have the pilot director complete Stripe-hosted onboarding in live mode.
+5. Enable production checkout only for the controlled gate and run one
    low-value purchase with a real card.
-5. Confirm the live connected-payment webhook marks the order paid and creates
+6. Confirm the live connected-payment webhook marks the order paid and creates
    every pass.
-6. Confirm the buyer receives the Resend email and can save every offline pass.
-7. Open and scan every issued pass through a production scanner link.
-8. Confirm gross sales, Stripe fees, the 2% plus 30-cent TourniBase fee,
+7. Confirm the buyer receives the Resend email and can save every offline pass.
+8. Open and scan every issued pass through a production scanner link.
+9. Confirm gross sales, Stripe fees, the 2% plus 30-cent TourniBase fee,
    director proceeds, and TourniBase reporting match Stripe.
-9. Fully refund the test order, confirm the buyer receives the refund email,
+10. Fully refund the test order, confirm the buyer receives the refund email,
    and confirm the scanner blocks the refunded pass.
-10. Follow the basic tournament-day support and refund process in
+11. Follow the basic tournament-day support and refund process in
    [Refund and Support Process](./refund-support.md).
 
 Do not mix Stripe accounts or modes. The secret key, publishable key, expected

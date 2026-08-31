@@ -1,6 +1,6 @@
 # TourniBase Web MVP Product Plan
 
-Last updated: July 16, 2026
+Last updated: August 31, 2026
 
 ## Current product
 
@@ -167,11 +167,14 @@ All 19 numbered web MVP phases are complete. The local demo seed is guarded
 against hosted Supabase URLs, the quality checks pass, and the final repository
 review and handoff are complete.
 
-Before charging real customers, TourniBase must deploy the Connect migration
-and webhooks, complete the multi-director payment and refund test plan in a
-Stripe Sandbox, switch all Stripe Connect settings to live mode, have the pilot
-director repeat onboarding, and complete one live purchase, webhook, pass,
-email, scan, duplicate, refund, and dashboard verification.
+The Connect and environment-isolation migrations are deployed, the trusted
+server signup path is restored and verified, staging uses the Stripe onboarding
+Sandbox at a $0 TourniBase fee, and production is isolated to live data with
+paid checkout disabled. Before charging real customers, TourniBase must finish
+the Sandbox regression, re-enable Supabase Auth signup, configure the live
+Stripe keys and both live webhook destinations, have the pilot director repeat
+onboarding in live mode, and complete one live purchase, webhook, pass, email,
+scan, duplicate, refund, and dashboard verification.
 
 See [Final MVP Handoff](./mvp-handoff.md) for the complete routes, environment,
 database, testing, limitations, and launch checklist.

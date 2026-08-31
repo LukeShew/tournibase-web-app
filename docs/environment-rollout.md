@@ -3,9 +3,36 @@
 TourniBase uses one Vercel project and one Supabase project. The application,
 database, and Stripe checks keep test and live data separate.
 
-This environment split is implemented locally. It has not been deployed, the
-additive migration has not been applied, and the post-deploy contract is not in
-migration history yet.
+The split is deployed on both stable hosts. The additive migration
+`20260829002309_add_app_environment_isolation` and contract migration
+`20260831003839_finalize_app_environment_isolation` are applied to the shared
+Supabase project. Staging checkout is active in the Stripe onboarding Sandbox;
+production paid checkout remains disabled while live Stripe setup and pilot
+validation are unfinished.
+
+## Current rollout status
+
+Completed:
+
+- The `staging` branch is deployed at `staging.tournibase.com` with branch-only
+  credentials, a $0 TourniBase fee, and forced test-email delivery.
+- `main` is deployed at `tournibase.com` with the live application boundary and
+  its paid-checkout kill switch off.
+- Existing Luke Events data is classified as `test` and is available only
+  through staging.
+- Both environment-isolation migrations are applied.
+- The Sandbox connected-payment and account-status destinations target the
+  staging host.
+
+Still required:
+
+- Re-enable Supabase Auth signup. The trusted `service_role` organization-
+  creation grant is restored and verified, while direct browser inserts remain
+  blocked.
+- Configure the live Stripe API keys and both production webhook destinations.
+- Complete live onboarding for the pilot director.
+- Run the controlled real-money purchase, email, scan, duplicate-scan, refund,
+  and refunded-pass test before leaving production checkout enabled.
 
 ## Environment contract
 
@@ -21,7 +48,7 @@ migration history yet.
 | Transactional recipient | Forced to `lsautomates@gmail.com` | Actual buyer |
 | Email subject | Starts with `[TEST]` | Normal subject |
 | Public entrance | Same public homepage and sign-in design as production; no test data is listed | Normal public homepage and sign-in |
-| Public signup | Disabled | Enabled |
+| Public signup | Disabled | Temporarily maintenance-disabled; trusted server creation is restored, so re-enable the Supabase Auth signup toggle |
 | Search indexing | Disabled | Enabled |
 
 Both targets must use the canonical Supabase project
@@ -46,13 +73,13 @@ The August 28, 2026 audit found one existing director workspace:
 - Stripe connected account: `acct_1Tui4qBDCykX1MuY`
 - Connected-account mode: test
 - Tournaments: 2
-- Orders: 39 test and 0 live
+- Orders: hosted test orders only; no live orders
 
-The additive migration classifies that organization and everything belonging to
-it as test-only. The records remain in the one shared database but are surfaced
-only through the staging application environment. New production signups create
-live organizations. During the pilot, each director owns one organization in
-one immutable environment.
+The additive migration classified that organization and everything belonging
+to it as test-only. The records remain in the one shared database but are
+surfaced only through the staging application environment. After production
+signup reopens, new production signups create live organizations. During the
+pilot, each director owns one organization in one immutable environment.
 
 ## Vercel variables
 
@@ -69,11 +96,9 @@ function.
 
 ### Staging branch
 
-The block below is the final staging configuration. For the first staging
-deployment, set `TOURNIBASE_PAID_CHECKOUT_ENABLED=false` and omit the two new
-webhook secrets until the stable staging domain and Stripe destinations exist.
-After adding both secrets, redeploy once, then change the switch to `true` and
-redeploy staging again.
+The block below is the deployed staging configuration. Both Sandbox webhook
+secrets are installed as branch-scoped Vercel variables, and checkout is
+enabled for repeatable testing.
 
 ```text
 TOURNIBASE_APP_ENVIRONMENT=test
@@ -95,17 +120,19 @@ EMAIL_FROM=TourniBase <passes@tournibase.com>
 TOURNIBASE_EMAIL_OVERRIDE_TO=lsautomates@gmail.com
 ```
 
-Of the 39 test orders, 19 are old Test-mode platform-account orders and 20 are
-newer onboarding-Sandbox connected-account sample orders. The 19 legacy orders
-remain historical reporting data. Do not configure their old webhook secret in
-staging: the onboarding Sandbox API key cannot retrieve or refund old Test-mode
-payment objects.
+The hosted test workspace contains 19 old Test-mode platform-account orders as
+well as newer onboarding-Sandbox connected-account sample and regression
+orders. The 19 legacy orders remain historical reporting data. Do not configure
+their old webhook secret in staging: the onboarding Sandbox API key cannot
+retrieve or refund old Test-mode payment objects.
 
 ### Production
 
-Production starts and remains at
-`TOURNIBASE_PAID_CHECKOUT_ENABLED=false` through deployment, webhook setup,
+Production is deployed with the live application boundary and remains at
+`TOURNIBASE_PAID_CHECKOUT_ENABLED=false` through live key and webhook setup,
 live onboarding, and every check before the controlled real-money test.
+The live API-key and webhook-secret entries below describe the required final
+configuration; they are not installed yet.
 
 ```text
 TOURNIBASE_APP_ENVIRONMENT=live
@@ -154,63 +181,48 @@ staging signup is intentionally enabled later.
 
 ## Migration files
 
-The only new rollout migration currently under `supabase/migrations` is the
-additive file:
+All three rollout migrations are in migration history and applied to the
+canonical Supabase project:
 
 ```text
 20260829002309_add_app_environment_isolation.sql
+20260831003839_finalize_app_environment_isolation.sql
+20260831024917_restore_trusted_organization_creation.sql
 ```
 
-The contract SQL stays outside migration history at:
+The contract migration was created from the reviewed SQL at
+`supabase/post-deploy/finalize_app_environment_isolation.sql` after the same
+environment-aware build reached staging and production. It removes the legacy
+environment-unaware checkout and gate entry points, removes anonymous Data API
+access to public tournament data, and keeps the environment-aware server paths.
 
-```text
-supabase/post-deploy/finalize_app_environment_isolation.sql
-```
-
-Do not apply the contract file directly. Only after the same environment-aware
-build is deployed successfully to staging and production, copy it into a new
-timestamped file under `supabase/migrations`, review the diff, and apply it.
-
-This checkout is not currently linked to Supabase CLI. Authenticate, link the
-one approved project, and verify the generated reference before any migration
-command:
-
-```bash
-npx supabase login
-npx supabase link --project-ref khwaafsdtgiymucppkmo
-cat supabase/.temp/project-ref
-```
-
-The last command must print exactly `khwaafsdtgiymucppkmo`. Stop if it prints
-anything else. Then run:
-
-```bash
-npx supabase migration list --linked
-npx supabase db push --linked --dry-run
-```
-
-The dry run must show `20260829002309_add_app_environment_isolation.sql` as the
-only pending migration. Stop if it lists anything else. Apply it with:
-
-```bash
-npx supabase db push --linked
-```
-
-After both deployments pass their checks, create the contract migration:
-
-```bash
-npx supabase migration new finalize_app_environment_isolation
-```
-
-Copy the complete contents of
-`supabase/post-deploy/finalize_app_environment_isolation.sql` into the new empty
-migration, review it, then run another dry run before the final `db push`.
+Before any later database change, confirm the linked project reference is still
+exactly `khwaafsdtgiymucppkmo`, inspect `npx supabase migration list --linked`,
+and run `npx supabase db push --linked --dry-run` before applying a migration.
 
 ## Maintenance gate
 
-The currently deployed build predates the environment kill switches. Merely
-changing a new Vercel variable does not pause that old build. Before applying
-the additive migration:
+The rollout maintenance gate was used before the additive migration to block
+the old checkout and organization-insert paths. The environment-aware build and
+both isolation migrations are now active. Do not restore the old nine-argument
+checkout RPC or direct authenticated organization inserts.
+
+Migration `20260831024917_restore_trusted_organization_creation` restored the
+trusted server organization-creation path:
+
+```sql
+begin;
+grant insert on table public.organizations to service_role;
+grant usage, select on sequence public.organizations_id_seq to service_role;
+commit;
+```
+
+Verification confirms `service_role` can insert while `authenticated` still
+cannot. Re-enable Supabase Auth signups in the dashboard to finish maintenance.
+The original maintenance procedure is retained below for incident history; it
+must not be rerun against the active rollout.
+
+Before the additive migration, the gate procedure was:
 
 1. In **Supabase → Authentication → Providers → Email**, disable new user
    signups.
@@ -270,21 +282,16 @@ commit;
 Then re-enable Supabase Auth signups. Do not run that rollback after the
 environment-aware deployment is active.
 
-After both deployments pass, the contract migration is applied, and production
-signup is ready to reopen, restore only the trusted server insert path:
-
-```sql
-begin;
-grant insert on table public.organizations to service_role;
-grant usage, select on sequence public.organizations_id_seq to service_role;
-commit;
-```
-
-Verify `service_role` can insert while `authenticated` still cannot, then
-re-enable Supabase Auth signups. Never restore direct authenticated organization
-inserts or the old nine-argument checkout RPC.
+Never restore direct authenticated organization inserts or the old
+nine-argument checkout RPC.
 
 ## Safe rollout order
+
+This original ordered checklist is retained as the rollout runbook. Use
+**Current rollout status** above as the authoritative record: the dual
+deployment and both migrations are complete, while the remaining Sandbox
+regression, live Stripe configuration, maintenance cleanup, onboarding, and
+real-money gate are still pending.
 
 1. Finish local verification, make the local `staging` branch point at the same
    verified commit as `main`, and take a current Supabase backup.
@@ -378,9 +385,10 @@ Connect account status:
 https://<environment-host>/api/stripe/connect/webhook
 ```
 
-Set **Events from** to **Connected accounts** and use **Thin** payloads. This
-endpoint parses Accounts v2 event notifications rather than Snapshot event
-objects.
+Set **Events from** to **Your account** and use **Thin** payloads. Stripe sends
+Accounts v2 status notifications through the Connect platform account even
+though the changes describe connected accounts. This endpoint parses Accounts
+v2 notifications rather than Snapshot event objects.
 
 Subscribe to exactly:
 
@@ -398,8 +406,8 @@ the live destination.
 
 ## Acceptance checks
 
-- `lsautomates@gmail.com`, Luke Events, both existing tournaments, and all 39
-  orders appear only on staging.
+- `lsautomates@gmail.com`, Luke Events, both existing tournaments, and all
+  hosted test orders appear only on staging.
 - Staging cannot create public director accounts.
 - Hosted staging sends only `lsautomates@gmail.com` to Supabase password
   authentication; every other email receives the same generic local rejection.
@@ -418,7 +426,8 @@ the live destination.
   platform is rejected before Connect, checkout, webhook, or refund work.
 - Every staging order and refund email goes only to `lsautomates@gmail.com` and
   starts with `[TEST]`.
-- Production signup creates a live organization.
+- After maintenance ends, production signup creates a live organization through
+  the trusted server path while direct authenticated inserts remain blocked.
 - Production sends transactional email to the actual buyer.
 - Production cannot start paid checkout while its kill switch is off.
 - After the real-money gate, production charges exactly 200 basis points plus

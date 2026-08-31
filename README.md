@@ -21,8 +21,15 @@ Production app:
 - Full Stripe refunds sync back into TourniBase and invalidate active passes
 - Tournament organizers are the sellers and receive online proceeds in their
   connected Stripe accounts
-- A one-Vercel-project, one-Supabase-project staging/production split is
-  implemented locally but is not deployed and its migrations are not applied
+- The one-Vercel-project, one-Supabase-project staging/production split is
+  deployed, and both environment-isolation migrations are applied
+- Staging uses the onboarding Sandbox with a $0 TourniBase fee and forced test
+  email delivery; production is isolated to live data with paid checkout off
+- The trusted server organization-creation grant is restored and verified;
+  production signup remains maintenance-disabled until Supabase Auth signup is
+  re-enabled
+- Live Stripe keys and webhook destinations still must be configured before
+  the controlled real-money launch test
 
 Current progress and remaining work:
 [Implementation Roadmap](docs/implementation-roadmap.md)
@@ -249,9 +256,12 @@ and repeatable setup.
 
 ## Director accounts
 
-Public signup is enabled only on production. It creates a live organization for
-the new director. Staging signup is disabled; the existing
-`lsautomates@gmail.com` test account remains the permanent staging workspace.
+The public signup flow exists only on production and creates a live
+organization for the new director. Its trusted server database permission is
+restored and verified, but Supabase Auth signup remains maintenance-disabled
+until the final dashboard toggle is re-enabled.
+Staging signup stays disabled; the existing `lsautomates@gmail.com` test account
+remains the permanent staging workspace.
 The signed-out staging entrance uses the normal public design, lists no test
 data, sends account-creation links to production, and disables search indexing.
 Hosted staging submits only the permanent test email to Supabase Auth; other
@@ -322,7 +332,9 @@ Create a second Accounts v2 webhook endpoint at:
 https://<environment-host>/api/stripe/connect/webhook
 ```
 
-Set **Events from** to **Connected accounts** and use **Thin** payloads.
+Set **Events from** to **Your account** and use **Thin** payloads. Accounts v2
+status notifications belong to the Connect platform account even though they
+describe connected-account onboarding and capability changes.
 
 Use the exact Accounts v2 subscriptions and rollout order in
 [Staging and Production Rollout](docs/environment-rollout.md). Put that
@@ -496,11 +508,16 @@ npm run build
 
 ## Known limitations
 
-- The environment split is implemented locally but is not deployed, and its
-  additive and post-deploy contract migrations are not applied.
+- The environment split is deployed on `staging.tournibase.com` and
+  `tournibase.com`, and migrations `20260829002309` and `20260831003839` are
+  applied. Migration `20260831024917` restores trusted server-only organization
+  creation. Production paid checkout remains disabled while live Stripe keys,
+  webhooks, onboarding, and the controlled real-money test are unfinished.
 - Existing Sandbox accounts do not become live accounts. Every production
   director must complete live onboarding before accepting real payments.
-- Staging signup is disabled; production signup is enabled.
+- Staging signup is disabled. The trusted production organization-creation path
+  is restored and direct authenticated inserts remain blocked, but Supabase
+  Auth signup is still maintenance-disabled pending its final dashboard toggle.
 - Directors initiate refunds in TourniBase. Stripe refund events then
   synchronize order and pass status, reverse the application fee when
   applicable, and trigger the buyer refund email. Dispute handling is not

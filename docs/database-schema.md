@@ -1,13 +1,14 @@
 # TourniBase Database Schema
 
-Last verified against the local repository migrations: August 29, 2026
+Last verified against the local repository migrations: August 31, 2026
 
 Latest local migration:
-`20260829002309_add_app_environment_isolation`
+`20260831024917_restore_trusted_organization_creation`
 
-That additive migration is prepared locally but has not been applied to hosted
-Supabase. The contract SQL remains in `supabase/post-deploy` until the same
-environment-aware build is active on staging and production.
+The additive environment migration, post-deploy contract migration, and
+server-only organization-creation grant migration are applied to hosted
+Supabase. The same environment-aware build is deployed to staging and
+production.
 
 ## Relationship summary
 
@@ -207,7 +208,7 @@ function can use it through the application flow.
 | `consume_rate_limit` | Atomically enforces a bounded server-side request bucket | Server secret key only |
 
 The environment-aware RPC overloads require a matching `test` or `live`
-argument. The post-deploy contract retains only those entry points and removes
+argument. The contract migration retains only those entry points and removes
 direct execution of their environment-unaware predecessors. Gate functions are
 unavailable to anonymous and authenticated browser roles. Dashboard functions
 also check the signed-in director's ownership.
@@ -222,8 +223,8 @@ RLS is enabled on all 13 public application tables.
 - A director can access only their own profile and data reachable through an
   organization they own. The application additionally checks that organization's
   environment on every protected route.
-- After the post-deploy contract, anonymous users cannot query tournaments or
-  ticket types through the Data API. Public buyer pages use the server-side,
+- Anonymous users cannot query tournaments or ticket types through the Data
+  API. Public buyer pages use the server-side,
   environment-aware data layer.
 - Orders, order items, passes, scanner sessions, check-ins, and manual sales
   have no anonymous read policy.
@@ -266,16 +267,20 @@ automatically expose new public tables.
 23. `20260719054223_secure_director_profile_name_update`
 24. `20260719054443_allow_director_organizer_name_propagation`
 25. `20260719054844_synchronize_existing_tournament_organizer_names`
-26. `20260829002309_add_app_environment_isolation` (local only; not applied)
+26. `20260829002309_add_app_environment_isolation`
+27. `20260831003839_finalize_app_environment_isolation`
+28. `20260831024917_restore_trusted_organization_creation`
 
 Migration files are the source of truth under `supabase/migrations`. New schema
 changes must be added as migrations and applied with `supabase db push`.
 
-The additive environment migration is the only new rollout file in migration
-history. Apply it first during the documented maintenance window. The reviewed
-contract at `supabase/post-deploy/finalize_app_environment_isolation.sql` must be
-copied into a new timestamped migration only after the same environment-aware
-build is deployed to staging and production. See
+The additive migration introduced immutable test/live routing while the old
+build remained compatible. The later contract migration removed the legacy
+environment-unaware RPC entry points and anonymous tournament/ticket Data API
+access after the environment-aware build reached both stable hosts. See
 [Staging and Production Rollout](./environment-rollout.md).
+The final grant migration restored organization creation only to the trusted
+server role; authenticated browser users remain unable to insert organizations
+or use the organization ID sequence directly.
 `supabase/seed.sql` adds local service-role table and sequence permissions but
 contains no demo records and does not add migration history.
