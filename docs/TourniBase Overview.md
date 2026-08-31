@@ -42,16 +42,16 @@ before expanding into a larger platform.
 | Offline access | Downloadable pass PNG for Photos or Files |
 | Refund support | TourniBase full-order and pass-specific refunds with connected-account webhook synchronization |
 | Legal/support pages | Footer links to Terms, Privacy, Refund Policy, and Support |
-| Launch dependency | Re-enable Supabase Auth signup, configure live Stripe keys and webhooks, complete director live onboarding, and pass a controlled purchase/scan/refund test |
+| Launch dependency | Configure live Stripe keys and webhooks, complete director live onboarding, and pass a controlled purchase/scan/refund test |
 
 No numbered phases remain. See the [Final MVP Handoff](./mvp-handoff.md) for
 routes, environment variables, database state, local testing, and launch work.
 
 Before accepting real customer payments, TourniBase must finish the remaining
-[staging and production rollout](./environment-rollout.md) maintenance and
-checks, configure the live webhooks and keys, have the pilot director complete
-live onboarding, and pass one controlled real-money purchase, email, gate,
-duplicate-scan, and refund test.
+[staging and production rollout](./environment-rollout.md) checks, configure the
+live webhooks and keys, have the pilot director complete live onboarding, and
+pass one controlled real-money purchase, email, gate, duplicate-scan, and refund
+test.
 
 Keep this section current after every phase or material product change. The
 [Implementation Roadmap](./implementation-roadmap.md) is the detailed progress
@@ -62,8 +62,8 @@ tracker.
 ### Director tools
 
 - Public production signup with email confirmation and protected password login
-  is built; its server database permission is restored and verified, but the
-  Supabase Auth signup toggle remains maintenance-disabled
+  is active; Supabase Auth reports `disable_signup: false`, and its trusted
+  server database path was independently verified on August 31, 2026
 - Disabled public signup on the permanent staging environment
 - Protected dashboard and organization ownership
 - Tournament creation with venue, dates, organizer, contact, and public slug
@@ -217,17 +217,17 @@ See [MVP Architecture](./mvp-architecture.md) and
 - Live Stripe API keys and the two production webhook destinations are not yet
   configured. Production paid checkout remains disabled until that setup,
   director live onboarding, and the controlled real-money test are complete.
-- The trusted production organization-creation grant is restored and verified,
-  and direct authenticated inserts remain blocked. Supabase Auth signup is
-  still maintenance-disabled pending its final dashboard toggle.
+- Production Supabase Auth signup is enabled and independently verified. The
+  trusted organization-creation grant is restored, while direct authenticated
+  organization inserts remain blocked.
 - Sandbox and live connected accounts are separate, so every production
   director must complete live onboarding before the first tournament.
 - TourniBase does not hold tournament proceeds. Stripe deducts processing fees
   from the director's connected account and controls bank payout timing.
 - Staging charges no TourniBase fee. Production is configured for exactly 2%
   plus 30 cents once its paid-checkout kill switch is enabled.
-- Once signup reopens, directors create accounts only from the production
-  signup page.
+- Directors create accounts only from the production signup page; staging
+  `/signup` remains disabled and redirects to production.
 - The signed-out staging entrance uses the normal public design, exposes no
   test-event listing or staging label, and is marked not to be indexed.
 - Supabase leaked-password protection is unavailable on the current plan, so

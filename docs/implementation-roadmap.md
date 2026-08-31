@@ -17,8 +17,8 @@ Last updated: August 31, 2026
 - Refund support: Basic organizer support flow and Stripe refund sync built
 - Next phase: Configure live Stripe keys and webhooks, complete live director
   onboarding, then run the live payment gate
-- Signup maintenance: The trusted server organization-creation path is restored
-  and verified; re-enable the Supabase Auth signup toggle
+- Production signup: Supabase Auth and the trusted server organization-creation
+  path are enabled and independently verified
 - Not started: No numbered phases
 
 The waitlist website and a native mobile app are postponed, separate products.
@@ -107,9 +107,6 @@ These are required before accepting real customer payments:
   recipient, host isolation, refunds, and multi-director isolation.
 - Configure live keys and both live webhook destinations with production
   checkout disabled.
-- Re-enable the Supabase Auth signup toggle. The trusted server
-  organization-creation path is restored and verified, and direct authenticated
-  inserts remain blocked.
 - Have the pilot director complete hosted onboarding in live mode.
 - Run one low-value live purchase using a real card and confirm the 2% plus
   30-cent TourniBase application fee.
@@ -134,9 +131,9 @@ These are required before accepting real customer payments:
   partial refunds created directly in Stripe remain order-level only.
 - Dispute workflows are not automated.
 - Ticket quantities use an atomic pending reservation during checkout.
-- Staging public signup is disabled. The trusted production organization-
-  creation path is restored and verified, but Supabase Auth signup remains
-  maintenance-disabled pending its final dashboard toggle.
+- Staging public signup is disabled and redirects to production. Production
+  Supabase Auth signup is enabled and independently verified, while direct
+  authenticated organization inserts remain blocked.
 
 ## MVP-ready definition
 

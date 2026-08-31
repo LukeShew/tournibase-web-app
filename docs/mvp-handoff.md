@@ -13,11 +13,11 @@ are isolated as `test` or `live`. Staging uses the onboarding Sandbox with a $0
 TourniBase fee and forced test-email delivery. Production uses the live data
 boundary with paid checkout disabled.
 
-The trusted server organization-creation path is restored and verified. The app
-is not ready to accept real customer payments until Supabase Auth signup is
-re-enabled, live Stripe keys and both live webhook destinations are configured,
-the pilot director completes live onboarding, and the controlled real-money
-test passes.
+Production Supabase Auth signup and the trusted server organization-creation
+path are enabled and independently verified. The app is not ready to accept
+real customer payments until live Stripe keys and both live webhook
+destinations are configured, the pilot director completes live onboarding, and
+the controlled real-money test passes.
 
 Production app:
 [tournibase.com](https://tournibase.com)
@@ -256,11 +256,11 @@ Verified July 5, 2026:
   tournament proceeds.
 - Staging takes no application fee. Production is configured for exactly 2%
   plus 30 cents after its launch gate passes.
-- Staging signup is disabled. The trusted production organization-creation path
-  is restored and verified, but Supabase Auth signup remains maintenance-
-  disabled pending its final dashboard toggle.
+- Staging signup is disabled and redirects to production. Production Supabase
+  Auth signup is enabled and independently verified, while direct authenticated
+  organization inserts remain blocked.
 - Supabase leaked-password protection is disabled because it is unavailable on
-  the current plan. Use strong, unique passwords for invited directors. Enable
+  the current plan. Directors must use strong, unique passwords. Enable
   it when the plan supports it. See
   [Supabase password security](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection).
 - Gate-sale recording tracks cash, Venmo, external-card, or comp payments but
@@ -278,25 +278,22 @@ Verified July 5, 2026:
 
 ## Requirements before real customer payments
 
-1. Re-enable Supabase Auth signup. The trusted server organization-creation path
-   is restored and verified, and the dual deployment plus all database
-   migrations are complete.
-2. Finish the remaining [staging and production rollout](./environment-rollout.md)
+1. Finish the remaining [staging and production rollout](./environment-rollout.md)
    Sandbox and host-isolation regression.
-3. Configure live Connect keys and separate connected-payment and
+2. Configure live Connect keys and separate connected-payment and
    account-status webhook endpoints while production checkout is disabled.
-4. Have the pilot director complete Stripe-hosted onboarding in live mode.
-5. Enable production checkout only for the controlled gate and run one
+3. Have the pilot director complete Stripe-hosted onboarding in live mode.
+4. Enable production checkout only for the controlled gate and run one
    low-value purchase with a real card.
-6. Confirm the live connected-payment webhook marks the order paid and creates
+5. Confirm the live connected-payment webhook marks the order paid and creates
    every pass.
-7. Confirm the buyer receives the Resend email and can save every offline pass.
-8. Open and scan every issued pass through a production scanner link.
-9. Confirm gross sales, Stripe fees, the 2% plus 30-cent TourniBase fee,
+6. Confirm the buyer receives the Resend email and can save every offline pass.
+7. Open and scan every issued pass through a production scanner link.
+8. Confirm gross sales, Stripe fees, the 2% plus 30-cent TourniBase fee,
    director proceeds, and TourniBase reporting match Stripe.
-10. Fully refund the test order, confirm the buyer receives the refund email,
+9. Fully refund the test order, confirm the buyer receives the refund email,
    and confirm the scanner blocks the refunded pass.
-11. Follow the basic tournament-day support and refund process in
+10. Follow the basic tournament-day support and refund process in
    [Refund and Support Process](./refund-support.md).
 
 Do not mix Stripe accounts or modes. The secret key, publishable key, expected

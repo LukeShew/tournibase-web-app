@@ -25,9 +25,8 @@ Production app:
   deployed, and both environment-isolation migrations are applied
 - Staging uses the onboarding Sandbox with a $0 TourniBase fee and forced test
   email delivery; production is isolated to live data with paid checkout off
-- The trusted server organization-creation grant is restored and verified;
-  production signup remains maintenance-disabled until Supabase Auth signup is
-  re-enabled
+- Production Supabase Auth signup is enabled and independently verified; the
+  trusted server organization-creation grant remains server-only
 - Live Stripe keys and webhook destinations still must be configured before
   the controlled real-money launch test
 
@@ -256,10 +255,10 @@ and repeatable setup.
 
 ## Director accounts
 
-The public signup flow exists only on production and creates a live
-organization for the new director. Its trusted server database permission is
-restored and verified, but Supabase Auth signup remains maintenance-disabled
-until the final dashboard toggle is re-enabled.
+The public signup flow is enabled only on production and creates a live
+organization for the new director. Supabase Auth reports
+`disable_signup: false`, and the trusted server database path was independently
+verified on August 31, 2026.
 Staging signup stays disabled; the existing `lsautomates@gmail.com` test account
 remains the permanent staging workspace.
 The signed-out staging entrance uses the normal public design, lists no test
@@ -515,9 +514,9 @@ npm run build
   webhooks, onboarding, and the controlled real-money test are unfinished.
 - Existing Sandbox accounts do not become live accounts. Every production
   director must complete live onboarding before accepting real payments.
-- Staging signup is disabled. The trusted production organization-creation path
-  is restored and direct authenticated inserts remain blocked, but Supabase
-  Auth signup is still maintenance-disabled pending its final dashboard toggle.
+- Staging signup is disabled and redirects to production. Production Supabase
+  Auth signup is enabled and independently verified, while direct authenticated
+  organization inserts remain blocked.
 - Directors initiate refunds in TourniBase. Stripe refund events then
   synchronize order and pass status, reverse the application fee when
   applicable, and trigger the buyer refund email. Dispute handling is not

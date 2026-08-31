@@ -23,12 +23,12 @@ Completed:
 - Both environment-isolation migrations are applied.
 - The Sandbox connected-payment and account-status destinations target the
   staging host.
+- Production Supabase Auth signup is enabled (`disable_signup: false`) and the
+  trusted `service_role` organization-creation path is independently verified;
+  direct browser inserts remain blocked.
 
 Still required:
 
-- Re-enable Supabase Auth signup. The trusted `service_role` organization-
-  creation grant is restored and verified, while direct browser inserts remain
-  blocked.
 - Configure the live Stripe API keys and both production webhook destinations.
 - Complete live onboarding for the pilot director.
 - Run the controlled real-money purchase, email, scan, duplicate-scan, refund,
@@ -48,7 +48,7 @@ Still required:
 | Transactional recipient | Forced to `lsautomates@gmail.com` | Actual buyer |
 | Email subject | Starts with `[TEST]` | Normal subject |
 | Public entrance | Same public homepage and sign-in design as production; no test data is listed | Normal public homepage and sign-in |
-| Public signup | Disabled | Temporarily maintenance-disabled; trusted server creation is restored, so re-enable the Supabase Auth signup toggle |
+| Public signup | Disabled; `/signup` redirects to production | Enabled and independently verified (`disable_signup: false`) |
 | Search indexing | Disabled | Enabled |
 
 Both targets must use the canonical Supabase project
@@ -77,9 +77,9 @@ The August 28, 2026 audit found one existing director workspace:
 
 The additive migration classified that organization and everything belonging
 to it as test-only. The records remain in the one shared database but are
-surfaced only through the staging application environment. After production
-signup reopens, new production signups create live organizations. During the
-pilot, each director owns one organization in one immutable environment.
+surfaced only through the staging application environment. New production
+signups create live organizations. During the pilot, each director owns one
+organization in one immutable environment.
 
 ## Vercel variables
 
@@ -218,9 +218,10 @@ commit;
 ```
 
 Verification confirms `service_role` can insert while `authenticated` still
-cannot. Re-enable Supabase Auth signups in the dashboard to finish maintenance.
-The original maintenance procedure is retained below for incident history; it
-must not be rerun against the active rollout.
+cannot. Supabase Auth signup was re-enabled and independently verified with
+`disable_signup: false` on August 31, 2026. The original maintenance procedure
+is retained below for incident history; it must not be rerun against the active
+rollout.
 
 Before the additive migration, the gate procedure was:
 
@@ -289,9 +290,9 @@ nine-argument checkout RPC.
 
 This original ordered checklist is retained as the rollout runbook. Use
 **Current rollout status** above as the authoritative record: the dual
-deployment and both migrations are complete, while the remaining Sandbox
-regression, live Stripe configuration, maintenance cleanup, onboarding, and
-real-money gate are still pending.
+deployment, all three migrations, and production signup restoration are
+complete, while the remaining Sandbox regression, live Stripe configuration,
+onboarding, and real-money gate are still pending.
 
 1. Finish local verification, make the local `staging` branch point at the same
    verified commit as `main`, and take a current Supabase backup.
@@ -426,8 +427,8 @@ the live destination.
   platform is rejected before Connect, checkout, webhook, or refund work.
 - Every staging order and refund email goes only to `lsautomates@gmail.com` and
   starts with `[TEST]`.
-- After maintenance ends, production signup creates a live organization through
-  the trusted server path while direct authenticated inserts remain blocked.
+- Production signup creates a live organization through the trusted server path
+  while direct authenticated organization inserts remain blocked.
 - Production sends transactional email to the actual buyer.
 - Production cannot start paid checkout while its kill switch is off.
 - After the real-money gate, production charges exactly 200 basis points plus
