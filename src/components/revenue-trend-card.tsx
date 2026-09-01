@@ -1,4 +1,5 @@
 import { formatCurrency, formatSalesDate } from "@/lib/dashboard-metrics";
+import { selectSalesByDay } from "@/lib/sales-by-day";
 
 type RevenueTrendCardProps = {
   days: Array<{
@@ -12,9 +13,10 @@ export function RevenueTrendCard({
   days,
   totalRevenue,
 }: RevenueTrendCardProps) {
+  const displayedDays = selectSalesByDay(days);
   const maxRevenue = Math.max(
     1,
-    ...days.map((day) => Number(day.totalRevenue)),
+    ...displayedDays.map((day) => Number(day.totalRevenue)),
   );
 
   return (
@@ -36,13 +38,13 @@ export function RevenueTrendCard({
         </p>
       </div>
 
-      {days.length === 0 ? (
+      {displayedDays.length === 0 ? (
         <div className="mt-4 grid min-h-64 flex-1 place-items-center rounded-3xl bg-card-strong text-sm font-medium text-slate-500">
           No sales data yet
         </div>
       ) : (
         <div className="mt-4 flex min-h-72 flex-1 items-end gap-3 overflow-x-auto rounded-3xl bg-card-strong px-5 py-6">
-          {days.map((day) => {
+          {displayedDays.map((day) => {
             const height = Math.max(
               8,
               Math.round((Number(day.totalRevenue) / maxRevenue) * 190),
