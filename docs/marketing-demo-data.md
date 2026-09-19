@@ -23,6 +23,12 @@ There are 37 additional manual admissions across 19 transactions: 31 paid admiss
 
 Before interactive video capture, 613 passes were checked in (391 weekend and 222 Saturday), leaving 304 unscanned. The seed includes 597 successful camera scans, 16 successful manual lookups, 9 duplicates, 3 wrong-day attempts and 1 invalid attempt. The two staff sessions cover Main Entrance and Court 4 Entrance. Subsequent authorized UI demonstrations can change these counts; use the latest dashboard capture for the final video.
 
+### Final capture snapshot
+
+At 12:31 PM Eastern on September 19, the real scanner UI demonstration had admitted one previously unused weekend pass and then rejected its repeat submission. The verified final capture counts are **614 checked-in passes**, **303 unscanned passes**, and **10 duplicate attempts**, with the same 917 passes and $21,694 revenue.
+
+Read-only database checks found zero scans before their corresponding orders, zero future paid orders, scans or manual sales, zero order rows outside the test environment, and zero pass/scanner relationships pointing outside event 5. Email-delivery rows remain zero. No dataset changes were made during this final verification.
+
 ## Sales timing
 
 This is a Saturday-midday snapshot. Presales build during the week and peak Saturday morning; no Sunday sales or future check-ins are fabricated.
