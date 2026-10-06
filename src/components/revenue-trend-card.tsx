@@ -20,7 +20,7 @@ export function RevenueTrendCard({
   );
 
   return (
-    <section className="relative flex h-full flex-col rounded-[2rem] border border-border bg-card p-6 shadow-sm">
+    <section className="revenue-trend-card relative flex h-full min-w-0 flex-col rounded-[2rem] border border-border bg-card p-4 shadow-sm sm:p-6">
       <div className="pr-28">
         <p className="text-xs font-semibold uppercase tracking-[0.14em] text-blue-700">
           Revenue trend
@@ -43,7 +43,7 @@ export function RevenueTrendCard({
           No sales data yet
         </div>
       ) : (
-        <div className="mt-4 flex min-h-72 flex-1 items-end gap-3 overflow-x-auto rounded-3xl bg-card-strong px-5 py-6">
+        <div className="revenue-trend-plot mt-4 grid min-h-72 flex-1 items-end gap-2 rounded-3xl bg-card-strong px-3 py-6" style={{ gridTemplateColumns: `repeat(${displayedDays.length}, minmax(0, 1fr))` }}>
           {displayedDays.map((day) => {
             const height = Math.max(
               8,
@@ -53,23 +53,27 @@ export function RevenueTrendCard({
             return (
               <div
                 key={day.date}
-                className="flex min-w-20 flex-1 flex-col items-center justify-end gap-3"
+                className="revenue-trend-day flex min-w-0 flex-col items-center justify-end gap-3"
               >
-                <div className="flex h-48 items-end">
+                <div className="revenue-trend-track flex h-48 w-full items-end justify-center">
                   <div
-                    className="w-8 rounded-full bg-blue-600 shadow-sm"
+                    className="revenue-trend-bar w-8 max-w-full rounded-full bg-blue-600 shadow-sm"
                     style={{ height }}
                     title={`${formatSalesDate(day.date)} · ${formatCurrency(
                       day.totalRevenue,
                     )}`}
                   />
                 </div>
-                <div className="text-center">
-                  <p className="font-mono text-xs font-semibold text-slate-700">
+                <div className="revenue-trend-label min-w-0 text-center">
+                  <p className="revenue-trend-full break-words font-mono text-xs font-semibold text-slate-700">
                     {formatCurrency(day.totalRevenue)}
                   </p>
-                  <p className="mt-1 whitespace-nowrap text-xs text-slate-500">
-                    {formatSalesDate(day.date)}
+                  <p className="revenue-trend-compact font-mono text-xs font-semibold text-slate-700" title={formatCurrency(day.totalRevenue)}>
+                    {new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", notation: "compact", maximumFractionDigits: 0 }).format(day.totalRevenue)}
+                  </p>
+                  <p className="mt-1 text-xs text-slate-500">
+                    <span className="revenue-trend-full">{formatSalesDate(day.date)}</span>
+                    <span className="revenue-trend-compact" title={formatSalesDate(day.date)}>{new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", timeZone: "UTC" }).format(new Date(`${day.date}T12:00:00Z`))}</span>
                   </p>
                 </div>
               </div>

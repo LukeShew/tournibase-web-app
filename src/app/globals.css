@@ -45,6 +45,35 @@ html {
   isolation: isolate;
 }
 
+.revenue-trend-card {
+  container-type: inline-size;
+}
+
+.revenue-trend-compact {
+  display: none;
+}
+
+/* Keep every date visible in chronological order without horizontal scrolling. */
+@container (max-width: 420px) {
+  .revenue-trend-plot {
+    gap: 4px;
+    padding-inline: 8px;
+  }
+
+  .revenue-trend-bar {
+    width: 65%;
+    max-width: 32px;
+  }
+
+  .revenue-trend-full {
+    display: none;
+  }
+
+  .revenue-trend-compact {
+    display: block;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
