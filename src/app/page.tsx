@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import QRCode from "qrcode";
 import { Brand } from "@/components/brand";
 import { LandingScrollStory } from "@/components/landing-scroll-story";
+import { LandingScrollReset } from "@/components/landing-scroll-reset";
 import { RevenueTrendCard } from "@/components/revenue-trend-card";
 import { getPublicSignupHref } from "@/lib/app-environment";
 import { getDirectorWorkspace } from "@/lib/auth";
@@ -38,6 +39,7 @@ export default async function Home() {
 
   return (
     <main className="landing-page bg-[#f7f8fb] text-slate-950">
+      <LandingScrollReset />
       <header className="relative z-30 mx-auto flex w-full max-w-7xl items-center justify-between px-5 py-5 sm:px-8 lg:px-10">
         <Brand tone="light" />
         <nav
@@ -58,7 +60,7 @@ export default async function Home() {
       </header>
 
       <section className="app-grid relative border-y border-slate-200/80 bg-[#f7f8fb]">
-        <div className="mx-auto grid min-w-0 w-full max-w-7xl items-center gap-14 px-5 py-16 sm:px-8 sm:py-20 lg:grid-cols-[0.9fr_1.1fr] lg:px-10 lg:py-24">
+        <div className="mx-auto grid min-w-0 w-full max-w-7xl items-start gap-14 px-5 pb-16 pt-6 sm:px-8 sm:pb-20 sm:pt-8 lg:grid-cols-[0.9fr_1.1fr] lg:px-10 lg:pb-24">
           <div className="relative z-10 min-w-0 max-w-2xl">
             <p className="inline-flex items-center gap-2 rounded-full border border-blue-200 bg-white px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-blue-700 shadow-sm">
               <span aria-hidden="true" className="h-2 w-2 rounded-full bg-blue-600" />
