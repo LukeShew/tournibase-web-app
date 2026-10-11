@@ -164,10 +164,9 @@ export async function fulfillCheckoutSession(
     paymentIdentifiers = await getStripePaymentIdentifiers(session, routing);
   }
 
-  if (
-    order.payment_status === "refunded" ||
-    order.payment_status === "partial_refund"
-  ) {
+  // A partial refund can arrive before the payment webhook. It does not mean
+  // passes have been created. Upsert below also preserves already-refunded passes.
+  if (order.payment_status === "refunded") {
     return { fulfilled: true as const, orderId: order.id };
   }
   const { data: itemRows, error: itemError } = await supabase
@@ -225,6 +224,15 @@ export async function fulfillCheckoutSession(
     throw paymentUpdateError;
   }
 
+  // Reconcile again after creation: a refund may have arrived while fulfillment
+  // was running. Do not acknowledge fulfillment until refunded passes are blocked.
+  if (paymentIdentifiers.chargeId) {
+    await syncStripeChargeRefund(
+      { id: paymentIdentifiers.chargeId, livemode: routing.environment === "live" },
+      routing.connectedAccountId,
+    );
+  }
+
   return { fulfilled: true as const, orderId: order.id };
 }
 
@@ -275,7 +283,7 @@ export async function markCheckoutFailed(
 }
 
 export async function syncStripeChargeRefund(
-  charge: Stripe.Charge,
+  charge: Pick<Stripe.Charge, "id" | "livemode">,
   eventConnectedAccountId: string | null = null,
 ): Promise<StripeRefundSyncResult> {
   const stripe = await getVerifiedStripe();

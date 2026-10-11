@@ -40,7 +40,7 @@ export default async function Home() {
   return (
     <main className="landing-page bg-[#f7f8fb] text-slate-950">
       <LandingScrollReset />
-      <header className="relative z-30 mx-auto flex w-full max-w-7xl items-center justify-between px-5 py-5 sm:px-8 lg:px-10">
+      <header className="relative z-30 mx-auto flex w-full max-w-7xl flex-wrap items-center justify-between gap-3 px-5 py-5 sm:px-8 lg:px-10">
         <Brand tone="light" />
         <nav
           aria-label="Main navigation"
@@ -53,7 +53,7 @@ export default async function Home() {
             Gate control
           </a>
         </nav>
-        <div className="flex items-center gap-2 sm:gap-3">
+        <div className="flex shrink-0 items-center gap-2 sm:gap-3">
           <SecondaryLink href="/login">Sign in</SecondaryLink>
           <PrimaryLink href={signupHref}>Get started</PrimaryLink>
         </div>
@@ -239,7 +239,7 @@ function PrimaryLink({
   return (
     <Link
       href={href}
-      className={`inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 font-semibold text-white shadow-[0_10px_24px_rgba(37,99,235,0.2)] transition hover:-translate-y-0.5 hover:bg-blue-500 ${
+      className={`inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-blue-600 font-semibold text-white shadow-[0_10px_24px_rgba(37,99,235,0.2)] transition hover:-translate-y-0.5 hover:bg-blue-500 ${
         large ? "min-h-12 px-5 text-sm" : "px-4 py-2 text-sm"
       }`}
     >
@@ -258,7 +258,7 @@ function SecondaryLink({
   return (
     <Link
       href={href}
-      className="inline-flex items-center justify-center rounded-xl px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-blue-50 hover:text-blue-700 sm:px-4"
+      className="inline-flex items-center justify-center whitespace-nowrap rounded-xl px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-blue-50 hover:text-blue-700 sm:px-4"
     >
       {children}
     </Link>
