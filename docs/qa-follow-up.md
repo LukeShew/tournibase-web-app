@@ -1,5 +1,9 @@
 # QA follow-up — October 10, 2026
 
+> Historical snapshot. Supabase is active again. See
+> [October 17 staging/payment QA](qa-staging-2026-10-17.md) for completed hosted
+> checks, realistic event volumes, and newly reproduced refund launch blockers.
+
 ## Fixed locally
 
 - Next.js and its ESLint configuration upgraded to 16.3.8; Vitest to 4.1.11.
