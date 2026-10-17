@@ -12,7 +12,10 @@ let order: Row;
 let passes: Row[];
 let refunded: number;
 let refundPassIds: number[];
+let leadingRefunds: Array<{ status: string; metadata: { pass_id?: string } }>;
 let afterUpsert: (() => void) | undefined;
+let beforeRefundUpdate: (() => void) | undefined;
+let refundUpdateAttempts: number;
 const stripe = {
   checkout: { sessions: { retrieve: vi.fn(async () => ({
     payment_status: "paid", livemode: false, payment_intent: "pi_test", metadata: { order_id: "1" },
@@ -24,9 +27,14 @@ const stripe = {
     id: "ch_test", amount: 2000, amount_refunded: refunded, livemode: false,
     payment_intent: "pi_test", metadata: { order_id: "1" }, application_fee: null,
   })) },
-  refunds: { list: vi.fn(async () => ({ data: refundPassIds.map(id => ({
-    status: "succeeded", metadata: { pass_id: String(id) },
-  })) })) },
+  refunds: { list: vi.fn(() => ({
+    async *[Symbol.asyncIterator]() {
+      yield* leadingRefunds;
+      for (const id of refundPassIds) {
+        yield { status: "succeeded", metadata: { pass_id: String(id) } };
+      }
+    },
+  })) },
 };
 
 // Small in-memory query double. It applies update filters and unique pass keys,
@@ -50,7 +58,15 @@ function from(table: string) {
     in: (key: string, values: unknown[]) => { filters.push(row => values.includes(row[key])); return query; },
     update: (value: Row) => { changes = value; return query; },
     order: () => query,
-    maybeSingle: async () => ({ data: rows()[0] ? structuredClone(rows()[0]) : null, error: null }),
+    maybeSingle: async () => {
+      if (table === "orders" && changes?.amount_refunded !== undefined) {
+        refundUpdateAttempts += 1;
+        beforeRefundUpdate?.();
+      }
+      const data = rows();
+      if (changes) data.forEach(row => Object.assign(row, changes));
+      return { data: data[0] ? structuredClone(data[0]) : null, error: null };
+    },
     upsert: async (values: Row[], options: { ignoreDuplicates: boolean; onConflict: string }) => {
       expect(options).toEqual({ ignoreDuplicates: true, onConflict: "order_item_id,sequence_number" });
       for (const value of values) {
@@ -84,7 +100,10 @@ beforeEach(() => {
   passes = [];
   refunded = 0;
   refundPassIds = [];
+  leadingRefunds = [];
   afterUpsert = undefined;
+  beforeRefundUpdate = undefined;
+  refundUpdateAttempts = 0;
 });
 
 afterEach(() => vi.unstubAllEnvs());
@@ -109,6 +128,81 @@ describe("checkout fulfillment and out-of-order refunds", () => {
     await fulfillCheckoutSession("cs_test", "acct_test", "test");
     expect(passes.map(pass => pass.status)).toEqual(["refunded", "active"]);
     expect(order.payment_status).toBe("partial_refund");
+  });
+
+  it("reconciles older pass metadata beyond the first 100 refunds and ignores unfinished refunds", async () => {
+    await fulfillCheckoutSession("cs_test", "acct_test", "test");
+    refunded = 1000;
+    leadingRefunds = Array.from({ length: 101 }, () => ({ status: "succeeded", metadata: {} }));
+    leadingRefunds.push(
+      { status: "pending", metadata: { pass_id: "2" } },
+      { status: "requires_action", metadata: { pass_id: "2" } },
+      { status: "failed", metadata: { pass_id: "2" } },
+      { status: "canceled", metadata: { pass_id: "2" } },
+      { status: "succeeded", metadata: { pass_id: "not-a-number" } },
+    );
+    refundPassIds = [1, 1];
+    await syncStripeChargeRefund({ id: "ch_test", livemode: false }, "acct_test");
+    expect(passes.map(pass => pass.status)).toEqual(["refunded", "active"]);
+    expect(stripe.refunds.list).toHaveBeenCalledWith(
+      { charge: "ch_test", limit: 100 }, { stripeAccount: "acct_test" },
+    );
+  });
+
+  it("does not let an older partial sync overwrite a concurrent full refund", async () => {
+    await fulfillCheckoutSession("cs_test", "acct_test", "test");
+    refunded = 1000;
+    beforeRefundUpdate = () => {
+      beforeRefundUpdate = undefined;
+      Object.assign(order, { amount_refunded: "20.00", payment_status: "refunded", platform_fee_refunded: "0.70" });
+    };
+    const result = await syncStripeChargeRefund({ id: "ch_test", livemode: false }, "acct_test");
+    expect(result).toEqual({ status: "refunded", orderId: 1, amountTotalCents: 2000, amountRefundedCents: 2000 });
+    expect(order).toMatchObject({ amount_refunded: "20.00", payment_status: "refunded", platform_fee_refunded: "0.70" });
+    expect(passes.map(pass => pass.status)).toEqual(["refunded", "refunded"]);
+    expect(refundUpdateAttempts).toBe(2);
+  });
+
+  it("preserves newer partial totals and returns the committed total after losing a write race", async () => {
+    await fulfillCheckoutSession("cs_test", "acct_test", "test");
+    refunded = 500;
+    refundPassIds = [1];
+    beforeRefundUpdate = () => {
+      beforeRefundUpdate = undefined;
+      Object.assign(order, { amount_refunded: "10.00", payment_status: "partial_refund" });
+    };
+    const result = await syncStripeChargeRefund({ id: "ch_test", livemode: false }, "acct_test");
+    expect(result).toMatchObject({ status: "partial_refund", amountRefundedCents: 1000 });
+    expect(order.amount_refunded).toBe("10.00");
+    expect(passes.map(pass => pass.status)).toEqual(["refunded", "active"]);
+    expect(refundUpdateAttempts).toBe(2);
+  });
+
+  it("preserves a concurrent fee-only reconciliation without regressing totals", async () => {
+    await fulfillCheckoutSession("cs_test", "acct_test", "test");
+    refunded = 1000;
+    refundPassIds = [1];
+    beforeRefundUpdate = () => {
+      beforeRefundUpdate = undefined;
+      order.platform_fee_refunded = "0.35";
+    };
+    await syncStripeChargeRefund({ id: "ch_test", livemode: false }, "acct_test");
+    expect(order).toMatchObject({ amount_refunded: "10.00", payment_status: "partial_refund", platform_fee_refunded: "0.35" });
+    expect(refundUpdateAttempts).toBe(2);
+  });
+
+  it("throws after bounded contention so a webhook can retry without applying a stale write", async () => {
+    await fulfillCheckoutSession("cs_test", "acct_test", "test");
+    refunded = 500;
+    beforeRefundUpdate = () => {
+      order.amount_refunded = (Number(order.amount_refunded) + 1).toFixed(2);
+      order.payment_status = "partial_refund";
+    };
+    await expect(syncStripeChargeRefund({ id: "ch_test", livemode: false }, "acct_test"))
+      .rejects.toThrow("Refund synchronization changed concurrently");
+    expect(order.amount_refunded).toBe("3.00");
+    expect(refundUpdateAttempts).toBe(3);
+    expect(passes.map(pass => pass.status)).toEqual(["active", "active"]);
   });
 
   it("creates no admission passes for an already fully refunded order", async () => {

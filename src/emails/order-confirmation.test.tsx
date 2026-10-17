@@ -70,4 +70,24 @@ describe("order confirmation email", () => {
       expect(text).toContain(pass.offlineUrl);
     }
   });
+
+  it("clearly separates the original purchase and refund in HTML and text", async () => {
+    const partiallyRefunded: OrderConfirmationEmailData = {
+      ...sample,
+      refund: { amountRefunded: "$10.00", amountRemaining: "$15.00" },
+    };
+    const html = await render(<OrderConfirmationEmail {...partiallyRefunded} />);
+    const text = createOrderConfirmationText(partiallyRefunded);
+
+    for (const body of [html, text]) {
+      expect(body.toLowerCase()).toContain("original order summary");
+      expect(body).toContain("Original amount paid");
+      expect(body).toContain("$25.00");
+      expect(body).toContain("Refunded");
+      expect(body).toContain("$10.00");
+      expect(body).toContain("Amount after refunds");
+      expect(body).toContain("$15.00");
+      expect(body).toContain("refunded passes cannot be used for entry");
+    }
+  });
 });

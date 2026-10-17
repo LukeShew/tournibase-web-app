@@ -20,7 +20,8 @@ export function RevenueTrendCard({
   );
 
   return (
-    <section className="revenue-trend-card relative flex h-full min-w-0 flex-col rounded-[2rem] border border-border bg-card p-4 shadow-sm sm:p-6">
+    // Auto height fits stacked cards; the Orders grid stretches this card itself.
+    <section className="revenue-trend-card relative flex min-w-0 flex-col rounded-[2rem] border border-border bg-card p-4 shadow-sm sm:p-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-xs font-semibold uppercase tracking-[0.14em] text-blue-700">

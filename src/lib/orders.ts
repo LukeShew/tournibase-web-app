@@ -327,8 +327,6 @@ export async function syncStripeChargeRefund(
     routing,
   });
 
-  const nextStatus =
-    order.payment_status === "refunded" ? "refunded" : refundStatus;
   const platformFeeRefundedCents =
     await synchronizeApplicationFeeRefund(latestCharge, order);
   const paymentIntentId =
@@ -337,30 +335,14 @@ export async function syncStripeChargeRefund(
       : latestCharge.payment_intent?.id ?? order.stripe_payment_intent_id;
 
   const supabase = getSupabaseAdmin();
-  let orderUpdate = supabase
-    .from("orders")
-    .update({
-      amount_refunded: (latestCharge.amount_refunded / 100).toFixed(2),
-      payment_status: nextStatus,
-      platform_fee_refunded: (platformFeeRefundedCents / 100).toFixed(2),
-      stripe_charge_id: latestCharge.id,
-      stripe_payment_intent_id: paymentIntentId,
-    })
-    .eq("id", order.id)
-    .eq("stripe_environment", routing.environment);
-
-  orderUpdate = routing.connectedAccountId
-    ? orderUpdate.eq(
-        "stripe_connected_account_id",
-        routing.connectedAccountId,
-      )
-    : orderUpdate.is("stripe_connected_account_id", null);
-
-  const { error: orderUpdateError } = await orderUpdate;
-
-  if (orderUpdateError) {
-    throw orderUpdateError;
-  }
+  const committed = await persistStripeRefundState({
+    order,
+    charge: latestCharge,
+    paymentIntentId,
+    platformFeeRefundedCents,
+    routing,
+  });
+  const nextStatus = committed.status;
 
   if (nextStatus === "refunded") {
     const { error: passUpdateError } = await supabase
@@ -375,21 +357,25 @@ export async function syncStripeChargeRefund(
   }
 
   if (nextStatus === "partial_refund") {
-    const refunds = await stripe.refunds.list(
+    const refundedPassIds = new Set<number>();
+    // Stripe returns at most 100 refunds per page. Older pass refunds must
+    // still be reconciled when a charge has a longer refund history.
+    for await (const refund of stripe.refunds.list(
       { charge: latestCharge.id, limit: 100 },
       getStripeRequestOptions(routing),
-    );
-    const refundedPassIds = refunds.data
-      .filter((refund) => refund.status === "succeeded")
-      .map((refund) => Number(refund.metadata?.pass_id))
-      .filter((passId) => Number.isSafeInteger(passId) && passId > 0);
+    )) {
+      const passId = Number(refund.metadata?.pass_id);
+      if (refund.status === "succeeded" && Number.isSafeInteger(passId) && passId > 0) {
+        refundedPassIds.add(passId);
+      }
+    }
 
-    if (refundedPassIds.length > 0) {
+    if (refundedPassIds.size > 0) {
       const { error: passUpdateError } = await supabase
         .from("passes")
         .update({ status: "refunded" })
         .eq("order_id", order.id)
-        .in("id", refundedPassIds)
+        .in("id", [...refundedPassIds])
         .in("status", ["active", "checked_in"]);
 
       if (passUpdateError) {
@@ -407,11 +393,98 @@ export async function syncStripeChargeRefund(
   }
 
   return {
-    amountRefundedCents: latestCharge.amount_refunded,
+    amountRefundedCents: committed.amountRefundedCents,
     amountTotalCents: latestCharge.amount,
     orderId: order.id,
     status: nextStatus,
   };
+}
+
+async function persistStripeRefundState({
+  order,
+  charge,
+  paymentIntentId,
+  platformFeeRefundedCents,
+  routing,
+}: {
+  order: OrderRecord;
+  charge: Stripe.Charge;
+  paymentIntentId: string | null;
+  platformFeeRefundedCents: number;
+  routing: StripePaymentRouting;
+}): Promise<{
+  amountRefundedCents: number;
+  status: "refunded" | "partial_refund";
+}> {
+  const supabase = getSupabaseAdmin();
+  let snapshot = order;
+
+  // A webhook and the refund route can reconcile the same charge concurrently.
+  // Compare-and-swap all refund fields so an older charge snapshot cannot undo
+  // newer totals or a fully refunded status. Re-read after a lost race.
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const amountRefundedCents = Math.max(
+      charge.amount_refunded,
+      Math.round(Number(snapshot.amount_refunded) * 100),
+    );
+    const feeRefundedCents = Math.max(
+      platformFeeRefundedCents,
+      Math.round(Number(snapshot.platform_fee_refunded) * 100),
+    );
+    const status = snapshot.payment_status === "refunded" || amountRefundedCents >= charge.amount
+      ? "refunded"
+      : "partial_refund";
+
+    let update = supabase
+      .from("orders")
+      .update({
+        amount_refunded: (amountRefundedCents / 100).toFixed(2),
+        payment_status: status,
+        platform_fee_refunded: (feeRefundedCents / 100).toFixed(2),
+        stripe_charge_id: charge.id,
+        stripe_payment_intent_id: paymentIntentId,
+      })
+      .eq("id", order.id)
+      .eq("stripe_environment", routing.environment)
+      .eq("amount_refunded", snapshot.amount_refunded)
+      .eq("platform_fee_refunded", snapshot.platform_fee_refunded)
+      .eq("payment_status", snapshot.payment_status);
+    update = routing.connectedAccountId
+      ? update.eq("stripe_connected_account_id", routing.connectedAccountId)
+      : update.is("stripe_connected_account_id", null);
+
+    const { data, error } = await update
+      .select("amount_refunded, payment_status")
+      .maybeSingle();
+
+    if (error) throw error;
+    if (data) {
+      return {
+        amountRefundedCents: Math.round(Number(data.amount_refunded) * 100),
+        status: data.payment_status as "refunded" | "partial_refund",
+      };
+    }
+
+    if (attempt < 2) {
+      let reload = supabase
+        .from("orders")
+        .select(orderRecordSelection)
+        .eq("id", order.id)
+        .eq("stripe_environment", routing.environment)
+        .eq("tournaments.organizations.operating_environment", routing.environment);
+      reload = routing.connectedAccountId
+        ? reload.eq("stripe_connected_account_id", routing.connectedAccountId)
+        : reload.is("stripe_connected_account_id", null);
+      const { data: current, error: reloadError } = await reload.maybeSingle();
+      if (reloadError) throw reloadError;
+      if (!current) throw new Error("The order disappeared during refund synchronization.");
+      snapshot = current as unknown as OrderRecord;
+      assertOrderMatchesAppEnvironment(snapshot);
+      assertOrderPaymentIdentifiers(snapshot, charge.id, paymentIntentId ?? undefined);
+    }
+  }
+
+  throw new Error("Refund synchronization changed concurrently. Retry the event.");
 }
 
 async function resolveOrderForStripeCharge(

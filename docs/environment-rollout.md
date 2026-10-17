@@ -29,6 +29,9 @@ Completed:
 
 Still required:
 
+- Deploy the October 17 refund/receipt/layout corrections identically to both
+  branches and repeat the hosted Sandbox refund checks. See
+  [the fix report](qa-refund-fixes-2026-10-17.md).
 - Configure the live Stripe API keys and both production webhook destinations.
 - Complete live onboarding for the pilot director.
 - Run the controlled real-money purchase, email, scan, duplicate-scan, refund,
@@ -133,6 +136,16 @@ Production is deployed with the live application boundary and remains at
 live onboarding, and every check before the controlled real-money test.
 The live API-key and webhook-secret entries below describe the required final
 configuration; they are not installed yet.
+
+The October 17 inventory confirmed all four Stripe key/signing-secret variables
+were absent from Production. The live platform itself reported submitted details
+and no currently due, past-due, or pending-verification requirements. That does
+not verify any director's live connected account or a real transaction.
+The user is adding the two API keys; installation must be checked again before
+changing this status. The only existing live destination at inspection time was
+the legacy snapshot endpoint `we_1TqL69BdjbPEH1Ela6YXcJBx`, listening to `@self`
+at `/api/stripe/webhook`. It is not the connected-account payment destination.
+No new live webhook or production variable was created by this fix task.
 
 ```text
 TOURNIBASE_APP_ENVIRONMENT=live

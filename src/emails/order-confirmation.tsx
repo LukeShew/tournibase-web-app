@@ -16,6 +16,10 @@ import {
 
 export type OrderConfirmationEmailData = {
   amountPaid: string;
+  refund?: {
+    amountRefunded: string;
+    amountRemaining: string;
+  };
   buyerName: string;
   eventDate: string;
   eventName: string;
@@ -48,6 +52,7 @@ export function OrderConfirmationEmail({
   organizerEmail,
   organizerName,
   passes,
+  refund,
   venueAddress,
   venueName,
 }: OrderConfirmationEmailData) {
@@ -97,6 +102,12 @@ export function OrderConfirmationEmail({
               Each link opens one unique QR pass. Do not post or forward these
               links publicly.
             </Text>
+            {refund ? (
+              <Text style={sectionDescription}>
+                This order has been partially refunded. Only the remaining
+                passes are linked below; refunded passes cannot be used for entry.
+              </Text>
+            ) : null}
 
             {passes.map((pass, index) => (
               <Section key={pass.url} style={passPanel}>
@@ -128,7 +139,7 @@ export function OrderConfirmationEmail({
             <Hr style={divider} />
 
             <Heading as="h2" style={sectionHeading}>
-              Order summary
+              {refund ? "Original order summary" : "Order summary"}
             </Heading>
             {items.map((item) => (
               <Section key={item.name} style={itemRow}>
@@ -140,9 +151,23 @@ export function OrderConfirmationEmail({
             ))}
 
             <Section style={totalRow}>
-              <Text style={totalLabel}>Amount paid</Text>
+              <Text style={totalLabel}>
+                {refund ? "Original amount paid" : "Amount paid"}
+              </Text>
               <Text style={totalValue}>{amountPaid}</Text>
             </Section>
+            {refund ? (
+              <>
+                <Section style={totalRow}>
+                  <Text style={totalLabel}>Refunded</Text>
+                  <Text style={totalValue}>{refund.amountRefunded}</Text>
+                </Section>
+                <Section style={totalRow}>
+                  <Text style={totalLabel}>Amount after refunds</Text>
+                  <Text style={totalValue}>{refund.amountRemaining}</Text>
+                </Section>
+              </>
+            ) : null}
             <Text style={orderNumberStyle}>Order {orderNumber}</Text>
 
             <Hr style={divider} />
@@ -180,6 +205,7 @@ export function createOrderConfirmationText({
   organizerEmail,
   organizerName,
   passes,
+  refund,
   venueAddress,
   venueName,
 }: OrderConfirmationEmailData) {
@@ -205,12 +231,21 @@ export function createOrderConfirmationText({
     "",
     "MOBILE PASSES",
     "Each link opens one unique QR pass. Do not post or forward these links publicly.",
+    ...(refund
+      ? ["This order has been partially refunded. Only the remaining passes are linked below; refunded passes cannot be used for entry."]
+      : []),
     "",
     passLines,
     "",
-    "ORDER SUMMARY",
+    refund ? "ORIGINAL ORDER SUMMARY" : "ORDER SUMMARY",
     itemLines,
-    `Amount paid: ${amountPaid}`,
+    `${refund ? "Original amount paid" : "Amount paid"}: ${amountPaid}`,
+    ...(refund
+      ? [
+          `Refunded: ${refund.amountRefunded}`,
+          `Amount after refunds: ${refund.amountRemaining}`,
+        ]
+      : []),
     `Order: ${orderNumber}`,
     "",
     `${organizerName} is the seller for this admission order. TourniBase provides the checkout and digital pass tools.`,

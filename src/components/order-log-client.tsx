@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import type { RefundActionResponse } from "@/lib/refund-action-response";
 
 export type OrderLogItem = {
   id: number;
@@ -233,6 +234,7 @@ function OrderDetailsModal({
   const [refundingPassId, setRefundingPassId] = useState<number | null>(null);
   const [refundingOrder, setRefundingOrder] = useState(false);
   const [refundError, setRefundError] = useState<string | null>(null);
+  const [refundNotice, setRefundNotice] = useState<string | null>(null);
   const isHistoricalStripeEnvironment =
     order.stripe_environment !== currentStripeEnvironment;
   const isHistoricalStripePayment =
@@ -249,6 +251,7 @@ function OrderDetailsModal({
     }
 
     setRefundError(null);
+    setRefundNotice(null);
     setRefundingPassId(passId);
 
     try {
@@ -257,10 +260,16 @@ function OrderDetailsModal({
         headers: { "content-type": "application/json" },
         method: "POST",
       });
-      const result = (await response.json()) as { error?: string };
+      const result = (await response.json()) as Partial<RefundActionResponse> & { error?: string };
 
       if (!response.ok) {
         throw new Error(result.error || "The pass could not be refunded.");
+      }
+
+      if (result.status !== "completed") {
+        setRefundNotice("message" in result ? result.message ?? "The refund is still processing." : "The refund is still processing.");
+        router.refresh();
+        return;
       }
 
       onClose();
@@ -282,6 +291,7 @@ function OrderDetailsModal({
     }
 
     setRefundError(null);
+    setRefundNotice(null);
     setRefundingOrder(true);
 
     try {
@@ -290,10 +300,16 @@ function OrderDetailsModal({
         headers: { "content-type": "application/json" },
         method: "POST",
       });
-      const result = (await response.json()) as { error?: string };
+      const result = (await response.json()) as Partial<RefundActionResponse> & { error?: string };
 
       if (!response.ok) {
         throw new Error(result.error || "The order could not be refunded.");
+      }
+
+      if (result.status !== "completed") {
+        setRefundNotice("message" in result ? result.message ?? "The refund is still processing." : "The refund is still processing.");
+        router.refresh();
+        return;
       }
 
       onClose();
@@ -436,7 +452,7 @@ function OrderDetailsModal({
                         <button
                           type="button"
                           className="inline-flex h-10 items-center justify-center rounded-2xl border border-rose-200 bg-rose-50 px-4 text-sm font-semibold text-rose-700 transition hover:bg-rose-100 disabled:opacity-60"
-                          disabled={refundingPassId === pass.id}
+                          disabled={refundingOrder || refundingPassId !== null}
                           onClick={() => refundPass(pass.id)}
                         >
                           {refundingPassId === pass.id ? "Refunding…" : "Refund this pass"}
@@ -448,6 +464,12 @@ function OrderDetailsModal({
               </div>
             )}
           </section>
+
+          {refundNotice ? (
+            <p role="status" className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-800">
+              {refundNotice}
+            </p>
+          ) : null}
 
           {refundError ? (
             <p className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700">

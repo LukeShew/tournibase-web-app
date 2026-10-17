@@ -30,6 +30,7 @@ type DeliveryRecord = {
 };
 
 type OrderRecord = {
+  amount_refunded: number | string;
   amount_total: number | string;
   buyer_email: string;
   buyer_name: string;
@@ -61,6 +62,7 @@ type PassRecord = {
   order_item_id: number | null;
   public_token: string;
   sequence_number: number | null;
+  status: "active" | "checked_in" | "refunded" | "voided" | "expired";
 };
 
 export type OrderEmailAttempt =
@@ -255,7 +257,7 @@ async function loadOrderEmail(
   const { data: orderRow, error: orderError } = await supabase
     .from("orders")
     .select(
-      "id, tournament_id, buyer_name, buyer_email, amount_total, payment_status, stripe_environment",
+      "id, tournament_id, buyer_name, buyer_email, amount_total, amount_refunded, payment_status, stripe_environment",
     )
     .eq("id", orderId)
     .eq("stripe_environment", appEnvironment)
@@ -274,7 +276,10 @@ async function loadOrderEmail(
 
   const order = orderRow as OrderRecord;
 
-  if (order.payment_status !== "paid") {
+  if (
+    order.payment_status !== "paid" &&
+    order.payment_status !== "partial_refund"
+  ) {
     throw permanentDataError(
       "email_order_not_paid",
       "The order is not marked paid.",
@@ -301,7 +306,7 @@ async function loadOrderEmail(
       .order("id", { ascending: true }),
     supabase
       .from("passes")
-      .select("id, public_token, order_item_id, sequence_number")
+      .select("id, public_token, order_item_id, sequence_number, status")
       .eq("order_id", order.id)
       .order("id", { ascending: true }),
   ]);
@@ -343,12 +348,34 @@ async function loadOrderEmail(
     });
   }
 
+  // Check fulfillment against every original pass above, but never email links
+  // for passes that have since been refunded, voided, or expired.
+  const availablePasses = passes.filter(
+    (pass) => pass.status === "active" || pass.status === "checked_in",
+  );
+
+  if (availablePasses.length === 0) {
+    throw permanentDataError(
+      "email_no_available_passes",
+      "The order has no remaining admission passes to deliver.",
+    );
+  }
+
   const itemNames = new Map(items.map((item) => [item.id, item.ticket_name]));
   const siteUrl = getSiteUrl();
+  const amountRefunded = Number(order.amount_refunded);
 
   return {
     email: {
       amountPaid: formatCurrency(Number(order.amount_total)),
+      refund: amountRefunded > 0
+        ? {
+            amountRefunded: formatCurrency(amountRefunded),
+            amountRemaining: formatCurrency(
+              Number(order.amount_total) - amountRefunded,
+            ),
+          }
+        : undefined,
       buyerName: order.buyer_name,
       eventDate: formatCalendarDateRange(
         tournament.start_date,
@@ -366,7 +393,7 @@ async function loadOrderEmail(
       orderNumber: `TB-${order.id.toString().padStart(6, "0")}`,
       organizerEmail: tournament.contact_email,
       organizerName: tournament.organizer_name,
-      passes: passes.map((pass) => {
+      passes: availablePasses.map((pass) => {
         if (!pass.order_item_id || !pass.sequence_number) {
           throw permanentDataError(
             "email_pass_snapshot_missing",

@@ -3,7 +3,9 @@ import { z } from "zod";
 import { getDirectorWorkspace } from "@/lib/auth";
 import { attemptRefundConfirmationEmail } from "@/lib/email/refund-confirmation";
 import { syncStripeChargeRefund } from "@/lib/orders";
+import { getRefundActionResponse } from "@/lib/refund-action-response";
 import { getVerifiedStripe } from "@/lib/stripe";
+import { createOrRetrieveStripeRefund } from "@/lib/stripe-refund-request";
 import {
   assertStripeRoutingMatches,
   getStripeRequestOptions,
@@ -36,7 +38,7 @@ export async function POST(request: NextRequest) {
   const supabase = getSupabaseAdmin();
   const { data: pass, error } = await supabase
     .from("passes")
-    .select("id, order_id, order_item_id, status, orders!inner(stripe_checkout_id, stripe_connected_account_id, stripe_environment, platform_fee_amount, tournaments!inner(organizations!inner(id, owner_user_id, operating_environment))), order_items!inner(unit_amount_cents)")
+    .select("id, order_id, order_item_id, status, orders!passes_order_tournament_fk!inner(stripe_checkout_id, stripe_connected_account_id, stripe_environment, platform_fee_amount, tournaments!orders_tournament_id_fkey!inner(organizations!tournaments_organization_id_fkey!inner(id, owner_user_id, operating_environment))), order_items!passes_order_item_relationship_fk!inner(unit_amount_cents)")
     .eq("id", parsed.data.passId)
     .eq("order_id", parsed.data.orderId)
     .eq(
@@ -50,7 +52,19 @@ export async function POST(request: NextRequest) {
     )
     .maybeSingle();
 
-  if (error || !pass) {
+  if (error) {
+    console.error("[refund-pass] pass lookup failed", {
+      code: error.code,
+      orderId: parsed.data.orderId,
+      passId: parsed.data.passId,
+    });
+    return NextResponse.json(
+      { error: "The pass could not be loaded. Try again shortly." },
+      { status: 503 },
+    );
+  }
+
+  if (!pass) {
     return NextResponse.json({ error: "That pass could not be found." }, { status: 404 });
   }
 
@@ -125,43 +139,37 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const stripe = await getVerifiedStripe();
-  const session = await stripe.checkout.sessions.retrieve(
-    relation.orders.stripe_checkout_id,
-    {},
-    getStripeRequestOptions(routing),
-  );
-
-  assertStripeRoutingMatches({
-    actualEnvironment: session.livemode ? "live" : "test",
-    routing,
-  });
-
-  const paymentIntent =
-    typeof session.payment_intent === "string"
-      ? session.payment_intent
-      : session.payment_intent?.id;
-
-  if (!paymentIntent) {
-    return NextResponse.json({ error: "Free passes do not have a payment to refund." }, { status: 409 });
-  }
-
   try {
-    const refund = await stripe.refunds.create(
-      {
-        amount: relation.order_items.unit_amount_cents,
-        metadata: {
-          order_id: String(parsed.data.orderId),
-          pass_id: String(parsed.data.passId),
-        },
-        payment_intent: paymentIntent,
-        refund_application_fee: true,
-      },
-      getStripeRequestOptions(
-        routing,
-        `tournibase-pass-refund-${parsed.data.passId}`,
-      ),
+    const stripe = await getVerifiedStripe();
+    const session = await stripe.checkout.sessions.retrieve(
+      relation.orders.stripe_checkout_id,
+      {},
+      getStripeRequestOptions(routing),
     );
+
+    assertStripeRoutingMatches({
+      actualEnvironment: session.livemode ? "live" : "test",
+      routing,
+    });
+
+    const paymentIntent =
+      typeof session.payment_intent === "string"
+        ? session.payment_intent
+        : session.payment_intent?.id;
+
+    if (!paymentIntent) {
+      return NextResponse.json({ error: "Free passes do not have a payment to refund." }, { status: 409 });
+    }
+
+    const refund = await createOrRetrieveStripeRefund({
+      stripe,
+      routing,
+      orderId: parsed.data.orderId,
+      passId: parsed.data.passId,
+      paymentIntentId: paymentIntent,
+      amountCents: relation.order_items.unit_amount_cents,
+      platformFeeAmount: relation.orders.platform_fee_amount,
+    });
     const chargeId = typeof refund.charge === "string" ? refund.charge : refund.charge?.id;
 
     if (!chargeId) {
@@ -178,11 +186,16 @@ export async function POST(request: NextRequest) {
       routing.connectedAccountId,
     );
 
-    if (result.status === "refunded" || result.status === "partial_refund") {
+    const response = getRefundActionResponse(
+      refund.status,
+      result.status === "refunded" || result.status === "partial_refund",
+    );
+
+    if (response.ok && (result.status === "refunded" || result.status === "partial_refund")) {
       await attemptRefundConfirmationEmail(result);
     }
 
-    return NextResponse.json({ ok: true });
+    return NextResponse.json(response, { status: response.ok ? 200 : 202 });
   } catch (refundError) {
     console.error("[refund-pass] Stripe refund failed", {
       message: refundError instanceof Error ? refundError.message : "Unknown error",

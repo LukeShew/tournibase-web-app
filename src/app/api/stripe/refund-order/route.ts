@@ -3,7 +3,9 @@ import { z } from "zod";
 import { getDirectorWorkspace } from "@/lib/auth";
 import { attemptRefundConfirmationEmail } from "@/lib/email/refund-confirmation";
 import { syncStripeChargeRefund } from "@/lib/orders";
+import { getRefundActionResponse } from "@/lib/refund-action-response";
 import { getVerifiedStripe } from "@/lib/stripe";
+import { createOrRetrieveStripeRefund } from "@/lib/stripe-refund-request";
 import {
   assertStripeRoutingMatches,
   getStripeRequestOptions,
@@ -41,7 +43,7 @@ export async function POST(request: NextRequest) {
   const { data: orderRow, error: orderError } = await supabase
     .from("orders")
     .select(
-      "id, amount_total, amount_refunded, payment_status, stripe_checkout_id, stripe_connected_account_id, stripe_environment, stripe_payment_intent_id, tournaments!inner(organizations!inner(id, owner_user_id, operating_environment))",
+      "id, amount_total, amount_refunded, payment_status, platform_fee_amount, stripe_checkout_id, stripe_connected_account_id, stripe_environment, stripe_payment_intent_id, tournaments!orders_tournament_id_fkey!inner(organizations!tournaments_organization_id_fkey!inner(id, owner_user_id, operating_environment))",
     )
     .eq("id", parsed.data.orderId)
     .eq("stripe_environment", workspace.organization.operatingEnvironment)
@@ -52,7 +54,18 @@ export async function POST(request: NextRequest) {
     )
     .maybeSingle();
 
-  if (orderError || !orderRow) {
+  if (orderError) {
+    console.error("[refund-order] order lookup failed", {
+      code: orderError.code,
+      orderId: parsed.data.orderId,
+    });
+    return NextResponse.json(
+      { error: "The order could not be loaded. Try again shortly." },
+      { status: 503 },
+    );
+  }
+
+  if (!orderRow) {
     return NextResponse.json(
       { error: "That order could not be found." },
       { status: 404 },
@@ -64,6 +77,7 @@ export async function POST(request: NextRequest) {
     amount_total: number | string;
     id: number;
     payment_status: string;
+    platform_fee_amount: number | string;
     stripe_checkout_id: string | null;
     stripe_connected_account_id: string | null;
     stripe_environment: StripeEnvironment;
@@ -142,10 +156,10 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const stripe = await getVerifiedStripe();
   let paymentIntentId = order.stripe_payment_intent_id;
 
   try {
+    const stripe = await getVerifiedStripe();
     if (!paymentIntentId && order.stripe_checkout_id) {
       const session = await stripe.checkout.sessions.retrieve(
         order.stripe_checkout_id,
@@ -171,17 +185,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const refund = await stripe.refunds.create(
-      {
-        metadata: { order_id: String(order.id) },
-        payment_intent: paymentIntentId,
-        refund_application_fee: true,
-      },
-      getStripeRequestOptions(
-        routing,
-        `tournibase-order-refund-${order.id}`,
-      ),
-    );
+    const refund = await createOrRetrieveStripeRefund({
+      stripe,
+      routing,
+      orderId: order.id,
+      paymentIntentId,
+      platformFeeAmount: order.platform_fee_amount,
+    });
     const chargeId =
       typeof refund.charge === "string"
         ? refund.charge
@@ -201,11 +211,16 @@ export async function POST(request: NextRequest) {
       routing.connectedAccountId,
     );
 
-    if (result.status === "refunded" || result.status === "partial_refund") {
+    const response = getRefundActionResponse(
+      refund.status,
+      result.status === "refunded",
+    );
+
+    if (response.ok && result.status === "refunded") {
       await attemptRefundConfirmationEmail(result);
     }
 
-    return NextResponse.json({ ok: true });
+    return NextResponse.json(response, { status: response.ok ? 200 : 202 });
   } catch (refundError) {
     console.error("[refund-order] Stripe refund failed", {
       message:

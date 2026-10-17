@@ -1,5 +1,9 @@
 # Staging volume and payment QA — October 17, 2026
 
+> This is the original hosted QA snapshot. See
+> [the local refund/layout fixes and live setup handoff](qa-refund-fixes-2026-10-17.md)
+> for the subsequent corrections. Local fixes are not a deployed refund pass.
+
 ## Result
 
 Staging data setup is complete. Checkout, receipt delivery, and camera-free
