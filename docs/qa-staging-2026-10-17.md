@@ -6,6 +6,8 @@
 > Later user-requested sample-count adjustments are recorded in
 > [Staging sample totals](qa-sample-variation-2026-10-17.md); the counts below remain
 > the original QA snapshot.
+> The latest sample money/admission totals are in
+> [Sample pricing and attendance](qa-sample-realism-2026-10-17.md).
 
 ## Result
 

@@ -1,5 +1,9 @@
 # Staging sample totals — October 17, 2026
 
+> Historical intermediate snapshot. The subsequent user-requested
+> [pricing and attendance update](qa-sample-realism-2026-10-17.md) supersedes these
+> totals and the instruction to leave all generated passes unscanned.
+
 ## Request and scope
 
 The user requested less artificially round numbers across all sample events.
