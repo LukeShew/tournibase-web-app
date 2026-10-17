@@ -3,6 +3,9 @@
 > This is the original hosted QA snapshot. See
 > [the local refund/layout fixes and live setup handoff](qa-refund-fixes-2026-10-17.md)
 > for the subsequent corrections. Local fixes are not a deployed refund pass.
+> Later user-requested sample-count adjustments are recorded in
+> [Staging sample totals](qa-sample-variation-2026-10-17.md); the counts below remain
+> the original QA snapshot.
 
 ## Result
 
