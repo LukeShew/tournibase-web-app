@@ -24,6 +24,7 @@ import {
   getSupabaseAdminConfigurationIssues,
 } from "@/lib/supabase/admin";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { buildCheckoutLineItems } from "@/lib/checkout-pricing";
 
 export const runtime = "nodejs";
 const CHECKOUT_INTEGRATION_IDENTIFIER = "tournibase_dhkgywdx";
@@ -55,6 +56,8 @@ const checkoutSchema = z.object({
 
 type ReservedCheckout = {
   amount_total_cents: number;
+  ticket_subtotal_cents: number;
+  buyer_fee_amount_cents: number;
   inventory_expires_at: string;
   order_id: number;
   tournament_id: number;
@@ -216,7 +219,7 @@ export async function POST(request: NextRequest) {
   }
 
   const { data: reservationData, error: reservationError } = await supabase.rpc(
-    "reserve_checkout_order",
+    "reserve_checkout_order_with_buyer_fee",
     {
       p_buyer_email: parsed.data.email,
       p_buyer_name: buyerName,
@@ -268,6 +271,24 @@ export async function POST(request: NextRequest) {
     environment: reservation.stripe_environment,
   };
   const platformFeeCents = reservation.platform_fee_amount_cents;
+  let lineItems: ReturnType<typeof buildCheckoutLineItems>;
+  try {
+    lineItems = buildCheckoutLineItems({
+      items: selectedTickets,
+      ticketSubtotalCents: reservation.ticket_subtotal_cents,
+      buyerFeeCents: reservation.buyer_fee_amount_cents,
+      platformFeeCents,
+      amountTotalCents,
+      feeConfiguration: platformFeeConfiguration,
+    });
+  } catch (error) {
+    console.error("[checkout] reserved pricing mismatch", {
+      orderId: order.id,
+      message: error instanceof Error ? error.message : "Invalid pricing",
+    });
+    await markOrderFailed(order.id);
+    return checkoutError();
+  }
 
   if (reservation.stripe_environment !== appEnvironment) {
     await markOrderFailed(order.id);
@@ -356,17 +377,7 @@ export async function POST(request: NextRequest) {
         integration_identifier: CHECKOUT_INTEGRATION_IDENTIFIER,
         customer_email: parsed.data.email,
         client_reference_id: String(order.id),
-        line_items: selectedTickets.map((selection) => ({
-          quantity: selection.quantity,
-          price_data: {
-            currency: "usd",
-            unit_amount: selection.unit_amount_cents,
-            product_data: {
-              name: selection.name,
-              description: selection.description || undefined,
-            },
-          },
-        })),
+        line_items: lineItems,
         metadata: {
           order_id: String(order.id),
           tournament_id: String(reservation.tournament_id),

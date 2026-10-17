@@ -33,6 +33,7 @@ type OrderRecord = {
   amount_refunded: number | string;
   amount_total: number | string;
   buyer_email: string;
+  buyer_fee_amount: number | string;
   buyer_name: string;
   id: number;
   payment_status: "pending" | "paid" | "failed" | "refunded" | "partial_refund";
@@ -257,7 +258,7 @@ async function loadOrderEmail(
   const { data: orderRow, error: orderError } = await supabase
     .from("orders")
     .select(
-      "id, tournament_id, buyer_name, buyer_email, amount_total, amount_refunded, payment_status, stripe_environment",
+      "id, tournament_id, buyer_name, buyer_email, amount_total, amount_refunded, buyer_fee_amount, payment_status, stripe_environment",
     )
     .eq("id", orderId)
     .eq("stripe_environment", appEnvironment)
@@ -364,10 +365,13 @@ async function loadOrderEmail(
   const itemNames = new Map(items.map((item) => [item.id, item.ticket_name]));
   const siteUrl = getSiteUrl();
   const amountRefunded = Number(order.amount_refunded);
+  const buyerFee = Number(order.buyer_fee_amount ?? 0);
 
   return {
     email: {
       amountPaid: formatCurrency(Number(order.amount_total)),
+      buyerFee: buyerFee > 0 ? formatCurrency(buyerFee) : undefined,
+      ticketSubtotal: formatCurrency(Number(order.amount_total) - buyerFee),
       refund: amountRefunded > 0
         ? {
             amountRefunded: formatCurrency(amountRefunded),

@@ -32,7 +32,7 @@ type Refund = {
   charge: string;
   payment_intent: string;
   amount: number;
-  metadata: { order_id: string; pass_id?: string };
+  metadata: { order_id: string; pass_id?: string; buyer_fee_policy?: string; buyer_fee_refund_cents?: string; ticket_refund_cents?: string };
   status: string;
 };
 
@@ -49,6 +49,7 @@ function makeOrder() {
     amount_refunded: "0.00",
     payment_status: "paid",
     platform_fee_amount: "0.00",
+    buyer_fee_amount: "0.00",
     stripe_checkout_id: "cs_test_order",
     stripe_connected_account_id: "acct_director",
     stripe_environment: "test",
@@ -68,6 +69,7 @@ let pass: {
   id: number;
   order_id: number;
   order_item_id: number;
+  sequence_number: number;
   status: string;
   orders: ReturnType<typeof makeOrder>;
   order_items: { unit_amount_cents: number };
@@ -78,6 +80,7 @@ let refundHistory: Refund[];
 let selections: Map<string, string>;
 let filters: Array<[string, unknown]>;
 let idempotentRequests: Map<string, string>;
+let orderItems: Array<{ id: number; quantity: number; unit_amount_cents: number }>;
 
 beforeEach(() => {
   vi.resetAllMocks();
@@ -90,6 +93,7 @@ beforeEach(() => {
     id: 4788,
     order_id: order.id,
     order_item_id: 2136,
+    sequence_number: 1,
     status: "active",
     orders: order,
     order_items: { unit_amount_cents: 1800 },
@@ -100,6 +104,7 @@ beforeEach(() => {
   selections = new Map();
   filters = [];
   idempotentRequests = new Map();
+  orderItems = [{ id: 2136, quantity: 3, unit_amount_cents: 1800 }];
   mocks.workspace.mockResolvedValue({
     director: { id: "director-one" },
     organization: { id: 1, operatingEnvironment: "test" },
@@ -112,6 +117,8 @@ beforeEach(() => {
         data: missingRow || lookupError ? null : table === "passes" ? pass : order,
         error: lookupError,
       }),
+      then: (resolve: (result: { data: typeof orderItems; error: null }) => unknown) =>
+        Promise.resolve(resolve({ data: orderItems, error: null })),
     };
     return query;
   });
@@ -398,5 +405,63 @@ it("never turns a complimentary pass into an entire-payment refund", async () =>
   pass.order_items.unit_amount_cents = 0;
   expect((await refundPass(request({ orderId: 1957, passId: 4788 }))).status).toBe(409);
   expect(mocks.verifiedStripe).not.toHaveBeenCalled();
+  expect(mocks.createRefund).not.toHaveBeenCalled();
+});
+
+it("refunds a pass price plus its exact buyer fee and keeps the application fee reversal separate", async () => {
+  order.buyer_fee_amount = "1.39";
+  order.platform_fee_amount = "1.39";
+  order.amount_total = "55.39";
+  expect((await refundPass(request({ orderId: 1957, passId: 4788 }))).status).toBe(200);
+  expect(mocks.createRefund).toHaveBeenCalledWith({
+    amount: 1847,
+    payment_intent: "pi_test_order",
+    metadata: { order_id: "1957", pass_id: "4788", buyer_fee_policy: "buyer_fee_v1",
+      buyer_fee_refund_cents: "47", ticket_refund_cents: "1800" },
+  }, { stripeAccount: "acct_director", idempotencyKey: "tournibase-pass-refund-4788-buyer-fee-v1" });
+  expect(filters).toContainEqual(["order_id", 1957]);
+});
+
+it("reuses a buyer-fee refund after failed synchronization without returning the fee twice", async () => {
+  order.buyer_fee_amount = "1.39";
+  order.platform_fee_amount = "1.39";
+  order.amount_total = "55.39";
+  mocks.synchronize.mockRejectedValueOnce(new Error("Temporary database failure"));
+  expect((await refundPass(request({ orderId: 1957, passId: 4788 }))).status).toBe(502);
+  expect((await refundPass(request({ orderId: 1957, passId: 4788 }))).status).toBe(200);
+  expect(mocks.createRefund).toHaveBeenCalledOnce();
+  expect(refundHistory).toHaveLength(1);
+  expect(refundHistory[0].amount).toBe(1847);
+});
+
+it("refunds the remaining complete payment after a buyer-fee pass refund, with stable retries", async () => {
+  order.buyer_fee_amount = "1.39";
+  order.platform_fee_amount = "1.39";
+  order.amount_total = "55.39";
+  await refundPass(request({ orderId: 1957, passId: 4788 }));
+  order.amount_refunded = "18.47";
+  order.payment_status = "partial_refund";
+  mocks.synchronize.mockResolvedValue({ status: "refunded", orderId: 1957,
+    amountTotalCents: 5539, amountRefundedCents: 5539 });
+  expect((await refundOrder(request({ orderId: 1957 }))).status).toBe(200);
+  expect((await refundOrder(request({ orderId: 1957 }))).status).toBe(200);
+  expect(mocks.createRefund).toHaveBeenCalledTimes(2);
+  expect(mocks.createRefund.mock.calls[1]).toEqual([
+    { payment_intent: "pi_test_order", metadata: { order_id: "1957" } },
+    { stripeAccount: "acct_director", idempotencyKey: "tournibase-order-refund-1957-buyer-fee-v1" },
+  ]);
+});
+
+it("does not charge a complimentary pass any buyer fee even in a paid order", async () => {
+  order.buyer_fee_amount = "1.39";
+  pass.order_items.unit_amount_cents = 0;
+  expect((await refundPass(request({ orderId: 1957, passId: 4788 }))).status).toBe(409);
+  expect(mocks.createRefund).not.toHaveBeenCalled();
+});
+
+it("fails closed when the pass cannot be matched to its recorded buyer fee allocation", async () => {
+  order.buyer_fee_amount = "1.39";
+  pass.sequence_number = 4;
+  expect((await refundPass(request({ orderId: 1957, passId: 4788 }))).status).toBe(502);
   expect(mocks.createRefund).not.toHaveBeenCalled();
 });

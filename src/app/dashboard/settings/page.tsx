@@ -185,8 +185,8 @@ export default async function SettingsPage({
           <p className="text-sm leading-6 text-slate-600">
             The tournament organization is the seller for its admission
             orders. Stripe handles payment processing and bank payouts.
-            TourniBase application fees, when applicable, are deducted
-            automatically.
+            Buyers pay the TourniBase service fee on top of the ticket price.
+            Stripe processing fees still come out of the organization’s proceeds.
           </p>
         </div>
       </section>

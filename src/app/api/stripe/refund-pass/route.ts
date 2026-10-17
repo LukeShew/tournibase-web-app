@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { getDirectorWorkspace } from "@/lib/auth";
+import { getPassBuyerFeeCents, type BuyerFeeOrderItem } from "@/lib/buyer-fees";
 import { attemptRefundConfirmationEmail } from "@/lib/email/refund-confirmation";
 import { syncStripeChargeRefund } from "@/lib/orders";
 import { getRefundActionResponse } from "@/lib/refund-action-response";
@@ -38,7 +39,7 @@ export async function POST(request: NextRequest) {
   const supabase = getSupabaseAdmin();
   const { data: pass, error } = await supabase
     .from("passes")
-    .select("id, order_id, order_item_id, status, orders!passes_order_tournament_fk!inner(stripe_checkout_id, stripe_connected_account_id, stripe_environment, platform_fee_amount, tournaments!orders_tournament_id_fkey!inner(organizations!tournaments_organization_id_fkey!inner(id, owner_user_id, operating_environment))), order_items!passes_order_item_relationship_fk!inner(unit_amount_cents)")
+    .select("id, order_id, order_item_id, sequence_number, status, orders!passes_order_tournament_fk!inner(stripe_checkout_id, stripe_connected_account_id, stripe_environment, platform_fee_amount, buyer_fee_amount, tournaments!orders_tournament_id_fkey!inner(organizations!tournaments_organization_id_fkey!inner(id, owner_user_id, operating_environment))), order_items!passes_order_item_relationship_fk!inner(unit_amount_cents)")
     .eq("id", parsed.data.passId)
     .eq("order_id", parsed.data.orderId)
     .eq(
@@ -70,12 +71,15 @@ export async function POST(request: NextRequest) {
 
   const relation = pass as unknown as {
     id: number;
+    order_item_id: number;
+    sequence_number: number;
     status: string;
     orders: {
       stripe_checkout_id: string | null;
       stripe_connected_account_id: string | null;
       stripe_environment: StripeEnvironment;
       platform_fee_amount: number | string;
+      buyer_fee_amount: number | string;
       tournaments: {
         organizations: {
           id: number;
@@ -140,6 +144,21 @@ export async function POST(request: NextRequest) {
   }
 
   try {
+    const buyerFeeCents = Math.round(Number(relation.orders.buyer_fee_amount ?? 0) * 100);
+    let passBuyerFeeCents = 0;
+    if (buyerFeeCents > 0) {
+      const { data: itemRows, error: itemError } = await supabase
+        .from("order_items")
+        .select("id, quantity, unit_amount_cents")
+        .eq("order_id", parsed.data.orderId);
+      if (itemError) throw itemError;
+      passBuyerFeeCents = getPassBuyerFeeCents({
+        buyerFeeCents,
+        orderItems: (itemRows ?? []) as BuyerFeeOrderItem[],
+        orderItemId: relation.order_item_id,
+        sequenceNumber: relation.sequence_number,
+      });
+    }
     const stripe = await getVerifiedStripe();
     const session = await stripe.checkout.sessions.retrieve(
       relation.orders.stripe_checkout_id,
@@ -167,8 +186,10 @@ export async function POST(request: NextRequest) {
       orderId: parsed.data.orderId,
       passId: parsed.data.passId,
       paymentIntentId: paymentIntent,
-      amountCents: relation.order_items.unit_amount_cents,
+      amountCents: relation.order_items.unit_amount_cents + passBuyerFeeCents,
       platformFeeAmount: relation.orders.platform_fee_amount,
+      buyerFeeAmount: relation.orders.buyer_fee_amount ?? 0,
+      buyerFeeRefundCents: passBuyerFeeCents,
     });
     const chargeId = typeof refund.charge === "string" ? refund.charge : refund.charge?.id;
 

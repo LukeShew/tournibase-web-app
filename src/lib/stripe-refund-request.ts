@@ -15,6 +15,8 @@ export async function createOrRetrieveStripeRefund({
   paymentIntentId,
   amountCents,
   platformFeeAmount,
+  buyerFeeAmount = 0,
+  buyerFeeRefundCents = 0,
 }: {
   stripe: Stripe;
   routing: StripePaymentRouting;
@@ -23,11 +25,21 @@ export async function createOrRetrieveStripeRefund({
   paymentIntentId: string;
   amountCents?: number;
   platformFeeAmount: number | string;
+  buyerFeeAmount?: number | string;
+  buyerFeeRefundCents?: number;
 }): Promise<Stripe.Refund> {
   const fee = Number(platformFeeAmount);
+  const buyerFeeCents = Math.round(Number(buyerFeeAmount) * 100);
 
   if (!Number.isFinite(fee) || fee < 0) {
     throw new Error("The order application fee is invalid.");
+  }
+  if (!Number.isSafeInteger(buyerFeeCents) || buyerFeeCents < 0 ||
+      !Number.isSafeInteger(buyerFeeRefundCents) || buyerFeeRefundCents < 0 ||
+      buyerFeeRefundCents > buyerFeeCents ||
+      (passId !== undefined && (!Number.isSafeInteger(amountCents) ||
+        (amountCents ?? 0) <= 0 || buyerFeeRefundCents > (amountCents ?? 0)))) {
+    throw new Error("The buyer fee refund amount is invalid.");
   }
 
   // A previous refund can have succeeded while its database synchronization
@@ -61,16 +73,25 @@ export async function createOrRetrieveStripeRefund({
       metadata: {
         order_id: String(orderId),
         ...(passId === undefined ? {} : { pass_id: String(passId) }),
+        ...(buyerFeeCents > 0 && passId !== undefined ? {
+          buyer_fee_policy: "buyer_fee_v1",
+          buyer_fee_refund_cents: String(buyerFeeRefundCents),
+          ticket_refund_cents: String(amountCents! - buyerFeeRefundCents),
+        } : {}),
       },
       payment_intent: paymentIntentId,
-      ...(fee > 0 ? { refund_application_fee: true } : {}),
+      // Buyer-fee orders reverse their exact allocated fee during sync, avoiding
+      // Stripe's per-refund proportional rounding. Historical orders keep their
+      // original application-fee refund behavior.
+      ...(fee > 0 && buyerFeeCents === 0 ? { refund_application_fee: true } : {}),
     },
     getStripeRequestOptions(
       routing,
       // Old zero-fee requests were rejected for asking to refund a nonexistent
       // fee. Use a stable new key for the corrected parameters; preserve keys
       // for fee-bearing requests. Never generate a fresh key on each retry.
-      fee > 0 ? originalKey : `${originalKey}-no-fee-v2`,
+      buyerFeeCents > 0 ? `${originalKey}-buyer-fee-v1`
+        : fee > 0 ? originalKey : `${originalKey}-no-fee-v2`,
     ),
   );
 }

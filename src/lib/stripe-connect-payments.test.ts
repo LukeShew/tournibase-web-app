@@ -38,13 +38,13 @@ describe("Stripe Connect payment helpers", () => {
     ).toBe(20);
   });
 
-  it("rejects invalid or total-consuming fees", () => {
-    expect(() =>
+  it("allows an added fee to equal the ticket subtotal and keeps free orders free", () => {
+    expect(
       calculatePlatformFeeCents(100, {
         basisPoints: 0,
         fixedCents: 100,
       }),
-    ).toThrow("less than the order total");
+    ).toBe(100);
     expect(
       calculatePlatformFeeCents(0, {
         basisPoints: 100,

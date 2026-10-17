@@ -21,6 +21,23 @@ const sample: RefundConfirmationEmailData = {
 };
 
 describe("refund confirmation email", () => {
+  it("identifies the buyer fee as part of, not in addition to, a refund", async () => {
+    const data: RefundConfirmationEmailData = {
+      ...sample,
+      amountPaid: "$25.80",
+      amountRefunded: "$25.80",
+      buyerFeeRefunded: "$0.80",
+    };
+    const html = await render(<RefundConfirmationEmail {...data} />);
+    const text = createRefundConfirmationText(data);
+    for (const body of [html, text]) {
+      expect(body).toContain("Service fee included in refund");
+      expect(body).toContain("$0.80");
+      expect(body).toContain("$25.80");
+    }
+    expect(text).toContain("Amount refunded: $25.80");
+  });
+
   it("renders refund details and support contact", async () => {
     const html = await render(<RefundConfirmationEmail {...sample} />);
 

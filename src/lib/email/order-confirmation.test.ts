@@ -110,6 +110,19 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllEnvs());
 
 describe("initial order receipts after refunds", () => {
+  it("loads the stored buyer fee without changing the ticket line prices", async () => {
+    order.buyer_fee_amount = "1.38";
+    order.amount_total = "55.38";
+
+    expect((await attemptOrderConfirmationEmail(1, provider)).status).toBe("sent");
+    const request = send.mock.calls[0][0];
+    expect(request.text).toContain("2 × Saturday Pass: $36.00");
+    expect(request.text).toContain("1 × Sunday Pass: $18.00");
+    expect(request.text).toContain("Ticket subtotal: $54.00");
+    expect(request.text).toContain("TourniBase service fee: $1.38");
+    expect(request.text).toContain("Amount paid: $55.38");
+  });
+
   it("sends the first receipt after a partial refund with only remaining pass links", async () => {
     order.payment_status = "partial_refund";
     order.amount_refunded = "18.00";

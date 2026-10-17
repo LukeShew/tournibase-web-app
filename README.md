@@ -27,8 +27,10 @@ Production app:
   email delivery; production is isolated to live data with paid checkout off
 - Production Supabase Auth signup is enabled and independently verified; the
   trusted server organization-creation grant remains server-only
-- Live Stripe keys and webhook destinations still must be configured before
-  the controlled real-money launch test
+- Live Stripe keys and both production webhook destinations are configured;
+  the October 17 redeploy passed the homepage and signed account-status webhook
+  checks. Live director onboarding and the controlled real-money payment/refund
+  test remain required before launch.
 
 Current progress and remaining work:
 [Implementation Roadmap](docs/implementation-roadmap.md)
@@ -284,8 +286,18 @@ Sessions use direct charges on that organizer's connected account, so Stripe
 deducts its processing fees and pays out the remaining balance according to
 the organizer's Stripe payout schedule.
 
-The application fee is calculated as
-`round(order total × basis points / 10,000) + fixed cents`.
+For new orders, the buyer-paid TourniBase service fee is calculated as
+`round(ticket subtotal in cents × basis points / 10,000) + fixed cents`
+and added once to the ticket subtotal. The full buyer payment is charged on the
+organizer's connected account, and Stripe transfers the service fee to
+TourniBase as an application fee. The service fee is excluded from director
+ticket-sales metrics; Stripe processing fees still reduce director proceeds.
+Free orders incur no service fee. Historical orders retain their original
+fee treatment.
+
+The buyer-paid-fee migration is applied. Matching application deployment to both
+branches is still required before this new pricing takes effect. See the
+[rollout status](docs/environment-rollout.md).
 
 Staging must use:
 

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { getPassBuyerFeeCents } from "@/lib/buyer-fees";
 import type { RefundActionResponse } from "@/lib/refund-action-response";
 
 export type OrderLogItem = {
@@ -29,6 +30,7 @@ export type OrderLogOrder = {
   amount_refunded: number | string;
   amount_total: number | string;
   buyer_email: string;
+  buyer_fee_amount: number | string;
   buyer_name: string;
   buyer_phone: string | null;
   created_at: string;
@@ -115,9 +117,12 @@ export function OrderLogClient({
                     {order.passes.length === 1 ? "pass" : "passes"}
                   </p>
                 </div>
-                <p className="font-mono text-xl font-semibold text-slate-950">
-                  {formatCurrency(Number(order.amount_total))}
-                </p>
+                <div>
+                  <p className="text-xs text-slate-500">Buyer total</p>
+                  <p className="mt-1 font-mono text-xl font-semibold text-slate-950">
+                    {formatCurrency(Number(order.amount_total))}
+                  </p>
+                </div>
               </div>
             </button>
 
@@ -246,7 +251,13 @@ function OrderDetailsModal({
     Number(order.amount_total) > 0;
 
   async function refundPass(passId: number) {
-    if (!window.confirm("Refund this pass and block it from future entry?")) {
+    const pass = order.passes.find((candidate) => candidate.id === passId);
+    const refundAmountCents = pass ? getOrderPassRefundAmountCents(order, pass) : null;
+    const confirmation = refundAmountCents === null
+      ? "Refund this pass and block it from future entry?"
+      : `Refund ${formatCurrency(refundAmountCents / 100)} for this pass${Number(order.buyer_fee_amount ?? 0) > 0 ? ", including its share of the TourniBase service fee," : ""} and block it from future entry?`;
+
+    if (!window.confirm(confirmation)) {
       return;
     }
 
@@ -361,7 +372,7 @@ function OrderDetailsModal({
               value={order.buyer_phone || "Not provided"}
             />
             <InfoBox
-              label="Amount paid"
+              label="Buyer payment after refunds"
               value={formatCurrency(
                 Math.max(0, Number(order.amount_total) - Number(order.amount_refunded)),
               )}
@@ -370,6 +381,18 @@ function OrderDetailsModal({
               label="Amount refunded"
               value={formatCurrency(Number(order.amount_refunded))}
             />
+            {Number(order.buyer_fee_amount ?? 0) > 0 ? (
+              <>
+                <InfoBox
+                  label="Original ticket subtotal"
+                  value={formatCurrency(Number(order.amount_total) - Number(order.buyer_fee_amount))}
+                />
+                <InfoBox
+                  label="Buyer-paid TourniBase service fee"
+                  value={formatCurrency(Number(order.buyer_fee_amount))}
+                />
+              </>
+            ) : null}
             <InfoBox
               label="Payment method"
               value={
@@ -525,6 +548,18 @@ function OrderDetailsModal({
       </div>
     </div>
   );
+}
+
+export function getOrderPassRefundAmountCents(order: OrderLogOrder, pass: OrderLogPass) {
+  const item = order.order_items.find((candidate) => candidate.id === pass.order_item_id);
+  if (!item || !pass.sequence_number) return null;
+
+  return item.unit_amount_cents + getPassBuyerFeeCents({
+    buyerFeeCents: Math.round(Number(order.buyer_fee_amount ?? 0) * 100),
+    orderItems: order.order_items,
+    orderItemId: item.id,
+    sequenceNumber: pass.sequence_number,
+  });
 }
 
 function InfoBox({ label, value }: { label: string; value: string }) {

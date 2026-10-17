@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 export default function TermsPage() {
   return (
     <LegalPageShell eyebrow="Legal" title="Terms of use">
-      <p className="text-sm text-slate-500">Last updated: July 16, 2026</p>
+      <p className="text-sm text-slate-500">Last updated: October 17, 2026</p>
 
       <LegalSection title="What TourniBase does">
         <p>
@@ -52,10 +52,13 @@ export default function TermsPage() {
           schedule. TourniBase does not store full card numbers.
         </p>
         <p>
-          TourniBase may retain an application fee from an organizer’s
-          transaction proceeds. Refund requests and decisions are handled by
-          the event organizer. Refund timing can depend on Stripe, the card
-          network, and the buyer’s bank.
+          Buyers pay any TourniBase service fee in addition to the ticket
+          price. The ticket subtotal, service fee, and total are shown before
+          checkout. Stripe transfers the service fee to TourniBase as an
+          application fee; it does not reduce the organizer’s ticket price.
+          Refund requests and decisions are handled by the event organizer.
+          Refund timing can depend on Stripe, the card network, and the
+          buyer’s bank.
         </p>
       </LegalSection>
 

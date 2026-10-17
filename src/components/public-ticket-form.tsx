@@ -2,6 +2,10 @@
 
 import { useState, type FormEvent } from "react";
 import { eventDateFromTimestamp } from "@/lib/event-time";
+import {
+  calculatePlatformFeeCents,
+  type PlatformFeeConfiguration,
+} from "@/lib/stripe-connect-payments";
 import { formatEventDateRange } from "@/lib/tournaments";
 
 export type PublicTicketOption = {
@@ -18,11 +22,13 @@ export function PublicTicketForm({
   eventName,
   eventSlug,
   eventTimeZone,
+  platformFeeConfiguration,
   tickets,
 }: {
   eventName: string;
   eventSlug: string;
   eventTimeZone: string;
+  platformFeeConfiguration: PlatformFeeConfiguration;
   tickets: PublicTicketOption[];
 }) {
   const [quantities, setQuantities] = useState<Record<number, number>>({});
@@ -32,7 +38,7 @@ export function PublicTicketForm({
     (total, quantity) => total + quantity,
     0,
   );
-  const totalCents = tickets.reduce(
+  const ticketSubtotalCents = tickets.reduce(
     (total, ticket) =>
       total +
       Math.round(Number(ticket.price) * 100) *
@@ -268,21 +274,17 @@ export function PublicTicketForm({
       </fieldset>
 
       <div className="rounded-2xl border border-border bg-card-strong p-5 sm:p-6">
-        <div className="flex items-end justify-between gap-5">
+        <div>
           <div>
             <p className="text-sm text-slate-400">
               {selectedCount} {selectedCount === 1 ? "pass" : "passes"} selected
             </p>
             <p className="mt-1 text-xs text-slate-500">{eventName}</p>
           </div>
-          <div className="text-right">
-            <p className="text-xs uppercase tracking-[0.14em] text-slate-500">
-              Total
-            </p>
-            <p className="mt-1 font-mono text-2xl font-semibold text-white">
-              {formatCurrency(totalCents / 100)}
-            </p>
-          </div>
+          <TicketPriceSummary
+            ticketSubtotalCents={ticketSubtotalCents}
+            platformFeeConfiguration={platformFeeConfiguration}
+          />
         </div>
 
         <button
@@ -306,6 +308,40 @@ export function PublicTicketForm({
         </div>
       </div>
     </form>
+  );
+}
+
+export function TicketPriceSummary({
+  ticketSubtotalCents,
+  platformFeeConfiguration,
+}: {
+  ticketSubtotalCents: number;
+  platformFeeConfiguration: PlatformFeeConfiguration;
+}) {
+  const buyerFeeCents = calculatePlatformFeeCents(
+    ticketSubtotalCents,
+    platformFeeConfiguration,
+  );
+
+  return (
+    <dl className="mt-4 space-y-3" aria-live="polite">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 text-sm text-slate-300">
+        <dt>Ticket subtotal</dt>
+        <dd className="font-mono">{formatCurrency(ticketSubtotalCents / 100)}</dd>
+      </div>
+      {buyerFeeCents > 0 ? (
+        <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 text-sm text-slate-300">
+          <dt>TourniBase service fee</dt>
+          <dd className="font-mono">{formatCurrency(buyerFeeCents / 100)}</dd>
+        </div>
+      ) : null}
+      <div className="flex flex-wrap items-baseline justify-between gap-4 border-t border-border pt-3 font-semibold text-white">
+        <dt>Total</dt>
+        <dd className="font-mono text-2xl">
+          {formatCurrency((ticketSubtotalCents + buyerFeeCents) / 100)}
+        </dd>
+      </div>
+    </dl>
   );
 }
 

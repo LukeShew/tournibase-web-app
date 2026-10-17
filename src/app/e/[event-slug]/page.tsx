@@ -12,6 +12,7 @@ import {
 import { isPaidCheckoutEnabled } from "@/lib/app-environment";
 import { getPublicEvent } from "@/lib/public-events";
 import { isOrganizationStripeAccountReady } from "@/lib/stripe-connect";
+import { getPlatformFeeConfiguration } from "@/lib/stripe-connect-payments";
 import { formatEventDateRange } from "@/lib/tournaments";
 
 export const dynamic = "force-dynamic";
@@ -158,6 +159,7 @@ export default async function PublicEventPage({
                 eventName={event.name}
                 eventSlug={event.public_slug}
                 eventTimeZone={event.time_zone}
+                platformFeeConfiguration={getPlatformFeeConfiguration()}
                 tickets={ticketOptions}
               />
             ) : (

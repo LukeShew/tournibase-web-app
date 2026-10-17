@@ -41,6 +41,7 @@ export type RefundEmailAttempt =
 export type RefundConfirmationInput = {
   amountRefundedCents: number;
   amountTotalCents: number;
+  buyerFeeRefundedCents?: number;
   orderId: number;
   status: "refunded" | "partial_refund";
 };
@@ -134,6 +135,9 @@ async function loadRefundEmail(
     email: {
       amountPaid: formatCurrency(input.amountTotalCents / 100),
       amountRefunded: formatCurrency(input.amountRefundedCents / 100),
+      buyerFeeRefunded: input.buyerFeeRefundedCents
+        ? formatCurrency(input.buyerFeeRefundedCents / 100)
+        : undefined,
       buyerName: order.buyer_name,
       eventDate: formatCalendarDateRange(
         tournament.start_date,

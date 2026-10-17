@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 export default function RefundPolicyPage() {
   return (
     <LegalPageShell eyebrow="Support" title="Refund policy">
-      <p className="text-sm text-slate-500">Last updated: July 16, 2026</p>
+      <p className="text-sm text-slate-500">Last updated: October 17, 2026</p>
 
       <LegalSection title="Who handles refunds">
         <p>
@@ -27,13 +27,16 @@ export default function RefundPolicyPage() {
           When a full Stripe refund is processed and Stripe sends the refund
           event to TourniBase, TourniBase marks the order as refunded and blocks
           the order’s active or checked-in passes from future entry.
+          A full refund includes any TourniBase service fee paid by the buyer.
         </p>
       </LegalSection>
 
       <LegalSection title="Partial refunds">
         <p>
           Pass-specific partial refunds created from TourniBase order details
-          update the refunded total and void the selected pass. A generic
+          include the selected ticket’s price and its share of any buyer-paid
+          TourniBase service fee, update the refunded total, and void the
+          selected pass. A generic
           partial refund created directly in Stripe updates the order total,
           but it cannot identify which pass should be voided.
         </p>

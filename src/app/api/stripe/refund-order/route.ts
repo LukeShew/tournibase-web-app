@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
   const { data: orderRow, error: orderError } = await supabase
     .from("orders")
     .select(
-      "id, amount_total, amount_refunded, payment_status, platform_fee_amount, stripe_checkout_id, stripe_connected_account_id, stripe_environment, stripe_payment_intent_id, tournaments!orders_tournament_id_fkey!inner(organizations!tournaments_organization_id_fkey!inner(id, owner_user_id, operating_environment))",
+      "id, amount_total, amount_refunded, payment_status, platform_fee_amount, buyer_fee_amount, stripe_checkout_id, stripe_connected_account_id, stripe_environment, stripe_payment_intent_id, tournaments!orders_tournament_id_fkey!inner(organizations!tournaments_organization_id_fkey!inner(id, owner_user_id, operating_environment))",
     )
     .eq("id", parsed.data.orderId)
     .eq("stripe_environment", workspace.organization.operatingEnvironment)
@@ -78,6 +78,7 @@ export async function POST(request: NextRequest) {
     id: number;
     payment_status: string;
     platform_fee_amount: number | string;
+    buyer_fee_amount: number | string;
     stripe_checkout_id: string | null;
     stripe_connected_account_id: string | null;
     stripe_environment: StripeEnvironment;
@@ -191,6 +192,7 @@ export async function POST(request: NextRequest) {
       orderId: order.id,
       paymentIntentId,
       platformFeeAmount: order.platform_fee_amount,
+      buyerFeeAmount: order.buyer_fee_amount ?? 0,
     });
     const chargeId =
       typeof refund.charge === "string"

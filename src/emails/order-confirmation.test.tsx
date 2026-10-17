@@ -41,6 +41,27 @@ const sample: OrderConfirmationEmailData = {
 };
 
 describe("order confirmation email", () => {
+  it("itemizes the buyer fee above ticket prices in both receipt formats", async () => {
+    const withFee = { ...sample, amountPaid: "$25.80", buyerFee: "$0.80", ticketSubtotal: "$25.00" };
+    const html = await render(<OrderConfirmationEmail {...withFee} />);
+    const text = createOrderConfirmationText(withFee);
+
+    for (const body of [html, text]) {
+      expect(body).toContain("Ticket subtotal");
+      expect(body).toContain("TourniBase service fee");
+      expect(body).toContain("$25.00");
+      expect(body).toContain("$0.80");
+      expect(body).toContain("$25.80");
+    }
+    expect(text).toContain("Amount paid: $25.80");
+  });
+
+  it("keeps legacy and no-fee receipts free of added service fees", async () => {
+    const html = await render(<OrderConfirmationEmail {...sample} />);
+    expect(html).not.toContain("TourniBase service fee");
+    expect(createOrderConfirmationText(sample)).not.toContain("TourniBase service fee");
+  });
+
   it("renders every pass link and the order details", async () => {
     const html = await render(<OrderConfirmationEmail {...sample} />);
 

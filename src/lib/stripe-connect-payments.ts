@@ -155,10 +155,6 @@ export function calculatePlatformFeeCents(
     throw new Error("The calculated TourniBase fee is not valid.");
   }
 
-  if (feeCents >= amountTotalCents) {
-    throw new Error("The TourniBase fee must be less than the order total.");
-  }
-
   return feeCents;
 }
 

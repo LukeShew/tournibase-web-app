@@ -26,16 +26,56 @@ Completed:
 - Production Supabase Auth signup is enabled (`disable_signup: false`) and the
   trusted `service_role` organization-creation path is independently verified;
   direct browser inserts remain blocked.
+- Live API keys and both production webhook destinations are configured. The
+  October 17 production redeploy `F3EzhFuXuguPDQV96YPymp9tmDPh` returned HTTP
+  200 for the homepage and the signed Accounts v2 destination ping.
 
 Still required:
 
 - Deploy the October 17 refund/receipt/layout corrections identically to both
   branches and repeat the hosted Sandbox refund checks. See
   [the fix report](qa-refund-fixes-2026-10-17.md).
-- Configure the live Stripe API keys and both production webhook destinations.
+- Deploy the new buyer-paid pricing code to both branches (the database
+  migration is already applied), then verify the connected-payment destination
+  during payment QA.
 - Complete live onboarding for the pilot director.
 - Run the controlled real-money purchase, email, scan, duplicate-scan, refund,
   and refunded-pass test before leaving production checkout enabled.
+
+## Buyer-paid fee rollout — October 17, 2026
+
+Hosted migration `20261017234245_add_buyer_paid_tournibase_fees` is applied.
+It adds immutable buyer-fee snapshots and exact refunded-fee accounting, plus
+the service-role-only `reserve_checkout_order_with_buyer_fee` RPC. The old
+reservation RPC remains compatible with the current hosted application.
+Existing 2,037 orders and 4,910 passes were unchanged; all historical buyer-fee
+fields remain zero. Only the new application code uses additive buyer pricing.
+
+For a $10 admission with the production fee configuration, checkout collects
+$10.50, transfers $0.50 to TourniBase, and leaves the director $10 before Stripe
+processing. Ticket-revenue reports exclude the service fee. Full and pass-level
+refunds include the corresponding buyer fee, with exact cent allocation across
+passes. Old orders retain their original pricing and refund treatment.
+
+Local checks cover checkout, receipts, fee allocation, refunds, reporting,
+historical compatibility, free orders, inventory, environment isolation, and
+database function permissions. All 29 migrations and the rollback regression
+file `supabase/tests/buyer_paid_fees.sql` passed in isolated PostgreSQL. The
+hosted post-migration checks confirmed unchanged record counts and restricted
+RPC permissions. Security advisors produced no new findings; existing
+intentional service-only RLS notices, the owner/environment-checked metrics
+wrapper notice, and disabled leaked-password protection remain unchanged.
+
+The full application suite passed 220 tests, TypeScript, and ESLint. A production
+build passed using `npm run build -- --webpack`; the default Turbopack build
+could not bind its internal worker port in the local execution sandbox.
+Generated duplicate `.next/types` cache files were cleared for the standalone
+TypeScript check. No production build configuration was changed.
+
+Deploy identical source to main/production and staging after explicit push
+authorization. Keep `TOURNIBASE_PAID_CHECKOUT_ENABLED=false` in production until
+the remaining live validation is approved. No real-money payment was made for
+this implementation.
 
 ## Environment contract
 
@@ -47,7 +87,7 @@ Still required:
 | `TOURNIBASE_APP_ENVIRONMENT` | `test` | `live` |
 | Stripe | TourniBase onboarding Sandbox | Live Connect platform |
 | Paid checkout | Enabled for testing | Disabled until the real-money test passes |
-| TourniBase fee | `0` bps + `0` cents | Exactly `200` bps + `30` cents |
+| TourniBase fee | `0` bps + `0` cents | Exactly `200` bps of ticket subtotal + `30` cents, added to the buyer total once per paid order |
 | Transactional recipient | Forced to `lsautomates@gmail.com` | Actual buyer |
 | Email subject | Starts with `[TEST]` | Normal subject |
 | Public entrance | Same public homepage and sign-in design as production; no test data is listed | Normal public homepage and sign-in |
@@ -134,18 +174,18 @@ retrieve or refund old Test-mode payment objects.
 Production is deployed with the live application boundary and remains at
 `TOURNIBASE_PAID_CHECKOUT_ENABLED=false` through live key and webhook setup,
 live onboarding, and every check before the controlled real-money test.
-The live API-key and webhook-secret entries below describe the required final
-configuration; they are not installed yet.
+All four live API-key/signing-secret variables below are installed. On October
+17 the corrected secret key was deployed in `F3EzhFuXuguPDQV96YPymp9tmDPh`;
+the homepage and a signed live Accounts v2 ping returned HTTP 200. This verifies
+the account-status secret and the expected platform identity, not a real payment.
 
-The October 17 inventory confirmed all four Stripe key/signing-secret variables
-were absent from Production. The live platform itself reported submitted details
-and no currently due, past-due, or pending-verification requirements. That does
-not verify any director's live connected account or a real transaction.
-The user is adding the two API keys; installation must be checked again before
-changing this status. The only existing live destination at inspection time was
-the legacy snapshot endpoint `we_1TqL69BdjbPEH1Ela6YXcJBx`, listening to `@self`
-at `/api/stripe/webhook`. It is not the connected-account payment destination.
-No new live webhook or production variable was created by this fix task.
+The live connected-payment destination is `we_1URfxRBdjbPEH1ElMxINrRNY`
+(`@accounts`, snapshot, `2026-04-22.dahlia`), and the account-status destination
+is `ed_61Vb3yQgs90O2RBnZ16Uk91c3PSQnPu0SoFc4hKXYMjY` (`@self`, thin).
+Both are enabled. The legacy snapshot endpoint `we_1TqL69BdjbPEH1Ela6YXcJBx`
+still listens to `@self` at `/api/stripe/webhook`; it does not cover connected
+direct charges. Live director onboarding and payment/refund delivery remain
+launch checks.
 
 ```text
 TOURNIBASE_APP_ENVIRONMENT=live
@@ -356,7 +396,8 @@ onboarding, and real-money gate are still pending.
     `TOURNIBASE_PAID_CHECKOUT_ENABLED=true`, redeploy, and immediately run one
     controlled small real-money purchase, email, scan, duplicate-scan, and
     refund test. Confirm Stripe recorded a 2% plus 30-cent TourniBase
-    application fee.
+    application fee added on top of the ticket subtotal, a separate buyer fee
+    line on checkout/receipt, and director ticket sales excluding that fee.
 19. If any part fails, set the switch back to `false` and redeploy. If every
     part passes, leave it enabled for the pilot.
 

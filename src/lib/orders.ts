@@ -2,6 +2,7 @@ import "server-only";
 
 import type Stripe from "stripe";
 import { getAppEnvironment } from "@/lib/app-environment";
+import { getBuyerFeeRefundedCents, getPassBuyerFeeCents, type BuyerFeeOrderItem } from "@/lib/buyer-fees";
 import { attemptOrderConfirmationEmail } from "@/lib/email/order-confirmation";
 import {
   getRefundPaymentStatusForCharge,
@@ -23,6 +24,8 @@ type PaymentStatus = "pending" | "paid" | "failed" | "refunded" | "partial_refun
 type OrderRecord = {
   amount_refunded: number | string;
   amount_total: number | string;
+  buyer_fee_amount: number | string;
+  buyer_fee_refunded: number | string;
   buyer_name: string;
   id: number;
   payment_status: PaymentStatus;
@@ -41,7 +44,7 @@ type OrderRecord = {
 };
 
 const orderRecordSelection =
-  "id, tournament_id, buyer_name, amount_total, amount_refunded, payment_status, stripe_connected_account_id, stripe_environment, platform_fee_amount, platform_fee_refunded, stripe_payment_intent_id, stripe_charge_id, tournaments!inner(organizations!inner(operating_environment))";
+  "id, tournament_id, buyer_name, amount_total, amount_refunded, buyer_fee_amount, buyer_fee_refunded, payment_status, stripe_connected_account_id, stripe_environment, platform_fee_amount, platform_fee_refunded, stripe_payment_intent_id, stripe_charge_id, tournaments!inner(organizations!inner(operating_environment))";
 
 type OrderItemRecord = {
   id: number;
@@ -63,6 +66,7 @@ type PassRecord = {
 export type StripeRefundSyncResult =
   | {
       amountRefundedCents: number;
+      buyerFeeRefundedCents: number;
       amountTotalCents: number;
       orderId: number;
       status: "refunded" | "partial_refund";
@@ -72,6 +76,8 @@ export type StripeRefundSyncResult =
 
 export type OrderConfirmation = {
   amountTotal: number;
+  buyerFeeAmount: number;
+  ticketSubtotal: number;
   buyerName: string;
   eventName: string;
   orderNumber: string;
@@ -327,8 +333,29 @@ export async function syncStripeChargeRefund(
     routing,
   });
 
+  const buyerFeeCents = Math.round(Number(order.buyer_fee_amount ?? 0) * 100);
+  const refunds: Stripe.Refund[] = [];
+  if (refundStatus === "partial_refund" || buyerFeeCents > 0) {
+    // Read every page once for both fee accounting and pass invalidation.
+    for await (const refund of stripe.refunds.list(
+      { charge: latestCharge.id, limit: 100 },
+      getStripeRequestOptions(routing),
+    )) {
+      refunds.push(refund);
+    }
+  }
+  const buyerFeeRefundedCents = getBuyerFeeRefundedCents({
+    buyerFeeCents,
+    chargeAmountCents: latestCharge.amount,
+    chargeAmountRefundedCents: latestCharge.amount_refunded,
+    orderId: order.id,
+    refunds,
+    expectedPassRefunds: buyerFeeCents > 0 && refundStatus === "partial_refund"
+      ? await getExpectedPassRefunds(order.id, buyerFeeCents, refunds)
+      : undefined,
+  });
   const platformFeeRefundedCents =
-    await synchronizeApplicationFeeRefund(latestCharge, order);
+    await synchronizeApplicationFeeRefund(latestCharge, order, buyerFeeRefundedCents);
   const paymentIntentId =
     typeof latestCharge.payment_intent === "string"
       ? latestCharge.payment_intent
@@ -340,6 +367,7 @@ export async function syncStripeChargeRefund(
     charge: latestCharge,
     paymentIntentId,
     platformFeeRefundedCents,
+    buyerFeeRefundedCents,
     routing,
   });
   const nextStatus = committed.status;
@@ -358,12 +386,7 @@ export async function syncStripeChargeRefund(
 
   if (nextStatus === "partial_refund") {
     const refundedPassIds = new Set<number>();
-    // Stripe returns at most 100 refunds per page. Older pass refunds must
-    // still be reconciled when a charge has a longer refund history.
-    for await (const refund of stripe.refunds.list(
-      { charge: latestCharge.id, limit: 100 },
-      getStripeRequestOptions(routing),
-    )) {
+    for (const refund of refunds) {
       const passId = Number(refund.metadata?.pass_id);
       if (refund.status === "succeeded" && Number.isSafeInteger(passId) && passId > 0) {
         refundedPassIds.add(passId);
@@ -394,10 +417,44 @@ export async function syncStripeChargeRefund(
 
   return {
     amountRefundedCents: committed.amountRefundedCents,
+    buyerFeeRefundedCents: committed.buyerFeeRefundedCents,
     amountTotalCents: latestCharge.amount,
     orderId: order.id,
     status: nextStatus,
   };
+}
+
+async function getExpectedPassRefunds(orderId: number, buyerFeeCents: number, refunds: Stripe.Refund[]) {
+  const passIds = [...new Set(refunds
+    .filter((refund) => refund.status === "succeeded" &&
+      refund.metadata?.order_id === String(orderId) &&
+      refund.metadata?.buyer_fee_policy === "buyer_fee_v1")
+    .map((refund) => Number(refund.metadata?.pass_id))
+    .filter((passId) => Number.isSafeInteger(passId) && passId > 0))];
+  const expected = new Map<number, { ticketCents: number; buyerFeeCents: number }>();
+  if (passIds.length === 0) return expected;
+
+  const supabase = getSupabaseAdmin();
+  const [{ data: passRows, error: passError }, { data: itemRows, error: itemError }] = await Promise.all([
+    supabase.from("passes").select("id, order_item_id, sequence_number")
+      .eq("order_id", orderId).in("id", passIds),
+    supabase.from("order_items").select("id, quantity, unit_amount_cents").eq("order_id", orderId),
+  ]);
+  if (passError) throw passError;
+  if (itemError) throw itemError;
+  const items = (itemRows ?? []) as BuyerFeeOrderItem[];
+  const itemsById = new Map(items.map((item) => [item.id, item]));
+  for (const pass of (passRows ?? []) as Array<{ id: number; order_item_id: number; sequence_number: number }>) {
+    const item = itemsById.get(pass.order_item_id);
+    if (!item) throw new Error("Refunded pass has no original order item.");
+    expected.set(pass.id, {
+      ticketCents: item.unit_amount_cents,
+      buyerFeeCents: getPassBuyerFeeCents({
+        buyerFeeCents, orderItems: items, orderItemId: item.id, sequenceNumber: pass.sequence_number,
+      }),
+    });
+  }
+  return expected;
 }
 
 async function persistStripeRefundState({
@@ -405,15 +462,18 @@ async function persistStripeRefundState({
   charge,
   paymentIntentId,
   platformFeeRefundedCents,
+  buyerFeeRefundedCents,
   routing,
 }: {
   order: OrderRecord;
   charge: Stripe.Charge;
   paymentIntentId: string | null;
   platformFeeRefundedCents: number;
+  buyerFeeRefundedCents: number;
   routing: StripePaymentRouting;
 }): Promise<{
   amountRefundedCents: number;
+  buyerFeeRefundedCents: number;
   status: "refunded" | "partial_refund";
 }> {
   const supabase = getSupabaseAdmin();
@@ -431,6 +491,10 @@ async function persistStripeRefundState({
       platformFeeRefundedCents,
       Math.round(Number(snapshot.platform_fee_refunded) * 100),
     );
+    const committedBuyerFeeRefundedCents = Math.max(
+      buyerFeeRefundedCents,
+      Math.round(Number(snapshot.buyer_fee_refunded ?? 0) * 100),
+    );
     const status = snapshot.payment_status === "refunded" || amountRefundedCents >= charge.amount
       ? "refunded"
       : "partial_refund";
@@ -439,6 +503,7 @@ async function persistStripeRefundState({
       .from("orders")
       .update({
         amount_refunded: (amountRefundedCents / 100).toFixed(2),
+        buyer_fee_refunded: (committedBuyerFeeRefundedCents / 100).toFixed(2),
         payment_status: status,
         platform_fee_refunded: (feeRefundedCents / 100).toFixed(2),
         stripe_charge_id: charge.id,
@@ -447,6 +512,7 @@ async function persistStripeRefundState({
       .eq("id", order.id)
       .eq("stripe_environment", routing.environment)
       .eq("amount_refunded", snapshot.amount_refunded)
+      .eq("buyer_fee_refunded", snapshot.buyer_fee_refunded)
       .eq("platform_fee_refunded", snapshot.platform_fee_refunded)
       .eq("payment_status", snapshot.payment_status);
     update = routing.connectedAccountId
@@ -454,13 +520,14 @@ async function persistStripeRefundState({
       : update.is("stripe_connected_account_id", null);
 
     const { data, error } = await update
-      .select("amount_refunded, payment_status")
+      .select("amount_refunded, buyer_fee_refunded, payment_status")
       .maybeSingle();
 
     if (error) throw error;
     if (data) {
       return {
         amountRefundedCents: Math.round(Number(data.amount_refunded) * 100),
+        buyerFeeRefundedCents: Math.round(Number(data.buyer_fee_refunded) * 100),
         status: data.payment_status as "refunded" | "partial_refund",
       };
     }
@@ -691,6 +758,7 @@ async function getStripePaymentIdentifiers(
 async function synchronizeApplicationFeeRefund(
   charge: Stripe.Charge,
   order: OrderRecord,
+  buyerFeeRefundedCents: number,
 ) {
   const applicationFeeId =
     typeof charge.application_fee === "string"
@@ -698,6 +766,9 @@ async function synchronizeApplicationFeeRefund(
       : charge.application_fee?.id;
 
   if (!applicationFeeId) {
+    if (Number(order.buyer_fee_amount ?? 0) > 0) {
+      throw new Error("Stripe has not returned the buyer application fee yet. Retry the event.");
+    }
     return 0;
   }
 
@@ -706,11 +777,14 @@ async function synchronizeApplicationFeeRefund(
     applicationFeeId,
   );
 
-  const targetRefundCents = getApplicationFeeRefundTargetCents({
-    applicationFeeCents: applicationFee.amount,
-    chargeAmountCents: charge.amount,
-    chargeAmountRefundedCents: charge.amount_refunded,
-  });
+  const buyerFeeCents = Math.round(Number(order.buyer_fee_amount ?? 0) * 100);
+  const targetRefundCents = buyerFeeCents > 0
+    ? Math.min(applicationFee.amount, buyerFeeRefundedCents)
+    : getApplicationFeeRefundTargetCents({
+      applicationFeeCents: applicationFee.amount,
+      chargeAmountCents: charge.amount,
+      chargeAmountRefundedCents: charge.amount_refunded,
+    });
   const missingRefundCents =
     targetRefundCents - applicationFee.amount_refunded;
 
@@ -726,7 +800,13 @@ async function synchronizeApplicationFeeRefund(
         },
       },
       {
-        idempotencyKey: `tournibase-fee-refund-${applicationFeeId}-${charge.amount_refunded}`,
+        // Concurrent snapshots can have different targets but the same starting
+        // refunded balance. Sharing the key makes Stripe accept only one delta;
+        // the other worker retries from the newly observed balance. A key based
+        // on the target would allow both overlapping deltas to succeed.
+        idempotencyKey: buyerFeeCents > 0
+          ? `tournibase-buyer-fee-refund-${applicationFeeId}-from-${applicationFee.amount_refunded}`
+          : `tournibase-fee-refund-${applicationFeeId}-${charge.amount_refunded}`,
       },
     );
     applicationFee = await stripe.applicationFees.retrieve(applicationFeeId);
@@ -814,6 +894,9 @@ export async function getOrderConfirmation(
 
   const confirmation: OrderConfirmation = {
     amountTotal: Number(order.amount_total),
+    buyerFeeAmount: Number(order.buyer_fee_amount ?? 0),
+    ticketSubtotal: (Math.round(Number(order.amount_total) * 100) -
+      Math.round(Number(order.buyer_fee_amount ?? 0) * 100)) / 100,
     buyerName: order.buyer_name,
     eventName: tournament.name as string,
     orderNumber: `TB-${order.id.toString().padStart(6, "0")}`,

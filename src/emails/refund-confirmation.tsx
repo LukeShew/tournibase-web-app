@@ -16,6 +16,7 @@ import {
 export type RefundConfirmationEmailData = {
   amountPaid: string;
   amountRefunded: string;
+  buyerFeeRefunded?: string;
   buyerName: string;
   eventDate: string;
   eventName: string;
@@ -30,6 +31,7 @@ export type RefundConfirmationEmailData = {
 export function RefundConfirmationEmail({
   amountPaid,
   amountRefunded,
+  buyerFeeRefunded,
   buyerName,
   eventDate,
   eventName,
@@ -78,6 +80,9 @@ export function RefundConfirmationEmail({
 
             <Section style={summaryPanel}>
               <SummaryRow label="Amount refunded" value={amountRefunded} />
+              {buyerFeeRefunded ? (
+                <SummaryRow label="Service fee included in refund" value={buyerFeeRefunded} />
+              ) : null}
               <SummaryRow label="Original payment" value={amountPaid} />
               <SummaryRow label="Order" value={orderNumber} />
             </Section>
@@ -124,6 +129,7 @@ function SummaryRow({ label, value }: { label: string; value: string }) {
 export function createRefundConfirmationText({
   amountPaid,
   amountRefunded,
+  buyerFeeRefunded,
   buyerName,
   eventDate,
   eventName,
@@ -145,6 +151,7 @@ export function createRefundConfirmationText({
     `Venue: ${venueName}`,
     `Order: ${orderNumber}`,
     `Amount refunded: ${amountRefunded}`,
+    ...(buyerFeeRefunded ? [`Service fee included in refund: ${buyerFeeRefunded}`] : []),
     `Original payment: ${amountPaid}`,
     "",
     isFullRefund

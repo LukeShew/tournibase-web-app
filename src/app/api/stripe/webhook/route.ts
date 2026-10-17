@@ -149,6 +149,7 @@ export async function POST(request: Request) {
         const refundEmailAttempt = await attemptRefundConfirmationEmail({
           amountRefundedCents: refundSync.amountRefundedCents,
           amountTotalCents: refundSync.amountTotalCents,
+          buyerFeeRefundedCents: refundSync.buyerFeeRefundedCents,
           orderId: refundSync.orderId,
           status: refundSync.status,
         });

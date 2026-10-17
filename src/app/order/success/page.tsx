@@ -124,6 +124,20 @@ export default async function OrderSuccessPage({
             mono
           />
         </dl>
+        {confirmation.buyerFeeAmount > 0 ? (
+          <dl className="mt-4 grid gap-3 sm:grid-cols-2">
+            <OrderDetail
+              label="Ticket subtotal"
+              value={formatCurrency(confirmation.ticketSubtotal)}
+              mono
+            />
+            <OrderDetail
+              label="TourniBase service fee"
+              value={formatCurrency(confirmation.buyerFeeAmount)}
+              mono
+            />
+          </dl>
+        ) : null}
       </section>
 
       <section className="mt-6">

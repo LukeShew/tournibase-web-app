@@ -16,6 +16,8 @@ import {
 
 export type OrderConfirmationEmailData = {
   amountPaid: string;
+  buyerFee?: string;
+  ticketSubtotal?: string;
   refund?: {
     amountRefunded: string;
     amountRemaining: string;
@@ -43,6 +45,7 @@ export type OrderConfirmationEmailData = {
 
 export function OrderConfirmationEmail({
   amountPaid,
+  buyerFee,
   buyerName,
   eventDate,
   eventName,
@@ -53,6 +56,7 @@ export function OrderConfirmationEmail({
   organizerName,
   passes,
   refund,
+  ticketSubtotal,
   venueAddress,
   venueName,
 }: OrderConfirmationEmailData) {
@@ -150,6 +154,18 @@ export function OrderConfirmationEmail({
               </Section>
             ))}
 
+            {buyerFee ? (
+              <>
+                <Section style={itemRow}>
+                  <Text style={itemName}>Ticket subtotal</Text>
+                  <Text style={itemPrice}>{ticketSubtotal}</Text>
+                </Section>
+                <Section style={itemRow}>
+                  <Text style={itemName}>TourniBase service fee</Text>
+                  <Text style={itemPrice}>{buyerFee}</Text>
+                </Section>
+              </>
+            ) : null}
             <Section style={totalRow}>
               <Text style={totalLabel}>
                 {refund ? "Original amount paid" : "Amount paid"}
@@ -197,6 +213,7 @@ export function OrderConfirmationEmail({
 
 export function createOrderConfirmationText({
   amountPaid,
+  buyerFee,
   buyerName,
   eventDate,
   eventName,
@@ -206,6 +223,7 @@ export function createOrderConfirmationText({
   organizerName,
   passes,
   refund,
+  ticketSubtotal,
   venueAddress,
   venueName,
 }: OrderConfirmationEmailData) {
@@ -239,6 +257,9 @@ export function createOrderConfirmationText({
     "",
     refund ? "ORIGINAL ORDER SUMMARY" : "ORDER SUMMARY",
     itemLines,
+    ...(buyerFee
+      ? [`Ticket subtotal: ${ticketSubtotal}`, `TourniBase service fee: ${buyerFee}`]
+      : []),
     `${refund ? "Original amount paid" : "Amount paid"}: ${amountPaid}`,
     ...(refund
       ? [
