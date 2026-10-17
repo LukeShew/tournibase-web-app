@@ -60,4 +60,3 @@ test("script preserves protected history and prevents active scanner sessions", 
   assert.match(sql, /set status='checked_in'/);
   assert.doesNotMatch(sql, /(?:update|delete from) public\.(?:orders|order_items|check_ins|scanner_sessions|manual_sales|ticket_types)\b/i);
 });
-

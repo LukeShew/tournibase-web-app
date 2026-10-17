@@ -3683,4 +3683,3 @@ select t.id,t.name,
 from public.tournaments t left join public.check_ins c on c.tournament_id=t.id
 left join public.passes p on p.id=c.pass_id left join public.orders o on o.id=p.order_id
 where t.id in(1,3,4,5,6) group by t.id,t.name order by t.id;
-
