@@ -125,7 +125,14 @@ describe("Stripe Connect payment helpers", () => {
         environment: "test",
         paymentIntentId: "pi_123",
       }),
-    ).toBe("https://dashboard.stripe.com/test/acct_123/payments/pi_123");
+    ).toBe("https://dashboard.stripe.com/acct_123/test/payments/pi_123");
+    expect(
+      getStripeDashboardPaymentUrl({
+        connectedAccountId: "acct_123",
+        environment: "live",
+        paymentIntentId: "pi_123",
+      }),
+    ).toBe("https://dashboard.stripe.com/acct_123/payments/pi_123");
     expect(getStripeEnvironment("sk_live_secret")).toBe("live");
     expect(getStripeEnvironment("sk_test_secret")).toBe("test");
   });

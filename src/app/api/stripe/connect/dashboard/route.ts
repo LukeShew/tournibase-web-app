@@ -46,7 +46,7 @@ export async function POST(request: Request) {
   const accountPath = encodeURIComponent(account.stripe_account_id);
   const dashboardUrl =
     getStripeEnvironment() === "test"
-      ? `https://dashboard.stripe.com/test/${accountPath}/dashboard`
+      ? `https://dashboard.stripe.com/${accountPath}/test/dashboard`
       : `https://dashboard.stripe.com/${accountPath}/dashboard`;
 
   return NextResponse.redirect(dashboardUrl, 303);

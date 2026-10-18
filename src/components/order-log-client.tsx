@@ -511,10 +511,7 @@ function OrderDetailsModal({
               refunded here.
             </p>
           ) : order.stripe_checkout_id && Number(order.amount_total) > 0 ? (
-            <p className="mt-4 rounded-2xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-medium text-blue-800">
-              You can review this payment in Stripe. Use the TourniBase refund
-              controls so pass status and the TourniBase fee stay synchronized.
-            </p>
+            <StripePaymentReviewNotice order={order} />
           ) : null}
 
           <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-end">
@@ -553,6 +550,14 @@ function OrderDetailsModal({
       </div>
     </div>
   );
+}
+
+export function StripePaymentReviewNotice({ order }: { order: OrderLogOrder }) {
+  return <p className="mt-4 rounded-2xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-medium text-blue-800">
+    {Number(order.refund_failed_amount ?? 0) > 0
+      ? "Review this payment in Stripe. Resolve any outstanding failed or canceled refund directly in Stripe; contact support before restoring a blocked pass. Do not use TourniBase refund controls to retry that failed attempt."
+      : "You can review this payment in Stripe. Use the TourniBase refund controls so pass status and the TourniBase fee stay synchronized."}
+  </p>;
 }
 
 export function RefundLifecycleNotice({ order }: { order: OrderLogOrder }) {

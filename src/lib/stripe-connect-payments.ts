@@ -205,9 +205,11 @@ export function getStripeDashboardPaymentUrl({
 }) {
   const modePath = environment === "test" ? "/test" : "";
 
-  return `https://dashboard.stripe.com${modePath}/${encodeURIComponent(
+  // Full-dashboard directors sign in with their own Stripe credentials. The
+  // account precedes /test; platform Connect-admin URLs are not director links.
+  return `https://dashboard.stripe.com/${encodeURIComponent(
     connectedAccountId,
-  )}/payments/${encodeURIComponent(paymentIntentId)}`;
+  )}${modePath}/payments/${encodeURIComponent(paymentIntentId)}`;
 }
 
 function parseNonnegativeInteger(

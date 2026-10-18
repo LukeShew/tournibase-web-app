@@ -1,6 +1,6 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { getOrderPassRefundAmountCents, OrderLogClient, RefundLifecycleNotice, type OrderLogOrder, type OrderLogPass } from "./order-log-client";
+import { getOrderPassRefundAmountCents, OrderLogClient, RefundLifecycleNotice, StripePaymentReviewNotice, type OrderLogOrder, type OrderLogPass } from "./order-log-client";
 
 const pass: OrderLogPass = {
   id: 1,
@@ -29,6 +29,16 @@ const order: OrderLogOrder = {
 };
 
 describe("buyer fee in director order details", () => {
+  it("does not invite an app retry after a failed refund", () => {
+    const html = renderToStaticMarkup(<StripePaymentReviewNotice order={{ ...order, refund_failed_amount: "10.30" }} />);
+    expect(html).toContain("directly in Stripe");
+    expect(html).toContain("contact support before restoring a blocked pass");
+    expect(html).not.toContain("Use the TourniBase refund controls so");
+  });
+  it("keeps normal refund guidance when no attempt has failed", () => {
+    expect(renderToStaticMarkup(<StripePaymentReviewNotice order={order} />))
+      .toContain("Use the TourniBase refund controls so");
+  });
   it("keeps pending and failed refund warnings visible after a reload", () => {
     const changed = { ...order, refund_pending_amount: "10.30", refund_failed_amount: "10.30" };
     const list = renderToStaticMarkup(<OrderLogClient currentStripeEnvironment="live" orders={[changed]} tournamentId={1} />);
