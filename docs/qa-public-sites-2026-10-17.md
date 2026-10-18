@@ -305,6 +305,24 @@ buyer-fee allocation, order synchronization, staff notices, and migration
   Git branches, or remote data were changed by this subtask. Deployment is
   coordinated by the parent task.
 
+## Final refund-concurrency follow-up
+
+Source `7425b18` fixes a final hosted-QA finding: Stripe had accepted a refund,
+but overlapping webhook/route synchronization exhausted immediate retries and
+returned a misleading 502 to the director. Refund synchronization now uses
+bounded backoff with fresh snapshots, and an accepted refund with delayed
+local synchronization returns 202 `synchronizing`, not a false failure or a
+false completed status. Actual failed/canceled and action-required outcomes
+remain distinct. An open order modal now derives its selected order from the
+refreshed server results instead of retaining stale totals and controls.
+
+The parent ran the complete suite after this correction: **295 tests across
+35 files**, ESLint, TypeScript, and the webpack production build passed.
+Independent source review found no blocker. Hosted rollout and the exact
+recovered event are recorded in the payment-readiness report; the forced
+contention/202 behavior is covered by automated regressions, not claimed as a
+second hosted purchase. No additional live or Sandbox payment was submitted.
+
 ## Limits on a readiness claim
 
 Passing public-page, validation, unit, and static checks is useful evidence, not

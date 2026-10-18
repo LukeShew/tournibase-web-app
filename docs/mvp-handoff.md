@@ -19,7 +19,7 @@ destinations are configured. Dedicated card-only Checkout configurations are
 created and saved in the correct Vercel scopes. The buyer-fee and refund-lifecycle
 migrations are applied to the shared database.
 
-The matching `f6be6cd` staging/production deployments are Ready, and the
+The matching `7425b18` staging/production deployments are Ready, and the
 eight-event connected-payment subscriptions are saved and verified in both
 Stripe environments. Sandbox orders `2040`–`2043` verified normal partial/full,
 pending-to-success, later-failed, and buyer-fee-inclusive refunds, with delivered
@@ -41,6 +41,16 @@ webpack build, all 30 migrations, and the rollback SQL regression. Deployment st
 separately; local tests and a Ready deployment are not a completed hosted-QA
 sign-off. See [Payment readiness QA](qa-payment-readiness-2026-10-17.md) and
 [Public-site QA](qa-public-sites-2026-10-17.md) for observed results and limits.
+
+The subsequent synchronization fix `7425b18` passed 295 tests across 35 files,
+ESLint, TypeScript, and the production webpack build; matching deployments are
+verified Ready. It allows at most five attempts with fresh snapshots and bounded
+delays for competing refund updates, returns HTTP 202 when Stripe accepted a refund but local state
+is still synchronizing, and refreshes an open order modal from the current
+order by ID. Failed/pending/action-required outcomes remain distinct. No new
+migration is needed. The triggering order-2043 webhook recovered automatically
+after about 17 seconds; final refund amounts and emails were correct. See the
+rollout receipt for deployment status and the QA report for provider evidence.
 
 Production app:
 [tournibase.com](https://tournibase.com)
@@ -176,7 +186,7 @@ split is recorded by:
 - `20261018000545_track_refund_lifecycle.sql`
 
 The environment-aware application split and latest buyer-fee/refund release
-`f6be6cd` are deployed to both environments, with both deployments Ready and
+`7425b18` are deployed to both environments, with both deployments Ready and
 the documented hosted refund cases verified. The last migration uses an October 18 UTC version but was
 applied October 17 US Eastern. Hosted counts remained 2,037 orders, 4,910
 passes, and six events, with zero initial lifecycle amounts and no new browser

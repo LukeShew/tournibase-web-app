@@ -53,7 +53,7 @@ saved in Production for live mode and Preview restricted to the staging branch
 for Sandbox. Cards and eligible Apple Pay/Google Pay are enabled; other methods
 and connected-account customization are disabled.
 
-The fee/refund/checkout release, strict maintenance guard, and final follow-up `f6be6cd` are deployed to both environments;
+The fee/refund/checkout release, strict maintenance guard, and refund synchronization follow-up `7425b18` are deployed to both environments;
 both Vercel deployments are Ready. The eight-event connected-payment webhook
 subscriptions are saved and verified in both Stripe environments. Hosted
 Sandbox orders `2040`–`2043` verified partial/full, pending-to-success,
@@ -76,6 +76,16 @@ hosts. Local checks passed 277 tests across 34 files,
 ESLint, TypeScript, a production webpack build,
 all 30 migrations, and the rollback SQL regression. These results do not
 establish that production is 100% ready or guarantee a director's bank payout.
+
+The later refund synchronization follow-up `7425b18` passed 295 tests across
+35 files, lint, TypeScript, and the production webpack build; its matching
+deployments are verified Ready. It retries competing refund-state updates with
+fresh snapshots, distinguishes accepted-but-synchronizing refunds from failed
+refunds, and keeps open order details current after refresh. The log review
+that triggered it found an order-2043 webhook/refund-route error that recovered
+automatically about 17 seconds later; final money and receipts were correct.
+The rollout receipt records the verified deployment IDs; configuration is
+unchanged, with production checkout disabled and staging's fee at zero.
 
 Keep this section current after every phase or material product change. The
 [Implementation Roadmap](./implementation-roadmap.md) is the detailed progress
@@ -250,7 +260,7 @@ gate staff can use it without installing anything.
 The environment-isolation application code is deployed to staging and
 production. Its additive and contract migrations are applied to the shared
 Supabase project. The October buyer-fee/refund-lifecycle migrations are applied;
-the matching `f6be6cd` application deployments are Ready in both environments.
+the matching `7425b18` application deployments are Ready in both environments.
 The documented Sandbox refund cases and zero-fee restoration are verified;
 real-director launch preparation is deferred until the user is ready.
 

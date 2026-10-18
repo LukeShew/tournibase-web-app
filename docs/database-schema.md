@@ -10,7 +10,7 @@ server-only organization-creation grant migration are applied to hosted
 Supabase. Buyer-fee and refund-lifecycle migrations are also applied. The
 refund migration's UTC version begins October 18 but was applied October 17 US
 Eastern. The environment split and the latest fee/refund application release
-`f6be6cd` are deployed to both environments; both deployments reached Ready.
+`7425b18` are deployed to both environments; both deployments reached Ready.
 Hosted Sandbox cases `2040`–`2043` verified normal, pending, later-failed, and
 buyer-fee refund accounting. Staging zero-fee restoration is verified after
 redeployment; production paid checkout remains disabled. The maintenance fee
@@ -18,9 +18,10 @@ guard required no new SQL migration. See
 [Payment readiness QA](qa-payment-readiness-2026-10-17.md) for the evidence and
 its limits.
 
-The final application-only follow-up `f6be6cd` is locally verified and deployed
-Ready on both hosts. It changes no schema; the migration count
-remains 30.
+The final application-only follow-up `7425b18` adds bounded refund-sync
+backoff and truthful accepted-but-synchronizing responses. It is locally
+verified and deployed Ready on both hosts. It changes no schema; the migration
+count remains 30.
 
 All 30 local migrations and `supabase/tests/buyer_paid_fees.sql` passed in
 isolated PostgreSQL. Hosted post-migration counts remained 2,037 orders, 4,910

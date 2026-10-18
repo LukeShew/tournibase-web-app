@@ -3,7 +3,7 @@
 Last updated: October 17, 2026
 
 Release checkpoint: the buyer-fee and refund-lifecycle database migrations are
-applied. Matching `f6be6cd` staging/production deployments are Ready, and both
+applied. Matching `7425b18` staging/production deployments are Ready, and both
 connected-payment destinations have all eight required event types. Hosted
 Sandbox cases below are verified; production paid checkout remains disabled.
 Staging's zero-fee restoration is verified in the saved variables, Ready
@@ -14,6 +14,11 @@ observed during the preceding fee/refund releases and remains recorded evidence,
 not a guarantee of live payment or payout behavior.
 See
 [Staging and Production Rollout](environment-rollout.md) for deployment evidence.
+
+Follow-up source `7425b18` passed 295 tests across 35 files, lint, TypeScript,
+and a production webpack build. Its matching deployments are verified Ready;
+it addresses the synchronization behavior described below. Production checkout
+remains disabled, and staging's normal fee stays zero.
 
 ## Deployed acceptance evidence
 
@@ -86,6 +91,24 @@ director-facing pass refund action when a specific pass must be invalidated.
 
 Only successful refund amounts belong in a refund confirmation or completed
 refund total. A pending attempt must not be described as money already returned.
+
+## Accepted refund still synchronizing
+
+Final log review found a race while synchronizing Sandbox order `2043`: a
+webhook returned HTTP 500 and the refund route returned HTTP 502 even though
+Stripe had accepted the refund. The exact webhook recovered to HTTP 200 about
+17 seconds later, and final amounts and emails were correct.
+
+The `7425b18` follow-up makes at most five attempts at competing versioned updates,
+reading a fresh provider/database snapshot each time with bounded randomized
+delays. If Stripe accepted the request but local synchronization still fails,
+the API returns HTTP 202 and reports that synchronization is in progress—not
+that the refund failed. Do not submit a duplicate refund to clear this message.
+Refresh the order, review the exact Stripe payment, and let signed webhook
+retries reconcile it; escalate persistent mismatches to support. Failed/canceled
+refunds still require manual review, and pending/action-required refunds remain
+separate from completed refunds. The order modal now follows the latest order
+by ID so a refresh also updates the visible totals.
 
 ## Director onboarding
 

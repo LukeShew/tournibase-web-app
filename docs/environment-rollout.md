@@ -12,16 +12,22 @@ validation are unfinished.
 
 ## Current rollout status
 
-Status checkpoint: October 17, 2026, after the matching `f6be6cd` deployments
+Status checkpoint: October 17, 2026, after the matching `7425b18` deployments
 reached Ready and the authorized Sandbox fee/refund cases below passed.
 Staging's zero-fee variables, restoration deployment, and stable-host display
 are verified restored. Production paid
 checkout remains disabled. The user deferred real director onboarding to a
 later session; no onboarding action is requested now.
 
-Final source follow-up `f6be6cd` corrects the director Stripe Dashboard URL
-ordering and failed-refund guidance. It is deployed and verified Ready on both
-production and staging; the deployment receipt below identifies both builds.
+The earlier `f6be6cd` follow-up corrected the director Stripe Dashboard URL
+ordering and failed-refund guidance. Those changes are included in the latest
+matching deployments identified in the receipt below.
+
+Follow-up source `7425b18` fixes a refund synchronization race found in the
+final Vercel log review. It passed 295 tests across 35 files, ESLint, TypeScript,
+and the production webpack build. Its matching production and staging
+deployments are verified Ready. Production checkout remains off and staging
+retains its normal zero-fee configuration.
 
 Completed:
 
@@ -52,8 +58,9 @@ Completed:
   Anonymous/authenticated order UPDATE access remains denied.
 - Local verification passed all 30 migrations, the rollback SQL regression,
   277 application tests across 34 files, ESLint, TypeScript, and the webpack
-  production build. The latest application checks cover source `f6be6cd`;
-  hosted verification below still identifies deployed source separately.
+  production build at source `f6be6cd`. The subsequent `7425b18` application
+  regression passed 295 tests across 35 files, lint, TypeScript, and the
+  production webpack build; hosted verification is recorded separately below.
 - The fee/refund/receipt/layout fixes and dedicated card-only Checkout handling
   are deployed from `f00e242` to both environments. Production deployment
   `3Yxq635djvsDSHVMYq8kNKVCotwE` and staging deployment
@@ -79,10 +86,10 @@ and limits. Passing cases are not a guarantee of every provider/network outcome.
 
 Deployment receipt:
 
-- Matching deployed source revision: `f6be6cd`.
-- Production: `HCnu3cCvMMpc1QELvtJBrRam2sm9`, Ready;
+- Matching deployed source revision: `7425b18`.
+- Production: `AivAja1aKZkakKYuJuUYvCL9ex9R`, Ready;
   `TOURNIBASE_PAID_CHECKOUT_ENABLED=false`.
-- Staging: `G66aPPavVYcpZe9x1o4QSred7c5c`, Ready, with normal zero-fee configuration.
+- Staging: `GvpLfjjMw4BvKxuHzhJZSNYQbvcM`, Ready, with normal zero-fee configuration.
 - Historical restoration evidence: deployment `4Xbukpk3HjwijJGkc6MvmVs3SvFk`
   on `5590ac4` reached Ready. Its stable ticket page showed Sunday $17.49,
   Weekend $28.75, and a
@@ -104,6 +111,23 @@ Deployment receipt:
   flag `false`, redeployed and checked on the stable host. The authorized
   maintenance run is closed; Production configuration was unchanged.
 - Genuine pilot payment and director payout evidence: not yet recorded.
+
+### Refund synchronization follow-up
+
+Order `2043` ultimately refunded correctly and delivered its emails, but the
+log review found a competing-update race: one webhook returned HTTP 500 and the
+director refund route returned HTTP 502. The exact webhook retried and returned
+HTTP 200 about 17 seconds later. This was a transient synchronization failure,
+not evidence of an additional charge or a missing final refund.
+
+Source `7425b18` makes at most five attempts at competing versioned updates,
+using a fresh authoritative snapshot each time and bounded, randomized delay.
+Once Stripe accepts
+a refund, a temporary local-sync failure returns HTTP 202 with a synchronizing
+status instead of a false HTTP 502. Genuine failed/canceled attempts retain
+their review-required HTTP 409 behavior; pending and action-required states
+remain distinct. The open order view reads the current order by ID so refreshed
+totals replace stale modal data. No database migration is required.
 
 ## Buyer-paid fee rollout — October 17, 2026
 
@@ -148,7 +172,7 @@ could not bind its internal worker port in the local execution sandbox.
 Generated duplicate `.next/types` cache files were cleared for the standalone
 TypeScript check. No production build configuration was changed.
 
-Identical source `f6be6cd` is deployed to main/production and staging. Keep
+Identical source `7425b18` is deployed to main/production and staging. Keep
 `TOURNIBASE_PAID_CHECKOUT_ENABLED=false` in production until
 the remaining live validation is approved. No real-money payment was made for
 this implementation.
@@ -499,7 +523,7 @@ This original ordered checklist is retained as the rollout runbook. Use
 **Current rollout status** above as the authoritative record: the dual
 deployment, all three migrations, and production signup restoration are
 complete. Live keys, destinations, and dedicated payment-method configurations
-are configured, and matching `f6be6cd` deployments are Ready. The documented
+are configured, and matching `7425b18` deployments are Ready. The documented
 Sandbox payment/refund cases and zero-fee restoration passed. Real director
 onboarding and genuine pilot payment/payout validation are deferred; production
 paid checkout remains disabled until an explicit launch decision.
