@@ -256,6 +256,67 @@ describe("TourniBase application environment", () => {
     ).toEqual({ basisPoints: 200, fixedCents: 30 });
   });
 
+  it("permits only the exact approved fee in explicitly enabled hosted Sandbox QA", () => {
+    const configuration = {
+      TOURNIBASE_APP_ENVIRONMENT: "test",
+      TOURNIBASE_SANDBOX_FEE_QA_ENABLED: "true",
+      TOURNIBASE_PLATFORM_FEE_BPS: "200",
+      TOURNIBASE_PLATFORM_FEE_FIXED_CENTS: "30",
+      NEXT_PUBLIC_SITE_URL: TEST_SITE_URL,
+      VERCEL: "1",
+      VERCEL_ENV: "preview",
+      VERCEL_GIT_COMMIT_REF: "staging",
+    };
+    expect(assertPlatformFeeEnvironmentConfiguration(configuration))
+      .toEqual({ basisPoints: 200, fixedCents: 30 });
+    for (const [basisPoints, fixedCents] of [["0", "0"], ["200", "0"], ["0", "30"], ["201", "30"], ["200", "31"]]) {
+      expect(() => assertPlatformFeeEnvironmentConfiguration({
+        ...configuration,
+        TOURNIBASE_PLATFORM_FEE_BPS: basisPoints,
+        TOURNIBASE_PLATFORM_FEE_FIXED_CENTS: fixedCents,
+      })).toThrow("Sandbox fee QA must use exactly");
+    }
+    expect(() => assertPlatformFeeEnvironmentConfiguration({
+      ...configuration, VERCEL_GIT_COMMIT_REF: "feature-branch",
+    })).toThrow("staging branch");
+    expect(() => assertPlatformFeeEnvironmentConfiguration({
+      ...configuration, NEXT_PUBLIC_SITE_URL: "https://tournibase.com",
+    })).toThrow("NEXT_PUBLIC_SITE_URL");
+    expect(() => assertPlatformFeeEnvironmentConfiguration({
+      ...configuration, VERCEL_ENV: "production",
+    })).toThrow("Vercel production");
+  });
+
+  it.each([undefined, "false"])("keeps ordinary staging fees at zero with QA flag %s", (flag) => {
+    const configuration = {
+      TOURNIBASE_APP_ENVIRONMENT: "test",
+      TOURNIBASE_SANDBOX_FEE_QA_ENABLED: flag,
+      TOURNIBASE_PLATFORM_FEE_BPS: "0",
+      TOURNIBASE_PLATFORM_FEE_FIXED_CENTS: "0",
+    };
+    expect(assertPlatformFeeEnvironmentConfiguration(configuration))
+      .toEqual({ basisPoints: 0, fixedCents: 0 });
+    expect(() => assertPlatformFeeEnvironmentConfiguration({
+      ...configuration, TOURNIBASE_PLATFORM_FEE_BPS: "200", TOURNIBASE_PLATFORM_FEE_FIXED_CENTS: "30",
+    })).toThrow("test environment must use a $0");
+  });
+
+  it.each(["", " ", "TRUE", "1", "yes", "enabled"])("fails closed for invalid Sandbox fee QA flag %j", (flag) => {
+    expect(() => assertPlatformFeeEnvironmentConfiguration({
+      TOURNIBASE_APP_ENVIRONMENT: "test",
+      TOURNIBASE_SANDBOX_FEE_QA_ENABLED: flag,
+    })).toThrow("TOURNIBASE_SANDBOX_FEE_QA_ENABLED must be");
+  });
+
+  it("never allows the Sandbox QA flag in live mode", () => {
+    expect(() => assertPlatformFeeEnvironmentConfiguration({
+      TOURNIBASE_APP_ENVIRONMENT: "live",
+      TOURNIBASE_SANDBOX_FEE_QA_ENABLED: "true",
+      TOURNIBASE_PLATFORM_FEE_BPS: "200",
+      TOURNIBASE_PLATFORM_FEE_FIXED_CENTS: "30",
+    })).toThrow("only be enabled in the TourniBase test environment");
+  });
+
   it("allows signup only in live hosted deployments", () => {
     expect(
       isPublicSignupEnabled({
@@ -368,7 +429,7 @@ describe("TourniBase application environment", () => {
     ).toBe("acct_expected123");
   });
 
-  it("validates a complete hosted test configuration", () => {
+  it.each([false, true])("validates a complete hosted test configuration (fee QA: %s)", (feeQa) => {
     expect(
       validateAppRuntimeConfiguration({
         EMAIL_PROVIDER: "resend",
@@ -385,8 +446,9 @@ describe("TourniBase application environment", () => {
         TOURNIBASE_APP_ENVIRONMENT: "test",
         TOURNIBASE_EMAIL_OVERRIDE_TO: TEST_EMAIL_RECIPIENT,
         TOURNIBASE_PAID_CHECKOUT_ENABLED: "true",
-        TOURNIBASE_PLATFORM_FEE_BPS: "0",
-        TOURNIBASE_PLATFORM_FEE_FIXED_CENTS: "0",
+        TOURNIBASE_SANDBOX_FEE_QA_ENABLED: feeQa ? "true" : "false",
+        TOURNIBASE_PLATFORM_FEE_BPS: feeQa ? "200" : "0",
+        TOURNIBASE_PLATFORM_FEE_FIXED_CENTS: feeQa ? "30" : "0",
         TOURNIBASE_STRIPE_PLATFORM_ACCOUNT_ID: "acct_testplatform",
         VERCEL: "1",
         VERCEL_ENV: "preview",
@@ -396,7 +458,7 @@ describe("TourniBase application environment", () => {
       appEnvironment: "test",
       emailOverrideTo: TEST_EMAIL_RECIPIENT,
       paidCheckoutEnabled: true,
-      platformFee: { basisPoints: 0, fixedCents: 0 },
+      platformFee: { basisPoints: feeQa ? 200 : 0, fixedCents: feeQa ? 30 : 0 },
     });
   });
 

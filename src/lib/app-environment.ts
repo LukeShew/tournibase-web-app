@@ -122,6 +122,22 @@ export function assertPlatformFeeEnvironmentConfiguration(
   environment: EnvironmentVariables = process.env,
 ) {
   const appEnvironment = getAppEnvironment(environment);
+  const sandboxFeeQaFlag = environment.TOURNIBASE_SANDBOX_FEE_QA_ENABLED;
+  const sandboxFeeQaValue = sandboxFeeQaFlag?.trim();
+  if (sandboxFeeQaFlag !== undefined &&
+      sandboxFeeQaValue !== "true" && sandboxFeeQaValue !== "false") {
+    throw new Error(
+      'TOURNIBASE_SANDBOX_FEE_QA_ENABLED must be either "true" or "false" when configured.',
+    );
+  }
+  const sandboxFeeQaEnabled = sandboxFeeQaValue === "true";
+  if (sandboxFeeQaEnabled) {
+    if (appEnvironment !== "test") {
+      throw new Error("Sandbox fee QA may only be enabled in the TourniBase test environment.");
+    }
+    // This exception changes only test fee policy, never deployment routing.
+    assertDeploymentTargetMatchesAppEnvironment(environment);
+  }
   const basisPoints = readNonnegativeInteger(
     environment.TOURNIBASE_PLATFORM_FEE_BPS,
     "TOURNIBASE_PLATFORM_FEE_BPS",
@@ -141,7 +157,14 @@ export function assertPlatformFeeEnvironmentConfiguration(
     );
   }
 
-  if (appEnvironment === "test" && (basisPoints !== 0 || fixedCents !== 0)) {
+  if (sandboxFeeQaEnabled &&
+      (basisPoints !== LIVE_PLATFORM_FEE_BPS || fixedCents !== LIVE_PLATFORM_FEE_FIXED_CENTS)) {
+    throw new Error(
+      `Sandbox fee QA must use exactly ${LIVE_PLATFORM_FEE_BPS} basis points plus ${LIVE_PLATFORM_FEE_FIXED_CENTS} cents.`,
+    );
+  }
+
+  if (appEnvironment === "test" && !sandboxFeeQaEnabled && (basisPoints !== 0 || fixedCents !== 0)) {
     throw new Error("The TourniBase test environment must use a $0 platform fee.");
   }
 
