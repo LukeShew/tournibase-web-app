@@ -143,6 +143,8 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  let acceptedRefund: Awaited<ReturnType<typeof createOrRetrieveStripeRefund>> | null = null;
+
   try {
     const buyerFeeCents = Math.round(Number(relation.orders.buyer_fee_amount ?? 0) * 100);
     let passBuyerFeeCents = 0;
@@ -191,6 +193,8 @@ export async function POST(request: NextRequest) {
       buyerFeeAmount: relation.orders.buyer_fee_amount ?? 0,
       buyerFeeRefundCents: passBuyerFeeCents,
     });
+    // Never report a local reconciliation error as a rejected Stripe refund.
+    acceptedRefund = refund;
     const chargeId = typeof refund.charge === "string" ? refund.charge : refund.charge?.id;
 
     if (!chargeId) {
@@ -219,8 +223,18 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(response, { status: response.ok ? 200 : 202 });
   } catch (refundError) {
-    if (refundError instanceof RefundReviewRequiredError) {
-      return NextResponse.json({ error: refundError.message }, { status: 409 });
+    if (refundError instanceof RefundReviewRequiredError ||
+        acceptedRefund?.status === "failed" || acceptedRefund?.status === "canceled") {
+      return NextResponse.json({ error: new RefundReviewRequiredError().message }, { status: 409 });
+    }
+    if (acceptedRefund) {
+      console.warn("[refund-pass] accepted refund synchronization delayed", {
+        message: refundError instanceof Error ? refundError.message : "Unknown error",
+        orderId: parsed.data.orderId,
+        passId: parsed.data.passId,
+        refundId: acceptedRefund.id,
+      });
+      return NextResponse.json(getRefundActionResponse(acceptedRefund.status, false), { status: 202 });
     }
     console.error("[refund-pass] Stripe refund failed", {
       message: refundError instanceof Error ? refundError.message : "Unknown error",

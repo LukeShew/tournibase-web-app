@@ -57,7 +57,8 @@ export function OrderLogClient({
   orders: OrderLogOrder[];
   tournamentId: number;
 }) {
-  const [activeOrder, setActiveOrder] = useState<OrderLogOrder | null>(null);
+  const [activeOrderId, setActiveOrderId] = useState<number | null>(null);
+  const activeOrder = orders.find((order) => order.id === activeOrderId) ?? null;
   const [openActionsId, setOpenActionsId] = useState<number | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const totalPages = Math.max(1, Math.ceil(orders.length / ORDERS_PER_PAGE));
@@ -89,7 +90,7 @@ export function OrderLogClient({
             <button
               type="button"
               className="min-w-0 flex-1 text-left"
-              onClick={() => setActiveOrder(order)}
+              onClick={() => setActiveOrderId(order.id)}
             >
               <div className="flex flex-wrap items-center gap-3">
                 <p className="font-mono text-sm font-semibold text-blue-700">
@@ -149,7 +150,7 @@ export function OrderLogClient({
                     type="button"
                     className="block w-full rounded-xl px-3 py-2 text-left text-sm font-semibold text-slate-700 transition hover:bg-blue-50 hover:text-blue-700"
                     onClick={() => {
-                      setActiveOrder(order);
+                      setActiveOrderId(order.id);
                       setOpenActionsId(null);
                     }}
                   >
@@ -223,7 +224,7 @@ export function OrderLogClient({
         <OrderDetailsModal
           currentStripeEnvironment={currentStripeEnvironment}
           order={activeOrder}
-          onClose={() => setActiveOrder(null)}
+          onClose={() => setActiveOrderId(null)}
         />
       ) : null}
     </>

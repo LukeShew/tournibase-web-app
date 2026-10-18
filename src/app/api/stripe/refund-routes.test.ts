@@ -88,6 +88,7 @@ beforeEach(() => {
   vi.stubEnv("STRIPE_SECRET_KEY", "");
   vi.stubEnv("NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY", "");
   vi.spyOn(console, "error").mockImplementation(() => {});
+  vi.spyOn(console, "warn").mockImplementation(() => {});
   order = makeOrder();
   pass = {
     id: 4788,
@@ -224,11 +225,66 @@ describe.each(routes)("$name refunds", ({ name, handler, payload, originalKey })
 
   it("reconciles a successful refund after a synchronization failure without refunding twice", async () => {
     mocks.synchronize.mockRejectedValueOnce(new Error("Temporary database failure"));
-    expect((await handler(request(payload))).status).toBe(502);
+    const delayedResponse = await handler(request(payload));
+    expect(delayedResponse.status).toBe(202);
+    expect(await delayedResponse.json()).toMatchObject({
+      ok: false, status: "synchronizing", message: expect.stringContaining("Do not submit another refund"),
+    });
+    expect(mocks.email).not.toHaveBeenCalled();
     expect((await handler(request(payload))).status).toBe(200);
     expect(mocks.createRefund).toHaveBeenCalledOnce();
     expect(refundHistory).toHaveLength(1);
     expect(mocks.synchronize).toHaveBeenCalledTimes(2);
+  });
+
+  it("returns synchronizing rather than false failure when accepted refunds exhaust CAS retries", async () => {
+    mocks.synchronize.mockRejectedValueOnce(new Error("Refund synchronization changed concurrently. Retry the event."));
+    const response = await handler(request(payload));
+    expect(response.status).toBe(202);
+    expect(await response.json()).toEqual({
+      ok: false, status: "synchronizing", message: expect.stringContaining("Stripe accepted the refund"),
+    });
+    expect(mocks.createRefund).toHaveBeenCalledOnce();
+    expect(refundHistory).toHaveLength(1);
+    expect(mocks.email).not.toHaveBeenCalled();
+  });
+
+  it("retains Stripe acceptance when the following charge lookup fails", async () => {
+    mocks.retrieveCharge.mockRejectedValueOnce(new Error("Temporary Stripe read failure"));
+    const response = await handler(request(payload));
+    expect(response.status).toBe(202);
+    expect(await response.json()).toMatchObject({ ok: false, status: "synchronizing" });
+    expect(mocks.synchronize).not.toHaveBeenCalled();
+    expect(mocks.email).not.toHaveBeenCalled();
+    expect((await handler(request(payload))).status).toBe(200);
+    expect(mocks.createRefund).toHaveBeenCalledOnce();
+  });
+
+  it.each(["pending", "requires_action"])("preserves an accepted %s status even if synchronization fails", async (status) => {
+    mocks.createRefund.mockResolvedValueOnce({ id: "re_accepted", charge: "ch_test_order", status });
+    mocks.synchronize.mockRejectedValueOnce(new Error("Temporary database failure"));
+    const response = await handler(request(payload));
+    expect(response.status).toBe(202);
+    expect(await response.json()).toMatchObject({ ok: false, status });
+    expect(mocks.email).not.toHaveBeenCalled();
+  });
+
+  it.each(["failed", "canceled"])("preserves a failed/canceled response (%s) when synchronization also fails", async (status) => {
+    mocks.createRefund.mockResolvedValueOnce({ id: "re_failed", charge: "ch_test_order", status });
+    mocks.synchronize.mockRejectedValueOnce(new Error("Temporary database failure"));
+    const response = await handler(request(payload));
+    expect(response.status).toBe(409);
+    expect(await response.json()).toMatchObject({ error: expect.stringContaining("Resolve it directly in Stripe") });
+    expect(mocks.email).not.toHaveBeenCalled();
+  });
+
+  it("does not claim Stripe accepted a refund when creation itself failed", async () => {
+    mocks.createRefund.mockRejectedValueOnce(new Error("Stripe rejected the request"));
+    const response = await handler(request(payload));
+    expect(response.status).toBe(502);
+    expect(await response.json()).toMatchObject({ error: expect.any(String) });
+    expect(mocks.synchronize).not.toHaveBeenCalled();
+    expect(mocks.email).not.toHaveBeenCalled();
   });
 
   it("finds an earlier matching refund beyond the first 100 records", async () => {
@@ -295,7 +351,7 @@ describe.each(routes)("$name refunds", ({ name, handler, payload, originalKey })
     const response = await handler(request(payload));
     expect(response.status).toBe(202);
     expect(await response.json()).toMatchObject({
-      ok: false, status: "pending", message: expect.stringContaining("still updating"),
+      ok: false, status: "synchronizing", message: expect.stringContaining("still updating"),
     });
     expect(mocks.email).not.toHaveBeenCalled();
     // A later retry reconciles the same successful Stripe refund.
@@ -394,7 +450,7 @@ describe.each(routes)("$name refunds", ({ name, handler, payload, originalKey })
 it("waits for the full order balance to synchronize before reporting an order refund complete", async () => {
   const response = await refundOrder(request({ orderId: 1957 }));
   expect(response.status).toBe(202);
-  expect(await response.json()).toMatchObject({ ok: false, status: "pending" });
+  expect(await response.json()).toMatchObject({ ok: false, status: "synchronizing" });
   expect(mocks.email).not.toHaveBeenCalled();
 });
 
@@ -434,7 +490,7 @@ it("reuses a buyer-fee refund after failed synchronization without returning the
   order.platform_fee_amount = "1.39";
   order.amount_total = "55.39";
   mocks.synchronize.mockRejectedValueOnce(new Error("Temporary database failure"));
-  expect((await refundPass(request({ orderId: 1957, passId: 4788 }))).status).toBe(502);
+  expect((await refundPass(request({ orderId: 1957, passId: 4788 }))).status).toBe(202);
   expect((await refundPass(request({ orderId: 1957, passId: 4788 }))).status).toBe(200);
   expect(mocks.createRefund).toHaveBeenCalledOnce();
   expect(refundHistory).toHaveLength(1);

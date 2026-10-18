@@ -158,6 +158,7 @@ export async function POST(request: NextRequest) {
   }
 
   let paymentIntentId = order.stripe_payment_intent_id;
+  let acceptedRefund: Awaited<ReturnType<typeof createOrRetrieveStripeRefund>> | null = null;
 
   try {
     const stripe = await getVerifiedStripe();
@@ -194,6 +195,9 @@ export async function POST(request: NextRequest) {
       platformFeeAmount: order.platform_fee_amount,
       buyerFeeAmount: order.buyer_fee_amount ?? 0,
     });
+    // Stripe acceptance and local reconciliation are separate outcomes. Once a
+    // refund exists, a temporary sync error must not encourage a second refund.
+    acceptedRefund = refund;
     const chargeId =
       typeof refund.charge === "string"
         ? refund.charge
@@ -225,8 +229,17 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(response, { status: response.ok ? 200 : 202 });
   } catch (refundError) {
-    if (refundError instanceof RefundReviewRequiredError) {
-      return NextResponse.json({ error: refundError.message }, { status: 409 });
+    if (refundError instanceof RefundReviewRequiredError ||
+        acceptedRefund?.status === "failed" || acceptedRefund?.status === "canceled") {
+      return NextResponse.json({ error: new RefundReviewRequiredError().message }, { status: 409 });
+    }
+    if (acceptedRefund) {
+      console.warn("[refund-order] accepted refund synchronization delayed", {
+        message: refundError instanceof Error ? refundError.message : "Unknown error",
+        orderId: order.id,
+        refundId: acceptedRefund.id,
+      });
+      return NextResponse.json(getRefundActionResponse(acceptedRefund.status, false), { status: 202 });
     }
     console.error("[refund-order] Stripe refund failed", {
       message:

@@ -8,7 +8,7 @@ export type RefundActionResponse =
   | { ok: true; status: "completed" }
   | {
       ok: false;
-      status: "pending" | "requires_action";
+      status: "pending" | "requires_action" | "synchronizing";
       message: string;
     };
 
@@ -34,16 +34,16 @@ export function getRefundActionResponse(
       ok: false,
       status: "pending",
       message:
-        "Stripe is processing this refund. It has not completed yet. You can check again safely; a second refund will not be created.",
+        "Stripe is processing this refund. It has not completed yet. No new refund is needed; refresh the order or open Stripe to check its status.",
     };
   }
 
   if (!synchronized) {
     return {
       ok: false,
-      status: "pending",
+      status: "synchronizing",
       message:
-        "Stripe accepted the refund. TourniBase is still updating the order. No new refund is needed; you can check again safely.",
+        "Stripe accepted the refund. TourniBase is still updating the order. Do not submit another refund; refresh the order or open Stripe to check its status.",
     };
   }
 

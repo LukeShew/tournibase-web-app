@@ -295,15 +295,24 @@ export async function markCheckoutFailed(
   }
 }
 
+// A route and several Stripe events can reconcile the same refund together.
+// Space fresh-snapshot retries out so they do not repeatedly collide in lockstep.
+// At most five attempts and 1,125 ms of waiting; persistent conflicts still fail
+// the webhook so Stripe retries, rather than acknowledging an uncommitted update.
+const refundSyncRetryDelaysMs = [50, 100, 200, 400] as const;
+
 export async function syncStripeChargeRefund(
   charge: Pick<Stripe.Charge, "id" | "livemode">,
   eventConnectedAccountId: string | null = null,
 ): Promise<StripeRefundSyncResult> {
-  for (let attempt = 0; attempt < 3; attempt += 1) {
+  for (let attempt = 0; attempt <= refundSyncRetryDelaysMs.length; attempt += 1) {
     try {
       return await syncFreshStripeChargeRefund(charge, eventConnectedAccountId);
     } catch (error) {
-      if (!(error instanceof RefundSyncConflict) || attempt === 2) throw error;
+      const delayMs = refundSyncRetryDelaysMs[attempt];
+      if (!(error instanceof RefundSyncConflict) || delayMs === undefined) throw error;
+      const jitterMs = Math.floor(Math.random() * (delayMs / 2 + 1));
+      await new Promise<void>((resolve) => setTimeout(resolve, delayMs + jitterMs));
     }
   }
   throw new RefundSyncConflict();

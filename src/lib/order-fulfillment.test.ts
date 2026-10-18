@@ -133,7 +133,11 @@ beforeEach(() => {
   refundUpdateAttempts = 0;
 });
 
-afterEach(() => vi.unstubAllEnvs());
+afterEach(() => {
+  vi.unstubAllEnvs();
+  vi.restoreAllMocks();
+  vi.useRealTimers();
+});
 
 describe("checkout fulfillment and out-of-order refunds", () => {
   it("records a pending refund without claiming success or invalidating a pass, then completes it", async () => {
@@ -268,17 +272,55 @@ describe("checkout fulfillment and out-of-order refunds", () => {
   });
 
   it("throws after bounded contention so a webhook can retry without applying a stale write", async () => {
+    vi.useFakeTimers();
+    vi.spyOn(Math, "random").mockReturnValue(0);
+    const timer = vi.spyOn(globalThis, "setTimeout");
     await fulfillCheckoutSession("cs_test", "acct_test", "test");
     refunded = 500;
     beforeRefundUpdate = () => {
       order.amount_refunded = (Number(order.amount_refunded) + 1).toFixed(2);
       order.payment_status = "partial_refund";
     };
-    await expect(syncStripeChargeRefund({ id: "ch_test", livemode: false }, "acct_test"))
+    const failure = expect(syncStripeChargeRefund({ id: "ch_test", livemode: false }, "acct_test"))
       .rejects.toThrow("Refund synchronization changed concurrently");
-    expect(order.amount_refunded).toBe("3.00");
-    expect(refundUpdateAttempts).toBe(3);
+    await vi.runAllTimersAsync();
+    await failure;
+    expect(timer.mock.calls.map((call) => call[1])).toEqual([50, 100, 200, 400]);
+    expect(order.amount_refunded).toBe("5.00");
+    expect(refundUpdateAttempts).toBe(5);
     expect(passes.map(pass => pass.status)).toEqual(["active", "active"]);
+  });
+
+  it("backs off after contention and rereads current Stripe state before a later successful attempt", async () => {
+    vi.useFakeTimers();
+    vi.spyOn(Math, "random").mockReturnValue(0.5);
+    const timer = vi.spyOn(globalThis, "setTimeout");
+    await fulfillCheckoutSession("cs_test", "acct_test", "test");
+    refunded = 500;
+    beforeRefundUpdate = () => {
+      if (refundUpdateAttempts <= 3) {
+        order.refund_sync_version = Number(order.refund_sync_version) + 1;
+        // The next attempt must obtain the latest full refund, not reapply the
+        // original partial snapshot just because its backoff timer completed.
+        refunded = 2000;
+      }
+    };
+    const synchronization = syncStripeChargeRefund({ id: "ch_test", livemode: false }, "acct_test");
+    await vi.runAllTimersAsync();
+    expect(await synchronization).toMatchObject({ status: "refunded", amountRefundedCents: 2000 });
+    expect(timer.mock.calls.map((call) => call[1])).toEqual([63, 125, 250]);
+    expect(refundUpdateAttempts).toBe(4);
+    expect(passes.map(pass => pass.status)).toEqual(["refunded", "refunded"]);
+  });
+
+  it("does not blindly retry unrelated Stripe errors as database contention", async () => {
+    vi.useFakeTimers();
+    const timer = vi.spyOn(globalThis, "setTimeout");
+    stripe.charges.retrieve.mockRejectedValueOnce(new Error("Stripe permission denied"));
+    await expect(syncStripeChargeRefund({ id: "ch_test", livemode: false }, "acct_test"))
+      .rejects.toThrow("Stripe permission denied");
+    expect(timer).not.toHaveBeenCalled();
+    expect(stripe.charges.retrieve).toHaveBeenCalledOnce();
   });
 
   it("creates no admission passes for an already fully refunded order", async () => {
