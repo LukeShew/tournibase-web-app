@@ -1,6 +1,6 @@
 # TourniBase Web MVP Handoff
 
-Last verified against the local repository: August 31, 2026
+Last verified against the local repository: October 17, 2026
 
 ## Handoff status
 
@@ -14,10 +14,33 @@ TourniBase fee and forced test-email delivery. Production uses the live data
 boundary with paid checkout disabled.
 
 Production Supabase Auth signup and the trusted server organization-creation
-path are enabled and independently verified. The app is not ready to accept
-real customer payments until live Stripe keys and both live webhook
-destinations are configured, the pilot director completes live onboarding, and
-the controlled real-money test passes.
+path are enabled and independently verified. Live keys and both live webhook
+destinations are configured. Dedicated card-only Checkout configurations are
+created and saved in the correct Vercel scopes. The buyer-fee and refund-lifecycle
+migrations are applied to the shared database.
+
+The matching `f6be6cd` staging/production deployments are Ready, and the
+eight-event connected-payment subscriptions are saved and verified in both
+Stripe environments. Sandbox orders `2040`–`2043` verified normal partial/full,
+pending-to-success, later-failed, and buyer-fee-inclusive refunds, with delivered
+receipts. The nonzero fee run verified collection and full return of the $1.22
+application fee. Staging is verified restored to `0`/`0`/`false` on Ready
+deployment `4Xbukpk3HjwijJGkc6MvmVs3SvFk`; the stable $46.24 basket again has no
+TourniBase fee. Production paid
+checkout remains disabled. The user deferred real director onboarding to later;
+this is future launch work, not a manual action needed from the user now.
+The pilot director must complete live onboarding; genuine pilot payment and
+payout evidence are not yet recorded. Do not describe local or Sandbox success
+as a 100% guarantee of real payments. The current deployment receipt is tracked
+in [Staging and Production Rollout](environment-rollout.md).
+
+The final URL-ordering/refund-guidance source follow-up `f6be6cd` is deployed
+and verified Ready on both hosts; the linked rollout receipt identifies them.
+Local QA passed 277 tests across 34 files, ESLint, TypeScript, the production
+webpack build, all 30 migrations, and the rollback SQL regression. Deployment status is verified
+separately; local tests and a Ready deployment are not a completed hosted-QA
+sign-off. See [Payment readiness QA](qa-payment-readiness-2026-10-17.md) and
+[Public-site QA](qa-public-sites-2026-10-17.md) for observed results and limits.
 
 Production app:
 [tournibase.com](https://tournibase.com)
@@ -50,6 +73,7 @@ Vercel environment variables for hosted deployments.
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Browser-safe | Supabase publishable key protected by RLS |
 | `SUPABASE_SECRET_KEY` | Server only | Fulfillment, pass lookup, and gate operations |
 | `STRIPE_SECRET_KEY` | Server only | Connect platform key for Accounts v2 and connected payment API calls |
+| `STRIPE_CHECKOUT_PAYMENT_METHOD_CONFIGURATION` | Server only | Required dedicated parent Checkout configuration: live `pmc_1URhTpBdjbPEH1ElDNVNmv70`, Sandbox `pmc_1URhX7BDCyF6XjOynzkBpyUD` |
 | `TOURNIBASE_STRIPE_PLATFORM_ACCOUNT_ID` | Server only | Expected platform account for this exact Sandbox or live target |
 | `STRIPE_CONNECTED_PAYMENTS_WEBHOOK_SECRET` | Server only | Verifies connected-account payment and refund events |
 | `STRIPE_CONNECT_ACCOUNT_WEBHOOK_SECRET` | Server only | Verifies Accounts v2 onboarding, requirement, capability, and closure events |
@@ -65,6 +89,20 @@ Vercel environment variables for hosted deployments.
 `NEXT_PUBLIC_SITE_URL` is `http://localhost:3000` locally,
 `https://staging.tournibase.com` on the staging branch, and
 `https://tournibase.com` in production.
+
+The live payment-method configuration belongs only in Vercel Production. The
+Sandbox configuration belongs in Preview restricted to branch `staging`, not
+generic Preview. Both parent configurations enable cards plus eligible Apple
+Pay/Google Pay, disable other methods, and disallow connected-account
+customization. Wallet display depends on buyer eligibility/device. A new
+configuration must be deployed before it affects Checkout.
+
+Buyers see fee-inclusive one-pass offers and an updated full-order total before
+entering contact information. Production adds 2% of ticket value plus $0.30 once
+per paid order, not once per pass; staging and free orders remain fee-free.
+Director ticket revenue excludes that buyer fee, but Stripe processing still
+reduces director proceeds. Director price fields are base admission values, not
+promises that buyers will pay that amount after mandatory fees.
 
 ## Route inventory
 
@@ -122,18 +160,27 @@ authorized gate staff.
 | `POST /api/stripe/connect/dashboard` | Opens the exact connected account in Stripe Dashboard |
 | `POST /api/stripe/connect/webhook` | Synchronizes account status, requirements, capabilities, and closure |
 | `POST /api/stripe/dashboard-payment` | Opens a connected order's payment in Stripe Dashboard |
+| `POST /api/stripe/refund-order` | Requests and reconciles an authorized full remaining-order refund |
+| `POST /api/stripe/refund-pass` | Requests a paid-pass refund including its allocated buyer fee |
 | `GET /dev/email-preview` | Local-only branded pass-email preview; returns 404 in production |
 
 ## Database handoff
 
-Hosted Supabase matches the 28 product and rollout migrations. The environment
+Hosted Supabase matches the 30 product and rollout migrations. The environment
 split is recorded by:
 
 - `20260829002309_add_app_environment_isolation.sql`
 - `20260831003839_finalize_app_environment_isolation.sql`
 - `20260831024917_restore_trusted_organization_creation.sql`
+- `20261017234245_add_buyer_paid_tournibase_fees.sql`
+- `20261018000545_track_refund_lifecycle.sql`
 
-The same environment-aware application build is deployed to both stable hosts.
+The environment-aware application split and latest buyer-fee/refund release
+`f6be6cd` are deployed to both environments, with both deployments Ready and
+the documented hosted refund cases verified. The last migration uses an October 18 UTC version but was
+applied October 17 US Eastern. Hosted counts remained 2,037 orders, 4,910
+passes, and six events, with zero initial lifecycle amounts and no new browser
+order-write permission.
 
 The current 13 public application tables are:
 
@@ -226,7 +273,7 @@ Verified July 5, 2026:
 - `npm audit --omit=dev` found zero vulnerabilities.
 - The production URL returned HTTP 200 from Vercel.
 - At that time, production and local Supabase had all 12 migrations and RLS on
-  all 11 public tables. Hosted Supabase now matches 28 migrations and all 13 public
+  all 11 public tables. Hosted Supabase now matches 30 migrations and all 13 public
   application tables have RLS enabled.
 - The email delivery table blocks anonymous and signed-in browser access while
   allowing only the service role to claim deliveries.
@@ -255,7 +302,8 @@ Verified July 5, 2026:
 - Stripe controls the director's payout schedule. TourniBase does not hold
   tournament proceeds.
 - Staging takes no application fee. Production is configured for exactly 2%
-  plus 30 cents after its launch gate passes.
+  of admission subtotal plus 30 cents added for the buyer once per paid order
+  after its launch gate passes. Director Stripe processing remains separate.
 - Staging signup is disabled and redirects to production. Production Supabase
   Auth signup is enabled and independently verified, while direct authenticated
   organization inserts remain blocked.
@@ -265,10 +313,17 @@ Verified July 5, 2026:
   [Supabase password security](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection).
 - Gate-sale recording tracks cash, Venmo, external-card, or comp payments but
   does not process those payments.
-- Full Stripe refunds automatically mark the order refunded, invalidate active
+- Successful full Stripe refunds mark the order refunded, invalidate active
   or checked-in passes for that order, and send a buyer refund email.
 - Pass-specific partial refunds are available from TourniBase order details;
   generic partial refunds created directly in Stripe remain order-level only.
+- Pending/requires-action and failed/canceled refunds are tracked separately
+  from successfully refunded money. Failed attempts need direct Stripe/support
+  review, never automatic retry or automatic reactivation of blocked passes.
+  An already-returned application fee is not automatically reversed.
+- Both connected-payment destinations need `refund.created`, `refund.updated`,
+  and `refund.failed` as well as `charge.refunded` and the four Checkout Session
+  events. See [Refund and Support Process](refund-support.md).
 - Disputes are not automated.
 - Ticket quantity limits use an atomic pending checkout reservation so
   simultaneous buyers cannot oversell the remaining inventory.
@@ -280,19 +335,23 @@ Verified July 5, 2026:
 
 1. Finish the remaining [staging and production rollout](./environment-rollout.md)
    Sandbox and host-isolation regression.
-2. Configure live Connect keys and separate connected-payment and
-   account-status webhook endpoints while production checkout is disabled.
+2. Verify the already-configured live Connect keys, separate payment/account
+   webhooks, eight payment event types, and dedicated card-only configuration
+   on the new deployment while production checkout is disabled.
 3. Have the pilot director complete Stripe-hosted onboarding in live mode.
-4. Enable production checkout only for the controlled gate and run one
-   low-value purchase with a real card.
+4. Enable production checkout only for an authorized genuine pilot launch and
+   observe a real admission purchase. Do not create a fabricated live payment
+   solely for QA; repeatable purchase/refund tests belong in Sandbox.
 5. Confirm the live connected-payment webhook marks the order paid and creates
    every pass.
 6. Confirm the buyer receives the Resend email and can save every offline pass.
 7. Open and scan every issued pass through a production scanner link.
-8. Confirm gross sales, Stripe fees, the 2% plus 30-cent TourniBase fee,
-   director proceeds, and TourniBase reporting match Stripe.
-9. Fully refund the test order, confirm the buyer receives the refund email,
-   and confirm the scanner blocks the refunded pass.
+8. Confirm ticket sales, the buyer's full charge, Stripe processing, the
+   separately added 2% plus 30-cent TourniBase fee, director proceeds, and
+   TourniBase reporting match Stripe; verify the director's real payout.
+9. Refund a live purchase only when legitimately requested and authorized.
+   Verify refund email and pass invalidation for that real refund; cover
+   synthetic full/partial/pending/failed refund scenarios in Sandbox.
 10. Follow the basic tournament-day support and refund process in
    [Refund and Support Process](./refund-support.md).
 

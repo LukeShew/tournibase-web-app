@@ -1,14 +1,32 @@
 # TourniBase Database Schema
 
-Last verified against the local repository migrations: August 31, 2026
+Last verified against the local repository migrations: October 17, 2026
 
 Latest local migration:
-`20260831024917_restore_trusted_organization_creation`
+`20261018000545_track_refund_lifecycle`
 
 The additive environment migration, post-deploy contract migration, and
 server-only organization-creation grant migration are applied to hosted
-Supabase. The same environment-aware build is deployed to staging and
-production.
+Supabase. Buyer-fee and refund-lifecycle migrations are also applied. The
+refund migration's UTC version begins October 18 but was applied October 17 US
+Eastern. The environment split and the latest fee/refund application release
+`f6be6cd` are deployed to both environments; both deployments reached Ready.
+Hosted Sandbox cases `2040`–`2043` verified normal, pending, later-failed, and
+buyer-fee refund accounting. Staging zero-fee restoration is verified after
+redeployment; production paid checkout remains disabled. The maintenance fee
+guard required no new SQL migration. See
+[Payment readiness QA](qa-payment-readiness-2026-10-17.md) for the evidence and
+its limits.
+
+The final application-only follow-up `f6be6cd` is locally verified and deployed
+Ready on both hosts. It changes no schema; the migration count
+remains 30.
+
+All 30 local migrations and `supabase/tests/buyer_paid_fees.sql` passed in
+isolated PostgreSQL. Hosted post-migration counts remained 2,037 orders, 4,910
+passes, and six events; the new refund-lifecycle columns were zero. Anonymous
+and authenticated browser roles still cannot UPDATE orders. No new database
+security-advisor findings were reported; prior notices remain unchanged.
 
 ## Relationship summary
 
@@ -79,7 +97,9 @@ Buyer and payment record for one Stripe Checkout Session.
 Key fields: `id`, `tournament_id`, `buyer_name`, `buyer_email`,
 `buyer_phone`, `buyer_team_name`, `stripe_checkout_id`, `amount_total`,
 `payment_status`, `stripe_connected_account_id`, `stripe_environment`,
-`platform_fee_amount`, `platform_fee_refunded`,
+`platform_fee_amount`, `platform_fee_refunded`, `buyer_fee_amount`,
+`buyer_fee_refunded`, `amount_refunded`, `refund_pending_amount`,
+`refund_failed_amount`, `refund_sync_version`,
 `stripe_payment_intent_id`, `stripe_charge_id`, `created_at`.
 
 The app formats order IDs as `TB-000001`, but the stored primary key is numeric.
@@ -87,6 +107,23 @@ The Stripe routing and fee fields are immutable payment snapshots. The 19 old
 Test-mode platform-account orders are classified as historical test reporting
 data with a $0 application fee. They do not receive new webhook or refund
 synchronization through the onboarding Sandbox.
+
+For new buyer-paid orders, `amount_total` includes admission value plus
+`buyer_fee_amount`; ticket value is their difference. `platform_fee_amount`
+routes that buyer fee to TourniBase. Historical orders retain a zero buyer-fee
+snapshot and their original treatment. Completed refunded admission value is
+`amount_refunded - buyer_fee_refunded`.
+
+`refund_pending_amount` tracks current pending/requires-action refunds and
+`refund_failed_amount` records failed/canceled attempts requiring review; neither
+is completed refunded money. The failed-attempt amount is historical and does
+not necessarily mean money is still owed after a successful recovery.
+`refund_sync_version` is incremented in a compare-and-swap update so stale
+webhook work cannot overwrite a newer authoritative Stripe snapshot. It permits
+an authoritative correction of completed buyer-refund totals; an application
+fee already returned remains irreversible in this bookkeeping. Routing,
+original fee snapshots, and previously recorded Stripe payment IDs stay
+protected. Refund corrections never automatically reactivate blocked passes.
 
 ### `organization_stripe_accounts`
 
@@ -194,6 +231,7 @@ function can use it through the application flow.
 
 | Function | Purpose | Execution |
 | --- | --- | --- |
+| `reserve_checkout_order_with_buyer_fee` | Atomically reserves inventory and snapshots the admission subtotal plus one buyer-paid fee | Server secret key only |
 | `validate_pass_for_entry` | Authoritative pass validation and atomic admission | Server secret key only |
 | `override_duplicate_pass_entry` | Records a reasoned duplicate override | Server secret key only |
 | `undo_pass_check_in` | Undoes an eligible check-in and recalculates pass state | Server secret key only |
@@ -270,6 +308,8 @@ automatically expose new public tables.
 26. `20260829002309_add_app_environment_isolation`
 27. `20260831003839_finalize_app_environment_isolation`
 28. `20260831024917_restore_trusted_organization_creation`
+29. `20261017234245_add_buyer_paid_tournibase_fees`
+30. `20261018000545_track_refund_lifecycle`
 
 Migration files are the source of truth under `supabase/migrations`. New schema
 changes must be added as migrations and applied with `supabase db push`.
@@ -279,8 +319,13 @@ build remained compatible. The later contract migration removed the legacy
 environment-unaware RPC entry points and anonymous tournament/ticket Data API
 access after the environment-aware build reached both stable hosts. See
 [Staging and Production Rollout](./environment-rollout.md).
-The final grant migration restored organization creation only to the trusted
+The organization-creation grant migration restored creation only to the trusted
 server role; authenticated browser users remain unable to insert organizations
 or use the organization ID sequence directly.
+The two October migrations add buyer-fee and refund-lifecycle fields to orders;
+they do not add public tables or reprice historical orders. Buyer-fee reporting
+subtracts the fee from ticket revenue. Refund-lifecycle correction is scoped to
+the original order, immutable Stripe account/environment, and synchronization
+version.
 `supabase/seed.sql` adds local service-role table and sequence permissions but
 contains no demo records and does not add migration history.
