@@ -42,9 +42,17 @@ const stripe = {
   },
   refunds: { list: vi.fn(() => ({
     async *[Symbol.asyncIterator]() {
-      yield* leadingRefunds;
-      for (const id of refundPassIds) {
-        yield { status: "succeeded", metadata: { pass_id: String(id) } };
+      const snapshots = leadingRefunds.map((refund, index) => ({ id: `re_leading_${index}`, amount: 0, ...refund }));
+      yield* snapshots;
+      const specifiedAmount = snapshots.filter((refund) => ["succeeded", "pending", "requires_action"].includes(refund.status))
+        .reduce((sum, refund) => sum + refund.amount, 0);
+      const unallocated = Math.max(0, refunded - specifiedAmount);
+      const passIds = [...new Set(refundPassIds)];
+      for (const id of passIds) {
+        yield { id: `re_pass_${id}`, amount: unallocated / passIds.length, status: "succeeded", metadata: { pass_id: String(id) } };
+      }
+      if (!passIds.length && unallocated > 0) {
+        yield { id: "re_external", amount: unallocated, status: "succeeded", metadata: {} };
       }
     },
   })) },
@@ -105,6 +113,7 @@ beforeEach(() => {
     id: 1, tournament_id: 2, buyer_name: "Test", amount_total: "20.00", amount_refunded: "0.00",
     payment_status: "pending", platform_fee_amount: "0.00", platform_fee_refunded: "0.00",
     buyer_fee_amount: "0.00", buyer_fee_refunded: "0.00",
+    refund_pending_amount: "0.00", refund_failed_amount: "0.00", refund_sync_version: 0,
     stripe_checkout_id: "cs_test", stripe_charge_id: null, stripe_payment_intent_id: null,
     stripe_connected_account_id: "acct_test", stripe_environment: "test",
     tournaments: { organizations: { operating_environment: "test" } },
@@ -127,6 +136,53 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllEnvs());
 
 describe("checkout fulfillment and out-of-order refunds", () => {
+  it("records a pending refund without claiming success or invalidating a pass, then completes it", async () => {
+    await fulfillCheckoutSession("cs_test", "acct_test", "test");
+    refunded = 1000;
+    leadingRefunds = [{ id: "re_pending", amount: 1000, status: "pending", metadata: { pass_id: "1" } }];
+    expect(await syncStripeChargeRefund({ id: "ch_test", livemode: false }, "acct_test"))
+      .toEqual({ status: "not_refunded" });
+    expect(order).toMatchObject({ amount_refunded: "0.00", refund_pending_amount: "10.00", payment_status: "paid" });
+    expect(passes.map(pass => pass.status)).toEqual(["active", "active"]);
+    leadingRefunds[0].status = "succeeded";
+    await syncStripeChargeRefund({ id: "ch_test", livemode: false }, "acct_test");
+    expect(order).toMatchObject({ amount_refunded: "10.00", refund_pending_amount: "0.00", payment_status: "partial_refund" });
+    expect(passes.map(pass => pass.status)).toEqual(["refunded", "active"]);
+  });
+
+  it("corrects a successful refund that later fails without reopening canceled passes", async () => {
+    Object.assign(order, { amount_total: "20.70", buyer_fee_amount: "0.70", platform_fee_amount: "0.70" });
+    chargeAmount = 2070;
+    applicationFeeId = "fee_buyer";
+    applicationFeeAmount = 70;
+    await fulfillCheckoutSession("cs_test", "acct_test", "test");
+    refunded = 2070;
+    leadingRefunds = [{ id: "re_failed_later", amount: 2070, status: "succeeded", metadata: {} }];
+    await syncStripeChargeRefund({ id: "ch_test", livemode: false }, "acct_test");
+    expect(order.payment_status).toBe("refunded");
+    leadingRefunds[0].status = "failed";
+    refunded = 0;
+    await syncStripeChargeRefund({ id: "ch_test", livemode: false }, "acct_test");
+    expect(order).toMatchObject({ payment_status: "paid", amount_refunded: "0.00", buyer_fee_refunded: "0.00",
+      refund_failed_amount: "20.70", platform_fee_refunded: "0.70" });
+    expect(passes.map(pass => pass.status)).toEqual(["refunded", "refunded"]);
+    expect(stripe.applicationFees.createRefund).toHaveBeenCalledOnce();
+  });
+
+  it("re-reads Stripe after a failure correction wins the write race", async () => {
+    await fulfillCheckoutSession("cs_test", "acct_test", "test");
+    refunded = 2000;
+    leadingRefunds = [{ id: "re_later_failed", amount: 2000, status: "succeeded", metadata: {} }];
+    beforeRefundUpdate = () => {
+      beforeRefundUpdate = undefined;
+      leadingRefunds[0].status = "failed";
+      refunded = 0;
+      Object.assign(order, { refund_sync_version: 1, refund_failed_amount: "20.00" });
+    };
+    await syncStripeChargeRefund({ id: "ch_test", livemode: false }, "acct_test");
+    expect(order).toMatchObject({ payment_status: "paid", amount_refunded: "0.00", refund_failed_amount: "20.00", refund_sync_version: 2 });
+    expect(refundUpdateAttempts).toBe(2);
+  });
   it("creates passes after a partial refund arrives before payment confirmation", async () => {
     refunded = 500;
     await syncStripeChargeRefund({ id: "ch_test", livemode: false }, "acct_test");
@@ -173,9 +229,10 @@ describe("checkout fulfillment and out-of-order refunds", () => {
     beforeRefundUpdate = () => {
       beforeRefundUpdate = undefined;
       Object.assign(order, { amount_refunded: "20.00", payment_status: "refunded", platform_fee_refunded: "0.70" });
+      refunded = 2000;
     };
     const result = await syncStripeChargeRefund({ id: "ch_test", livemode: false }, "acct_test");
-    expect(result).toEqual({ status: "refunded", orderId: 1, amountTotalCents: 2000, amountRefundedCents: 2000, buyerFeeRefundedCents: 0 });
+    expect(result).toMatchObject({ status: "refunded", orderId: 1, amountTotalCents: 2000, amountRefundedCents: 2000, buyerFeeRefundedCents: 0 });
     expect(order).toMatchObject({ amount_refunded: "20.00", payment_status: "refunded", platform_fee_refunded: "0.70" });
     expect(passes.map(pass => pass.status)).toEqual(["refunded", "refunded"]);
     expect(refundUpdateAttempts).toBe(2);
@@ -188,6 +245,7 @@ describe("checkout fulfillment and out-of-order refunds", () => {
     beforeRefundUpdate = () => {
       beforeRefundUpdate = undefined;
       Object.assign(order, { amount_refunded: "10.00", payment_status: "partial_refund" });
+      refunded = 1000;
     };
     const result = await syncStripeChargeRefund({ id: "ch_test", livemode: false }, "acct_test");
     expect(result).toMatchObject({ status: "partial_refund", amountRefundedCents: 1000 });
@@ -291,6 +349,7 @@ describe("checkout fulfillment and out-of-order refunds", () => {
     beforeRefundUpdate = () => {
       beforeRefundUpdate = undefined;
       Object.assign(order, { amount_refunded: "20.47", buyer_fee_refunded: "0.47", platform_fee_refunded: "0.47", payment_status: "partial_refund" });
+      refunded = 2047;
     };
     await syncStripeChargeRefund({ id: "ch_test", livemode: false }, "acct_test");
     expect(order).toMatchObject({ amount_refunded: "20.47", buyer_fee_refunded: "0.47", platform_fee_refunded: "0.47" });
@@ -313,7 +372,7 @@ describe("checkout fulfillment and out-of-order refunds", () => {
       payment_intent: "pi_test", metadata: { order_id: "1" }, application_fee: "fee_buyer",
     });
     stripe.refunds.list.mockImplementationOnce(() => ({
-      async *[Symbol.asyncIterator]() { yield leadingRefunds[0]; },
+      async *[Symbol.asyncIterator]() { yield { id: "re_first", amount: 1030, ...leadingRefunds[0] }; },
     }));
     const initialReads: Array<(value: { id: string; amount: number; amount_refunded: number }) => void> = [];
     stripe.applicationFees.retrieve.mockImplementationOnce(() => new Promise((resolve) => {

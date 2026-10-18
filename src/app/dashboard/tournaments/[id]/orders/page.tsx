@@ -90,7 +90,7 @@ export default async function EventOrdersPage({
   const { data: orderRows, error: orderError } = await supabase
     .from("orders")
     .select(
-      "id, buyer_name, buyer_email, buyer_phone, buyer_fee_amount, amount_total, amount_refunded, payment_status, created_at, stripe_checkout_id, stripe_connected_account_id, stripe_environment, stripe_payment_intent_id, order_items!order_items_order_tournament_fk(id, ticket_name, unit_amount_cents, quantity, valid_from, valid_until), passes!passes_order_tournament_fk(id, order_item_id, public_token, status, sequence_number, ticket_types!passes_ticket_tournament_fk(name))",
+      "id, buyer_name, buyer_email, buyer_phone, buyer_fee_amount, amount_total, amount_refunded, refund_pending_amount, refund_failed_amount, payment_status, created_at, stripe_checkout_id, stripe_connected_account_id, stripe_environment, stripe_payment_intent_id, order_items!order_items_order_tournament_fk(id, ticket_name, unit_amount_cents, quantity, valid_from, valid_until), passes!passes_order_tournament_fk(id, order_item_id, public_token, status, sequence_number, ticket_types!passes_ticket_tournament_fk(name))",
     )
     .eq("tournament_id", tournamentId)
     .order("created_at", { ascending: false })

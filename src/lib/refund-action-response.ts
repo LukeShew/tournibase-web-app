@@ -1,3 +1,9 @@
+export class RefundReviewRequiredError extends Error {
+  constructor() {
+    super("A refund attempt failed or was canceled. Resolve it directly in Stripe; TourniBase will not automatically submit another refund. Contact support before restoring a blocked pass.");
+  }
+}
+
 export type RefundActionResponse =
   | { ok: true; status: "completed" }
   | {
@@ -11,7 +17,7 @@ export function getRefundActionResponse(
   synchronized: boolean,
 ): RefundActionResponse {
   if (refundStatus === "failed" || refundStatus === "canceled") {
-    throw new Error("The refund needs review in Stripe before retrying.");
+    throw new RefundReviewRequiredError();
   }
 
   if (refundStatus === "requires_action") {

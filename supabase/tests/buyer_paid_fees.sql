@@ -221,7 +221,7 @@ begin
     update public.orders set buyer_fee_refunded = 0.25 where id = v_order_id;
   exception when others then v_denied := true;
   end;
-  assert v_denied, 'Buyer fee refunds cannot decrease';
+  assert v_denied, 'Buyer fee refunds cannot decrease without a fresh reconciliation version';
   v_denied := false;
   begin
     update public.orders set amount_refunded = 10.50 where id = v_order_id;
@@ -241,6 +241,54 @@ begin
   assert (v_metrics#>>'{sales,estimatedDirectorProceeds}')::numeric = 8.31;
   assert public.get_director_lifetime_revenue('test') = 10;
   reset role;
+
+  -- Stripe can report a successful refund as failed later. Only a fresh
+  -- service-side reconciliation may correct the completed financial totals.
+  assert not has_table_privilege('anon', 'public.orders', 'UPDATE');
+  assert not has_table_privilege('authenticated', 'public.orders', 'UPDATE');
+  v_denied := false;
+  begin
+    update public.orders set amount_refunded = 0, buyer_fee_refunded = 0
+    where id = v_order_id;
+  exception when others then v_denied := true;
+  end;
+  assert v_denied, 'Downward refund correction must carry the next version';
+  set local role service_role;
+  update public.orders set amount_refunded = 0, buyer_fee_refunded = 0,
+    refund_pending_amount = 0, refund_failed_amount = 10.50,
+    payment_status = 'paid', refund_sync_version = refund_sync_version + 1
+  where id = v_order_id and refund_sync_version = 0;
+  reset role;
+  select * into v_row from public.orders where id = v_order_id;
+  assert v_row.amount_refunded = 0 and v_row.buyer_fee_refunded = 0
+    and v_row.refund_failed_amount = 10.50 and v_row.refund_sync_version = 1
+    and v_row.platform_fee_refunded = 0.50,
+    'Failed refund correction must retain the irreversible application fee refund';
+  update public.orders set refund_pending_amount = 10.50,
+    refund_sync_version = refund_sync_version + 1
+  where id = v_order_id and refund_sync_version = 0;
+  assert not found, 'A stale reconciliation version must not write';
+  v_denied := false;
+  begin
+    update public.orders set stripe_connected_account_id = 'acct_wrong',
+      refund_sync_version = refund_sync_version + 1 where id = v_order_id;
+  exception when others then v_denied := true;
+  end;
+  assert v_denied, 'A fresh refund version must not bypass payment routing immutability';
+  v_denied := false;
+  begin
+    update public.orders set buyer_fee_amount = 0.40,
+      refund_sync_version = refund_sync_version + 1 where id = v_order_id;
+  exception when others then v_denied := true;
+  end;
+  assert v_denied, 'A fresh refund version must not reprice the original buyer fee';
+  v_denied := false;
+  begin
+    update public.orders set platform_fee_refunded = 0,
+      refund_sync_version = refund_sync_version + 1 where id = v_order_id;
+  exception when others then v_denied := true;
+  end;
+  assert v_denied, 'Already-returned application fees must not be reversed locally';
 end;
 $$;
 

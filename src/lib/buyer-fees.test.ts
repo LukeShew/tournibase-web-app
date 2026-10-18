@@ -79,6 +79,32 @@ describe("buyer fee refund accounting", () => {
     expect(getBuyerFeeRefundedCents({ ...input, buyerFeeCents: 0, refunds: [] })).toBe(0);
   });
 
+  it("apportions external refunds over the remaining fee after rounded pass shares", () => {
+    const known = Array.from({ length: 6 }, (_, index) => refund(`re_${index + 4}`, 1023, 23));
+    const actual = getBuyerFeeRefundedCents({ orderId: 1, buyerFeeCents: 210,
+      chargeAmountCents: 9210, chargeAmountRefundedCents: 9209,
+      refunds: [...known, { id: "re_external", amount: 3071, status: "succeeded", metadata: {} }],
+    });
+    expect(actual).toBe(210);
+    expect(9209 - actual).toBeLessThanOrEqual(9000);
+  });
+
+  it("keeps both ticket and fee refunds within their original balances for every residual amount", () => {
+    for (const known of [refund("re_1", 1024, 24), refund("re_2", 1023, 23)]) {
+      let previous = 0;
+      for (let external = 0; external <= 3070 - known.amount; external += 1) {
+        const total = known.amount + external;
+        const fee = getBuyerFeeRefundedCents({ ...input, chargeAmountRefundedCents: total,
+          refunds: [known, { id: "re_external", amount: external, status: "succeeded", metadata: {} }],
+        });
+        expect(fee).toBeGreaterThanOrEqual(previous);
+        expect(fee).toBeLessThanOrEqual(70);
+        expect(total - fee).toBeLessThanOrEqual(3000);
+        previous = fee;
+      }
+    }
+  });
+
   it("does not apply another order's exact metadata", () => {
     const other = refund("re_1", 1024, 24);
     other.metadata.order_id = "2";

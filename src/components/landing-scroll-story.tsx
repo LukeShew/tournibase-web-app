@@ -2,6 +2,22 @@
 
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
+import { calculatePlatformFeeCents } from "@/lib/stripe-connect-payments";
+
+// Illustrative product prices, identical on staging and production.
+const demoFeeConfiguration = { basisPoints: 200, fixedCents: 30 };
+const demoPriceFormatter = new Intl.NumberFormat("en-US", {
+  style: "currency",
+  currency: "USD",
+});
+const demoWeekendTotal = formatDemoOfferPrice(2800);
+const demoDayTotal = formatDemoOfferPrice(1800);
+
+function formatDemoOfferPrice(ticketCents: number) {
+  return demoPriceFormatter.format(
+    (ticketCents + calculatePlatformFeeCents(ticketCents, demoFeeConfiguration)) / 100,
+  );
+}
 
 const chapters = [
   {
@@ -66,7 +82,8 @@ export function LandingScrollStory({
           </h2>
           <p className="mt-6 max-w-2xl text-lg leading-8 text-slate-600">
             These product views use the same components and visual system as
-            TourniBase itself. The names and figures shown are demo data.
+            TourniBase itself. The names and figures shown are demo data. Example
+            prices include a TourniBase fee of 2% plus $0.30 per order.
           </p>
         </div>
 
@@ -229,19 +246,19 @@ function CheckoutScene({ compact }: { compact: boolean }) {
         <div className="mt-5 space-y-3">
           <TicketOption
             description="Valid Sep 19, 2026 – Sep 20, 2026"
-            price="$28.00"
+            price={demoWeekendTotal}
             quantity={1}
             title="Weekend Pass"
           />
           <TicketOption
             description="Valid Sep 19, 2026"
-            price="$18.00"
+            price={demoDayTotal}
             quantity={0}
             title="Saturday Pass"
           />
           <TicketOption
             description="Valid Sep 20, 2026"
-            price="$18.00"
+            price={demoDayTotal}
             quantity={0}
             title="Sunday Pass"
           />
@@ -261,7 +278,7 @@ function CheckoutScene({ compact }: { compact: boolean }) {
                   Total
                 </p>
                 <p className="mt-1 font-mono text-xl font-semibold text-slate-950">
-                  $28.00
+                  {demoWeekendTotal}
                 </p>
               </div>
             </div>

@@ -1,12 +1,19 @@
 import "server-only";
 
-import { requireDirectorWorkspace } from "@/lib/auth";
+import { getDirectorWorkspace } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 
 export async function getOwnedOrganizationForStripeConnect(
   organizationId: number,
 ) {
-  const { director, organization } = await requireDirectorWorkspace();
+  // API callers need an authorization result, not a Next.js redirect exception.
+  const workspace = await getDirectorWorkspace();
+
+  if (!workspace) {
+    return null;
+  }
+
+  const { director, organization } = workspace;
 
   if (organization.id !== organizationId) {
     return null;

@@ -122,9 +122,15 @@ export async function POST(request: Request) {
       );
     }
 
-    if (event.type === "charge.refunded") {
+    if (event.type === "charge.refunded" || event.type === "refund.created" ||
+        event.type === "refund.updated" || event.type === "refund.failed") {
+      const refundEvent = event.type === "charge.refunded" ? null : event.data.object as Stripe.Refund;
+      const chargeId = refundEvent
+        ? typeof refundEvent.charge === "string" ? refundEvent.charge : refundEvent.charge?.id
+        : event.data.object.id;
+      if (!chargeId) throw new Error("Stripe refund has no charge to reconcile.");
       const refundSync = await syncStripeChargeRefund(
-        event.data.object as Stripe.Charge,
+        { id: chargeId, livemode: event.livemode },
         eventConnectedAccountId,
       );
 
@@ -136,8 +142,9 @@ export async function POST(request: Request) {
       }
 
       if (
-        refundSync.status === "refunded" ||
-        refundSync.status === "partial_refund"
+        (refundSync.status === "refunded" || refundSync.status === "partial_refund") &&
+        (!refundEvent || (refundEvent.status === "succeeded" &&
+          refundSync.succeededRefundIds.includes(refundEvent.id)))
       ) {
         console.info("[stripe-webhook] refund synced", {
           amountRefundedCents: refundSync.amountRefundedCents,

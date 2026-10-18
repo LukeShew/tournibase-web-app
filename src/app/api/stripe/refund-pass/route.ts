@@ -4,7 +4,7 @@ import { getDirectorWorkspace } from "@/lib/auth";
 import { getPassBuyerFeeCents, type BuyerFeeOrderItem } from "@/lib/buyer-fees";
 import { attemptRefundConfirmationEmail } from "@/lib/email/refund-confirmation";
 import { syncStripeChargeRefund } from "@/lib/orders";
-import { getRefundActionResponse } from "@/lib/refund-action-response";
+import { getRefundActionResponse, RefundReviewRequiredError } from "@/lib/refund-action-response";
 import { getVerifiedStripe } from "@/lib/stripe";
 import { createOrRetrieveStripeRefund } from "@/lib/stripe-refund-request";
 import {
@@ -209,7 +209,8 @@ export async function POST(request: NextRequest) {
 
     const response = getRefundActionResponse(
       refund.status,
-      result.status === "refunded" || result.status === "partial_refund",
+      (result.status === "refunded" || result.status === "partial_refund") &&
+        result.succeededRefundIds.includes(refund.id),
     );
 
     if (response.ok && (result.status === "refunded" || result.status === "partial_refund")) {
@@ -218,6 +219,9 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(response, { status: response.ok ? 200 : 202 });
   } catch (refundError) {
+    if (refundError instanceof RefundReviewRequiredError) {
+      return NextResponse.json({ error: refundError.message }, { status: 409 });
+    }
     console.error("[refund-pass] Stripe refund failed", {
       message: refundError instanceof Error ? refundError.message : "Unknown error",
     });

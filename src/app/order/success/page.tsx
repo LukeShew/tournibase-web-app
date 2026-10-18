@@ -8,6 +8,11 @@ import { getSupabaseAdminConfigurationIssues } from "@/lib/supabase/admin";
 
 export const metadata: Metadata = {
   title: "Order confirmed",
+  robots: {
+    follow: false,
+    index: false,
+    nocache: true,
+  },
 };
 
 export const dynamic = "force-dynamic";

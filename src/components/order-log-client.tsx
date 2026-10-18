@@ -29,6 +29,8 @@ export type OrderLogPass = {
 export type OrderLogOrder = {
   amount_refunded: number | string;
   amount_total: number | string;
+  refund_pending_amount?: number | string;
+  refund_failed_amount?: number | string;
   buyer_email: string;
   buyer_fee_amount: number | string;
   buyer_name: string;
@@ -94,6 +96,8 @@ export function OrderLogClient({
                   {getOrderNumber(order.id)}
                 </p>
                 <OrderStatusBadge status={order.payment_status} />
+                {Number(order.refund_pending_amount ?? 0) > 0 ? <span className="text-sm font-semibold text-amber-700">Refund pending</span> : null}
+                {Number(order.refund_failed_amount ?? 0) > 0 ? <span className="text-sm font-semibold text-red-700">Refund needs review</span> : null}
                 <p className="font-mono text-xs text-slate-500">
                   {formatOrderDate(order.created_at)}
                 </p>
@@ -365,6 +369,7 @@ function OrderDetailsModal({
         </div>
 
         <div className="max-h-[calc(86vh-104px)] overflow-y-auto p-6">
+          <RefundLifecycleNotice order={order} />
           <div className="grid gap-4 md:grid-cols-2">
             <InfoBox label="Buyer email" value={order.buyer_email} />
             <InfoBox
@@ -548,6 +553,21 @@ function OrderDetailsModal({
       </div>
     </div>
   );
+}
+
+export function RefundLifecycleNotice({ order }: { order: OrderLogOrder }) {
+  return <>
+    {Number(order.refund_pending_amount ?? 0) > 0 ? (
+      <p role="status" className="mb-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+        {formatCurrency(Number(order.refund_pending_amount))} in refunds is still processing or needs action in Stripe. It is not included in the completed refund total. Pending refunds do not cancel additional passes; existing pass statuses still apply.
+      </p>
+    ) : null}
+    {Number(order.refund_failed_amount ?? 0) > 0 ? (
+      <p role="alert" className="mb-4 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-900">
+        A past refund attempt failed or was canceled in Stripe. If unresolved, resolve it directly in Stripe; TourniBase will not automatically submit another refund. This historical notice remains after recovery and does not mean money is still owed. Failed attempts are not included in the completed refund total. Previously canceled passes stay blocked; contact support before restoring admission. Any application fee already returned is not automatically reversed.
+      </p>
+    ) : null}
+  </>;
 }
 
 export function getOrderPassRefundAmountCents(order: OrderLogOrder, pass: OrderLogPass) {

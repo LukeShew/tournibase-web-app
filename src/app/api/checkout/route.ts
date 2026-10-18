@@ -12,6 +12,7 @@ import {
 } from "@/lib/stripe";
 import { attemptOrderConfirmationEmail } from "@/lib/email/order-confirmation";
 import {
+  calculatePlatformFeeCents,
   getPlatformFeeConfiguration,
   getStripeEnvironment,
   getStripeRequestOptions,
@@ -28,6 +29,7 @@ import { buildCheckoutLineItems } from "@/lib/checkout-pricing";
 
 export const runtime = "nodejs";
 const CHECKOUT_INTEGRATION_IDENTIFIER = "tournibase_dhkgywdx";
+const MINIMUM_PAID_CHECKOUT_CENTS = 50;
 
 const checkoutSchema = z.object({
   eventSlug: z
@@ -172,6 +174,22 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  const paymentMethodConfiguration =
+    process.env.STRIPE_CHECKOUT_PAYMENT_METHOD_CONFIGURATION?.trim();
+  const hasCardPaymentConfiguration = Boolean(
+    paymentMethodConfiguration && /^pmc_[A-Za-z0-9]+$/.test(paymentMethodConfiguration),
+  );
+
+  if (hasPaidTickets && !hasCardPaymentConfiguration) {
+    console.error("[checkout] card payment configuration is missing or invalid", {
+      variable: "STRIPE_CHECKOUT_PAYMENT_METHOD_CONFIGURATION",
+    });
+    return NextResponse.json(
+      { error: "Online paid checkout is temporarily unavailable." },
+      { status: 503 },
+    );
+  }
+
   const forwardedIp =
     request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
     request.headers.get("x-real-ip") ||
@@ -179,7 +197,9 @@ export async function POST(request: NextRequest) {
   const [ipAllowed, emailAllowed] = await Promise.all([
     checkRateLimit({
       key: `checkout-ip:${forwardedIp}`,
-      limit: 12,
+      // Families at a venue can share one public Wi-Fi IP. Keep a broad IP
+      // backstop while the per-buyer limit below handles repeated attempts.
+      limit: 300,
       windowSeconds: 600,
     }),
     checkRateLimit({
@@ -211,6 +231,20 @@ export async function POST(request: NextRequest) {
 
   try {
     platformFeeConfiguration = getPlatformFeeConfiguration();
+    const quantities = new Map(
+      parsed.data.items.map((item) => [item.ticketTypeId, item.quantity]),
+    );
+    const ticketSubtotalCents = selectedTicketRows!.reduce(
+      (total, ticket) =>
+        total + Math.round(Number(ticket.price) * 100) * quantities.get(ticket.id)!,
+      0,
+    );
+    const expectedTotalCents = ticketSubtotalCents +
+      calculatePlatformFeeCents(ticketSubtotalCents, platformFeeConfiguration);
+
+    if (expectedTotalCents > 0 && expectedTotalCents < MINIMUM_PAID_CHECKOUT_CENTS) {
+      return minimumCheckoutError();
+    }
   } catch (error) {
     console.error("[checkout] invalid platform fee configuration", {
       message: error instanceof Error ? error.message : "Unknown fee error",
@@ -295,6 +329,22 @@ export async function POST(request: NextRequest) {
     return checkoutError();
   }
 
+  // A ticket that was free during the initial lookup may now be paid.
+  if (amountTotalCents > 0 && (!paidCheckoutEnabled || !hasCardPaymentConfiguration)) {
+    await markOrderFailed(order.id);
+    return NextResponse.json(
+      { error: "Online paid checkout is temporarily unavailable." },
+      { status: 503 },
+    );
+  }
+
+  // Prices can change between the public lookup and the atomic reservation.
+  // Recheck its authoritative snapshot and release any hold before returning.
+  if (amountTotalCents > 0 && amountTotalCents < MINIMUM_PAID_CHECKOUT_CENTS) {
+    await markOrderFailed(order.id);
+    return minimumCheckoutError();
+  }
+
   if (amountTotalCents > 0 && !reservation.stripe_account_ready) {
     await markOrderFailed(order.id);
     return NextResponse.json(
@@ -368,12 +418,12 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const stripe = await getVerifiedStripe();
-
   try {
+    const stripe = await getVerifiedStripe();
     const session = await stripe.checkout.sessions.create(
       {
         mode: "payment",
+        payment_method_configuration: paymentMethodConfiguration,
         integration_identifier: CHECKOUT_INTEGRATION_IDENTIFIER,
         customer_email: parsed.data.email,
         client_reference_id: String(order.id),
@@ -401,6 +451,27 @@ export async function POST(request: NextRequest) {
       },
       getStripeRequestOptions(routing, `tournibase-order-${order.id}`),
     );
+
+    // A Dashboard configuration can change independently of this deployment.
+    // Never expose a session that allows delayed methods to outlive the hold.
+    if (
+      !Array.isArray(session.payment_method_types) ||
+      session.payment_method_types.length !== 1 ||
+      session.payment_method_types[0] !== "card"
+    ) {
+      console.error("[checkout] card payment configuration returned unsupported methods", {
+        orderId: order.id,
+        paymentMethods: session.payment_method_types,
+      });
+      await stripe.checkout.sessions
+        .expire(session.id, {}, getStripeRequestOptions(routing))
+        .catch(() => undefined);
+      await markOrderFailed(order.id);
+      return NextResponse.json(
+        { error: "Online paid checkout is temporarily unavailable." },
+        { status: 503 },
+      );
+    }
 
     if (!session.url) {
       await markOrderFailed(order.id);
@@ -457,5 +528,15 @@ function checkoutError() {
         "Secure checkout could not be started. Try again or contact the event organizer.",
     },
     { status: 500 },
+  );
+}
+
+function minimumCheckoutError() {
+  return NextResponse.json(
+    {
+      error:
+        "Paid checkout totals must be at least $0.50. Add another pass or contact the event organizer.",
+    },
+    { status: 400 },
   );
 }

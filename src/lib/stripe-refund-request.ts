@@ -1,6 +1,7 @@
 import "server-only";
 
 import type Stripe from "stripe";
+import { RefundReviewRequiredError } from "@/lib/refund-action-response";
 import {
   getStripeRequestOptions,
   type StripePaymentRouting,
@@ -56,7 +57,7 @@ export async function createOrRetrieveStripeRefund({
 
     if (sameOrder && samePass) {
       if (existing.status === "failed" || existing.status === "canceled") {
-        throw new Error("The previous refund needs review in Stripe before retrying.");
+        throw new RefundReviewRequiredError();
       }
 
       return existing;

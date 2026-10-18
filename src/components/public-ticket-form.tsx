@@ -126,6 +126,13 @@ export function PublicTicketForm({
         <p className="mt-2 text-sm leading-6 text-slate-400">
           Select the number of people who need admission.
         </p>
+        {platformFeeConfiguration.basisPoints > 0 || platformFeeConfiguration.fixedCents > 0 ? (
+          <p className="mt-2 text-sm leading-6 text-slate-400">
+            Prices include the TourniBase fee for one pass. For multiple passes,
+            the fee is calculated once on the whole order. Your total updates
+            below.
+          </p>
+        ) : null}
 
         <div className="mt-4 space-y-3">
           {tickets.map((ticket) => {
@@ -145,9 +152,10 @@ export function PublicTicketForm({
                   <div>
                     <div className="flex flex-wrap items-center gap-3">
                       <h3 className="font-semibold text-white">{ticket.name}</h3>
-                      <span className="font-mono text-sm font-semibold text-blue-300">
-                        {formatCurrency(ticket.price)}
-                      </span>
+                      <TicketOfferPrice
+                        ticketPrice={ticket.price}
+                        platformFeeConfiguration={platformFeeConfiguration}
+                      />
                     </div>
                     <p className="mt-2 text-sm text-slate-400">
                       Valid{" "}
@@ -201,6 +209,17 @@ export function PublicTicketForm({
           })}
         </div>
       </fieldset>
+
+      <section aria-label="Order total" className="rounded-2xl border border-border bg-card-strong p-5 sm:p-6">
+        <p className="text-sm text-slate-400">
+          {selectedCount} {selectedCount === 1 ? "pass" : "passes"} selected
+        </p>
+        <p className="mt-1 text-xs text-slate-500">{eventName}</p>
+        <TicketPriceSummary
+          ticketSubtotalCents={ticketSubtotalCents}
+          platformFeeConfiguration={platformFeeConfiguration}
+        />
+      </section>
 
       <fieldset className="rounded-2xl border border-border bg-card p-5 sm:p-6">
         <legend className="px-1 text-xl font-semibold text-white">
@@ -331,7 +350,12 @@ export function TicketPriceSummary({
       </div>
       {buyerFeeCents > 0 ? (
         <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 text-sm text-slate-300">
-          <dt>TourniBase service fee</dt>
+          <dt>
+            TourniBase service fee
+            <span className="mt-1 block text-xs text-slate-400">
+              For online ticketing and digital pass delivery.
+            </span>
+          </dt>
           <dd className="font-mono">{formatCurrency(buyerFeeCents / 100)}</dd>
         </div>
       ) : null}
@@ -342,6 +366,28 @@ export function TicketPriceSummary({
         </dd>
       </div>
     </dl>
+  );
+}
+
+export function TicketOfferPrice({
+  ticketPrice,
+  platformFeeConfiguration,
+}: {
+  ticketPrice: number | string;
+  platformFeeConfiguration: PlatformFeeConfiguration;
+}) {
+  const ticketCents = Math.round(Number(ticketPrice) * 100);
+  const feeCents = calculatePlatformFeeCents(ticketCents, platformFeeConfiguration);
+
+  return (
+    <span className="flex flex-col gap-1">
+      <span className="font-mono text-xl font-semibold text-blue-300">
+        {formatCurrency((ticketCents + feeCents) / 100)}
+      </span>
+      <span className="text-xs text-slate-400">
+        {feeCents > 0 ? "Total for 1 pass, fees included" : "Total for 1 pass"}
+      </span>
+    </span>
   );
 }
 

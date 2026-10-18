@@ -129,8 +129,17 @@ export function getBuyerFeeRefundedCents({
     throw new Error("Stripe refund totals changed during synchronization. Retry the event.");
   }
   const externalAmount = chargeAmountRefundedCents - knownAmount;
-  const externalFee = Math.round(buyerFeeCents * externalAmount / chargeAmountCents);
-  return Math.min(buyerFeeCents, chargeAmountRefundedCents, knownFee + externalFee);
+  if (knownFee > buyerFeeCents || knownAmount > chargeAmountCents) {
+    throw new Error("Stripe refund allocations exceed the original payment.");
+  }
+  // Exact pass refunds consume their original penny allocations. Apportion an
+  // external refund over only the remaining ticket/fee balance, not the whole
+  // original charge (which can otherwise refund more ticket revenue than sold).
+  const remainingCharge = chargeAmountCents - knownAmount;
+  const remainingFee = buyerFeeCents - knownFee;
+  const externalFee = remainingCharge === 0 ? 0 : Math.round(remainingFee * externalAmount / remainingCharge);
+  const minimumFee = Math.max(knownFee, chargeAmountRefundedCents - (chargeAmountCents - buyerFeeCents));
+  return Math.max(minimumFee, Math.min(buyerFeeCents, chargeAmountRefundedCents, knownFee + externalFee));
 }
 
 function assertNonnegativeCents(value: number, label: string) {

@@ -155,6 +155,7 @@ beforeEach(() => {
   mocks.synchronize.mockResolvedValue({
     status: "partial_refund", orderId: 1957,
     amountTotalCents: 5400, amountRefundedCents: 1800,
+    succeededRefundIds: ["re_1", "re_original"],
   });
   mocks.email.mockResolvedValue({ status: "sent", messageId: "message-id" });
 });
@@ -182,6 +183,7 @@ describe.each(routes)("$name refunds", ({ name, handler, payload, originalKey })
     mocks.synchronize.mockResolvedValue({
       status: name === "order" ? "refunded" : "partial_refund", orderId: 1957,
       amountTotalCents: 5400, amountRefundedCents: name === "order" ? 5400 : 1800,
+      succeededRefundIds: ["re_1", "re_original"],
     });
   });
 
@@ -280,6 +282,7 @@ describe.each(routes)("$name refunds", ({ name, handler, payload, originalKey })
     });
     mocks.synchronize.mockResolvedValueOnce({
       status: "partial_refund", orderId: 1957, amountTotalCents: 5400, amountRefundedCents: 1800,
+      succeededRefundIds: ["re_previous"],
     });
     const response = await handler(request(payload));
     expect(response.status).toBe(202);
@@ -303,7 +306,9 @@ describe.each(routes)("$name refunds", ({ name, handler, payload, originalKey })
   it.each(["failed", "canceled"])("does not report a newly created %s refund as complete", async (status) => {
     mocks.createRefund.mockResolvedValueOnce({ id: "re_failed", charge: "ch_test_order", status });
     mocks.synchronize.mockResolvedValueOnce({ status: "not_refunded" });
-    expect((await handler(request(payload))).status).toBe(502);
+    const response = await handler(request(payload));
+    expect(response.status).toBe(409);
+    expect(await response.json()).toMatchObject({ error: expect.stringContaining("Resolve it directly in Stripe") });
     expect(mocks.email).not.toHaveBeenCalled();
   });
 
@@ -312,7 +317,9 @@ describe.each(routes)("$name refunds", ({ name, handler, payload, originalKey })
       id: "re_failed", charge: "ch_test_order", payment_intent: "pi_test_order", amount: 1800,
       metadata: { order_id: "1957", ...(name === "pass" ? { pass_id: "4788" } : {}) }, status,
     });
-    expect((await handler(request(payload))).status).toBe(502);
+    const response = await handler(request(payload));
+    expect(response.status).toBe(409);
+    expect(await response.json()).toMatchObject({ error: expect.stringContaining("Resolve it directly in Stripe") });
     expect(mocks.createRefund).not.toHaveBeenCalled();
   });
 
@@ -442,7 +449,7 @@ it("refunds the remaining complete payment after a buyer-fee pass refund, with s
   order.amount_refunded = "18.47";
   order.payment_status = "partial_refund";
   mocks.synchronize.mockResolvedValue({ status: "refunded", orderId: 1957,
-    amountTotalCents: 5539, amountRefundedCents: 5539 });
+    amountTotalCents: 5539, amountRefundedCents: 5539, succeededRefundIds: ["re_1", "re_2"] });
   expect((await refundOrder(request({ orderId: 1957 }))).status).toBe(200);
   expect((await refundOrder(request({ orderId: 1957 }))).status).toBe(200);
   expect(mocks.createRefund).toHaveBeenCalledTimes(2);

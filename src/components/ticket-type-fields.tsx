@@ -50,7 +50,7 @@ export function TicketTypeFields({
 
       <FormField
         id={`${idPrefix}-price`}
-        label="Price"
+        label="Base admission price"
         error={errors.price}
       >
         <div className="mt-2 flex h-11 overflow-hidden rounded-xl border border-border bg-black/20 focus-within:border-brand focus-within:ring-4 focus-within:ring-brand/10">
@@ -67,12 +67,17 @@ export function TicketTypeFields({
             disabled={disabled}
             aria-invalid={Boolean(errors.price)}
             aria-describedby={
-              errors.price ? `${idPrefix}-price-error` : undefined
+              `${idPrefix}-price-help${errors.price ? ` ${idPrefix}-price-error` : ""}`
             }
             className="min-w-0 flex-1 bg-transparent px-3 text-sm text-white placeholder:text-slate-600 focus:outline-none disabled:cursor-wait disabled:opacity-70"
             placeholder="12.00"
           />
         </div>
+        <p id={`${idPrefix}-price-help`} className="mt-2 text-xs leading-5 text-slate-400">
+          Enter the ticket value before any TourniBase fee. Buyers see totals
+          including the applicable fee, added once per online order. Stripe
+          processing is still deducted from your proceeds.
+        </p>
       </FormField>
 
       <FormField
@@ -178,11 +183,16 @@ export function TicketTypeFields({
           disabled={disabled}
           aria-invalid={Boolean(errors.description)}
           aria-describedby={
-            errors.description ? `${idPrefix}-description-error` : undefined
+            `${idPrefix}-description-help${errors.description ? ` ${idPrefix}-description-error` : ""}`
           }
           className="mt-2 w-full resize-y rounded-xl border border-border bg-black/20 px-3 py-3 text-sm leading-6 text-white placeholder:text-slate-600 focus:border-brand focus:outline-none focus:ring-4 focus:ring-brand/10 disabled:cursor-wait disabled:opacity-70"
           placeholder="What this pass includes and who it is for."
         />
+        <p id={`${idPrefix}-description-help`} className="mt-2 text-xs leading-5 text-slate-400">
+          Describe admission details here, not prices. Share the public ticket
+          page for current fee-inclusive totals; avoid advertising a base price
+          without its mandatory fee in descriptions or messages.
+        </p>
       </FormField>
     </div>
   );

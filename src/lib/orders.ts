@@ -4,6 +4,7 @@ import type Stripe from "stripe";
 import { getAppEnvironment } from "@/lib/app-environment";
 import { getBuyerFeeRefundedCents, getPassBuyerFeeCents, type BuyerFeeOrderItem } from "@/lib/buyer-fees";
 import { attemptOrderConfirmationEmail } from "@/lib/email/order-confirmation";
+import { getRefundLifecycle } from "@/lib/refund-lifecycle";
 import {
   getRefundPaymentStatusForCharge,
   parseStripeOrderIdMetadata,
@@ -26,6 +27,9 @@ type OrderRecord = {
   amount_total: number | string;
   buyer_fee_amount: number | string;
   buyer_fee_refunded: number | string;
+  refund_pending_amount: number | string;
+  refund_failed_amount: number | string;
+  refund_sync_version: number;
   buyer_name: string;
   id: number;
   payment_status: PaymentStatus;
@@ -44,7 +48,7 @@ type OrderRecord = {
 };
 
 const orderRecordSelection =
-  "id, tournament_id, buyer_name, amount_total, amount_refunded, buyer_fee_amount, buyer_fee_refunded, payment_status, stripe_connected_account_id, stripe_environment, platform_fee_amount, platform_fee_refunded, stripe_payment_intent_id, stripe_charge_id, tournaments!inner(organizations!inner(operating_environment))";
+  "id, tournament_id, buyer_name, amount_total, amount_refunded, buyer_fee_amount, buyer_fee_refunded, refund_pending_amount, refund_failed_amount, refund_sync_version, payment_status, stripe_connected_account_id, stripe_environment, platform_fee_amount, platform_fee_refunded, stripe_payment_intent_id, stripe_charge_id, tournaments!inner(organizations!inner(operating_environment))";
 
 type OrderItemRecord = {
   id: number;
@@ -69,6 +73,9 @@ export type StripeRefundSyncResult =
       buyerFeeRefundedCents: number;
       amountTotalCents: number;
       orderId: number;
+      pendingRefundCents: number;
+      failedRefundCents: number;
+      succeededRefundIds: string[];
       status: "refunded" | "partial_refund";
     }
   | { chargeId: string; status: "order_not_found" }
@@ -292,6 +299,24 @@ export async function syncStripeChargeRefund(
   charge: Pick<Stripe.Charge, "id" | "livemode">,
   eventConnectedAccountId: string | null = null,
 ): Promise<StripeRefundSyncResult> {
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    try {
+      return await syncFreshStripeChargeRefund(charge, eventConnectedAccountId);
+    } catch (error) {
+      if (!(error instanceof RefundSyncConflict) || attempt === 2) throw error;
+    }
+  }
+  throw new RefundSyncConflict();
+}
+
+class RefundSyncConflict extends Error {
+  constructor() { super("Refund synchronization changed concurrently. Retry the event."); }
+}
+
+async function syncFreshStripeChargeRefund(
+  charge: Pick<Stripe.Charge, "id" | "livemode">,
+  eventConnectedAccountId: string | null,
+): Promise<StripeRefundSyncResult> {
   const stripe = await getVerifiedStripe();
   const eventRouting: StripePaymentRouting = {
     connectedAccountId: eventConnectedAccountId,
@@ -304,28 +329,29 @@ export async function syncStripeChargeRefund(
     );
   }
 
-  const latestCharge = await stripe.charges.retrieve(
+  const lookupCharge = await stripe.charges.retrieve(
     charge.id,
     {},
     getStripeRequestOptions(eventRouting),
   );
-  const refundStatus = getRefundPaymentStatusForCharge(latestCharge);
-
-  if (!refundStatus) {
-    return { status: "not_refunded" };
-  }
-
   const order = await resolveOrderForStripeCharge(
-    latestCharge,
+    lookupCharge,
     eventRouting,
   );
 
   if (!order) {
-    return { chargeId: latestCharge.id, status: "order_not_found" };
+    return { chargeId: lookupCharge.id, status: "order_not_found" };
   }
 
   const routing = getOrderStripeRouting(order);
   assertOrderMatchesAppEnvironment(order);
+
+  // Read the database version BEFORE the authoritative Stripe snapshot. A lost
+  // CAS restarts both reads; an old worker may never apply an older snapshot to
+  // a newer version, including when a previously successful refund later fails.
+  const latestCharge = await stripe.charges.retrieve(
+    charge.id, {}, getStripeRequestOptions(routing),
+  );
 
   assertStripeRoutingMatches({
     actualEnvironment: latestCharge.livemode ? "live" : "test",
@@ -335,19 +361,25 @@ export async function syncStripeChargeRefund(
 
   const buyerFeeCents = Math.round(Number(order.buyer_fee_amount ?? 0) * 100);
   const refunds: Stripe.Refund[] = [];
-  if (refundStatus === "partial_refund" || buyerFeeCents > 0) {
-    // Read every page once for both fee accounting and pass invalidation.
-    for await (const refund of stripe.refunds.list(
-      { charge: latestCharge.id, limit: 100 },
-      getStripeRequestOptions(routing),
-    )) {
-      refunds.push(refund);
-    }
+  for await (const refund of stripe.refunds.list(
+    { charge: latestCharge.id, limit: 100 }, getStripeRequestOptions(routing),
+  )) {
+    refunds.push(refund);
+  }
+  const lifecycle = getRefundLifecycle(refunds, latestCharge.amount);
+  if (latestCharge.amount_refunded > 0 && refunds.length === 0) {
+    throw new Error("Stripe refund totals changed during synchronization. Retry the event.");
+  }
+  const successfulCharge = { ...latestCharge, amount_refunded: lifecycle.succeededCents };
+  const refundStatus = getRefundPaymentStatusForCharge(successfulCharge);
+  if (refunds.length === 0 && Number(order.amount_refunded) === 0 &&
+      Number(order.refund_pending_amount) === 0 && Number(order.refund_failed_amount) === 0) {
+    return { status: "not_refunded" };
   }
   const buyerFeeRefundedCents = getBuyerFeeRefundedCents({
     buyerFeeCents,
     chargeAmountCents: latestCharge.amount,
-    chargeAmountRefundedCents: latestCharge.amount_refunded,
+    chargeAmountRefundedCents: lifecycle.succeededCents,
     orderId: order.id,
     refunds,
     expectedPassRefunds: buyerFeeCents > 0 && refundStatus === "partial_refund"
@@ -355,7 +387,7 @@ export async function syncStripeChargeRefund(
       : undefined,
   });
   const platformFeeRefundedCents =
-    await synchronizeApplicationFeeRefund(latestCharge, order, buyerFeeRefundedCents);
+    await synchronizeApplicationFeeRefund(successfulCharge, order, buyerFeeRefundedCents);
   const paymentIntentId =
     typeof latestCharge.payment_intent === "string"
       ? latestCharge.payment_intent
@@ -364,11 +396,13 @@ export async function syncStripeChargeRefund(
   const supabase = getSupabaseAdmin();
   const committed = await persistStripeRefundState({
     order,
-    charge: latestCharge,
+    charge: successfulCharge,
     paymentIntentId,
     platformFeeRefundedCents,
     buyerFeeRefundedCents,
     routing,
+    pendingRefundCents: lifecycle.pendingCents,
+    failedRefundCents: lifecycle.failedCents,
   });
   const nextStatus = committed.status;
 
@@ -415,11 +449,15 @@ export async function syncStripeChargeRefund(
     }
   }
 
+  if (nextStatus !== "refunded" && nextStatus !== "partial_refund") return { status: "not_refunded" };
   return {
     amountRefundedCents: committed.amountRefundedCents,
     buyerFeeRefundedCents: committed.buyerFeeRefundedCents,
     amountTotalCents: latestCharge.amount,
     orderId: order.id,
+    pendingRefundCents: lifecycle.pendingCents,
+    failedRefundCents: lifecycle.failedCents,
+    succeededRefundIds: refunds.filter((refund) => refund.status === "succeeded").map((refund) => refund.id),
     status: nextStatus,
   };
 }
@@ -464,6 +502,8 @@ async function persistStripeRefundState({
   platformFeeRefundedCents,
   buyerFeeRefundedCents,
   routing,
+  pendingRefundCents,
+  failedRefundCents,
 }: {
   order: OrderRecord;
   charge: Stripe.Charge;
@@ -471,87 +511,64 @@ async function persistStripeRefundState({
   platformFeeRefundedCents: number;
   buyerFeeRefundedCents: number;
   routing: StripePaymentRouting;
+  pendingRefundCents: number;
+  failedRefundCents: number;
 }): Promise<{
   amountRefundedCents: number;
   buyerFeeRefundedCents: number;
-  status: "refunded" | "partial_refund";
+  status: PaymentStatus;
 }> {
   const supabase = getSupabaseAdmin();
-  let snapshot = order;
+  const snapshot = order;
+  const amountRefundedCents = charge.amount_refunded;
+  const feeRefundedCents = Math.max(
+    platformFeeRefundedCents,
+    Math.round(Number(snapshot.platform_fee_refunded) * 100),
+  );
+  const committedBuyerFeeRefundedCents = buyerFeeRefundedCents;
+  const status: PaymentStatus = amountRefundedCents >= charge.amount ? "refunded"
+    : amountRefundedCents > 0 ? "partial_refund"
+    : snapshot.payment_status === "refunded" || snapshot.payment_status === "partial_refund"
+      ? "paid" : snapshot.payment_status;
 
-  // A webhook and the refund route can reconcile the same charge concurrently.
-  // Compare-and-swap all refund fields so an older charge snapshot cannot undo
-  // newer totals or a fully refunded status. Re-read after a lost race.
-  for (let attempt = 0; attempt < 3; attempt += 1) {
-    const amountRefundedCents = Math.max(
-      charge.amount_refunded,
-      Math.round(Number(snapshot.amount_refunded) * 100),
-    );
-    const feeRefundedCents = Math.max(
-      platformFeeRefundedCents,
-      Math.round(Number(snapshot.platform_fee_refunded) * 100),
-    );
-    const committedBuyerFeeRefundedCents = Math.max(
-      buyerFeeRefundedCents,
-      Math.round(Number(snapshot.buyer_fee_refunded ?? 0) * 100),
-    );
-    const status = snapshot.payment_status === "refunded" || amountRefundedCents >= charge.amount
-      ? "refunded"
-      : "partial_refund";
+  let update = supabase
+    .from("orders")
+    .update({
+      amount_refunded: (amountRefundedCents / 100).toFixed(2),
+      buyer_fee_refunded: (committedBuyerFeeRefundedCents / 100).toFixed(2),
+      refund_pending_amount: (pendingRefundCents / 100).toFixed(2),
+      refund_failed_amount: (failedRefundCents / 100).toFixed(2),
+      refund_sync_version: Number(snapshot.refund_sync_version) + 1,
+      payment_status: status,
+      platform_fee_refunded: (feeRefundedCents / 100).toFixed(2),
+      stripe_charge_id: charge.id,
+      stripe_payment_intent_id: paymentIntentId,
+    })
+    .eq("id", order.id)
+    .eq("stripe_environment", routing.environment)
+    .eq("amount_refunded", snapshot.amount_refunded)
+    .eq("buyer_fee_refunded", snapshot.buyer_fee_refunded)
+    .eq("platform_fee_refunded", snapshot.platform_fee_refunded)
+    .eq("payment_status", snapshot.payment_status);
+  update = update.eq("refund_sync_version", snapshot.refund_sync_version);
+  update = routing.connectedAccountId
+    ? update.eq("stripe_connected_account_id", routing.connectedAccountId)
+    : update.is("stripe_connected_account_id", null);
 
-    let update = supabase
-      .from("orders")
-      .update({
-        amount_refunded: (amountRefundedCents / 100).toFixed(2),
-        buyer_fee_refunded: (committedBuyerFeeRefundedCents / 100).toFixed(2),
-        payment_status: status,
-        platform_fee_refunded: (feeRefundedCents / 100).toFixed(2),
-        stripe_charge_id: charge.id,
-        stripe_payment_intent_id: paymentIntentId,
-      })
-      .eq("id", order.id)
-      .eq("stripe_environment", routing.environment)
-      .eq("amount_refunded", snapshot.amount_refunded)
-      .eq("buyer_fee_refunded", snapshot.buyer_fee_refunded)
-      .eq("platform_fee_refunded", snapshot.platform_fee_refunded)
-      .eq("payment_status", snapshot.payment_status);
-    update = routing.connectedAccountId
-      ? update.eq("stripe_connected_account_id", routing.connectedAccountId)
-      : update.is("stripe_connected_account_id", null);
+  const { data, error } = await update
+    .select("amount_refunded, buyer_fee_refunded, payment_status")
+    .maybeSingle();
 
-    const { data, error } = await update
-      .select("amount_refunded, buyer_fee_refunded, payment_status")
-      .maybeSingle();
-
-    if (error) throw error;
-    if (data) {
-      return {
-        amountRefundedCents: Math.round(Number(data.amount_refunded) * 100),
-        buyerFeeRefundedCents: Math.round(Number(data.buyer_fee_refunded) * 100),
-        status: data.payment_status as "refunded" | "partial_refund",
-      };
-    }
-
-    if (attempt < 2) {
-      let reload = supabase
-        .from("orders")
-        .select(orderRecordSelection)
-        .eq("id", order.id)
-        .eq("stripe_environment", routing.environment)
-        .eq("tournaments.organizations.operating_environment", routing.environment);
-      reload = routing.connectedAccountId
-        ? reload.eq("stripe_connected_account_id", routing.connectedAccountId)
-        : reload.is("stripe_connected_account_id", null);
-      const { data: current, error: reloadError } = await reload.maybeSingle();
-      if (reloadError) throw reloadError;
-      if (!current) throw new Error("The order disappeared during refund synchronization.");
-      snapshot = current as unknown as OrderRecord;
-      assertOrderMatchesAppEnvironment(snapshot);
-      assertOrderPaymentIdentifiers(snapshot, charge.id, paymentIntentId ?? undefined);
-    }
+  if (error) throw error;
+  if (data) {
+    return {
+      amountRefundedCents: Math.round(Number(data.amount_refunded) * 100),
+      buyerFeeRefundedCents: Math.round(Number(data.buyer_fee_refunded) * 100),
+      status: data.payment_status as PaymentStatus,
+    };
   }
 
-  throw new Error("Refund synchronization changed concurrently. Retry the event.");
+  throw new RefundSyncConflict();
 }
 
 async function resolveOrderForStripeCharge(

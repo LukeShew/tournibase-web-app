@@ -1,6 +1,6 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { getOrderPassRefundAmountCents, OrderLogClient, type OrderLogOrder, type OrderLogPass } from "./order-log-client";
+import { getOrderPassRefundAmountCents, OrderLogClient, RefundLifecycleNotice, type OrderLogOrder, type OrderLogPass } from "./order-log-client";
 
 const pass: OrderLogPass = {
   id: 1,
@@ -29,6 +29,17 @@ const order: OrderLogOrder = {
 };
 
 describe("buyer fee in director order details", () => {
+  it("keeps pending and failed refund warnings visible after a reload", () => {
+    const changed = { ...order, refund_pending_amount: "10.30", refund_failed_amount: "10.30" };
+    const list = renderToStaticMarkup(<OrderLogClient currentStripeEnvironment="live" orders={[changed]} tournamentId={1} />);
+    expect(list).toContain("Refund pending");
+    expect(list).toContain("Refund needs review");
+    const detail = renderToStaticMarkup(<RefundLifecycleNotice order={changed} />);
+    expect(detail).toContain("$10.30");
+    expect(detail).toContain("not included in the completed refund total");
+    expect(detail).toContain("Previously canceled passes stay blocked");
+    expect(renderToStaticMarkup(<RefundLifecycleNotice order={order} />)).toBe("");
+  });
   it("clearly labels the charged amount as the buyer total", () => {
     const html = renderToStaticMarkup(<OrderLogClient currentStripeEnvironment="live" orders={[order]} tournamentId={1} />);
     expect(html).toContain("Buyer total");
