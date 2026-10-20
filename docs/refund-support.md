@@ -1,5 +1,16 @@
 # TourniBase Refund and Support Process
 
+> Latest October 20 follow-up: the user approved resuming Sandbox verification.
+> Stripe created isolated account `acct_1USX6aBDCy7Cmb69`; its saved Profile shows
+> Express, Application fee collector, and Stripe negative-balance collector.
+> It has no payments, no accepted agreement, incomplete requirements, and no
+> TourniBase database link. The earlier research-only restriction below is
+> superseded for this isolated verification. Existing connections and live
+> settings were not changed. Application preview support and payment/refund
+> acceptance remain unfinished; keep rollout and live checkout disabled.
+> Evidence: [Sandbox record](stripe-express-sandbox-2026-10-20.json).
+
+
 Last updated: October 20, 2026
 
 ## Pending pricing change — not activated

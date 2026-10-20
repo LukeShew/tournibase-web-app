@@ -1,5 +1,16 @@
 # TourniBase Web App
 
+> Latest October 20 follow-up: the user approved resuming Sandbox verification.
+> Stripe created isolated account `acct_1USX6aBDCy7Cmb69`; its saved Profile shows
+> Express, Application fee collector, and Stripe negative-balance collector.
+> It has no payments, no accepted agreement, incomplete requirements, and no
+> TourniBase database link. The earlier research-only restriction below is
+> superseded for this isolated verification. Existing connections and live
+> settings were not changed. Application preview support and payment/refund
+> acceptance remain unfinished; keep rollout and live checkout disabled.
+> Evidence: [Sandbox record](docs/stripe-express-sandbox-2026-10-20.json).
+
+
 TourniBase is a digital gate system for youth basketball tournaments. This
 web-first MVP lets directors sell spectator passes, issue mobile tickets, scan
 guests, stop duplicate entry, and monitor sales and gate activity.

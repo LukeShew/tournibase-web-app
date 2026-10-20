@@ -1,0 +1,35 @@
+{
+  "date": "2026-10-20",
+  "authorization": "User approved resuming Express Sandbox verification in annotation 1.",
+  "platform_account": "acct_1Tal4NBDCyF6XjOy",
+  "isolated_connected_account": "acct_1USX6aBDCy7Cmb69",
+  "environment": "sandbox",
+  "verification_method": "Stripe Dashboard account creation followed by saved Profile inspection",
+  "saved_properties": {
+    "dashboard": "express",
+    "fees_collector": "application",
+    "negative_balance_collector": "stripe",
+    "requirements_collector": "stripe"
+  },
+  "status": "restricted; payments and payouts paused; requirements incomplete",
+  "terms_accepted": false,
+  "volume_usd": 0,
+  "balance_usd": 0,
+  "linked_to_tournibase_database": false,
+  "existing_connection_changed": false,
+  "live_changes": false,
+  "not_verified": [
+    "Hosted onboarding completion",
+    "Express login link from TourniBase",
+    "Actual processing fee debits",
+    "Buyer fee allocation in a payment",
+    "Insufficient-balance refund funding",
+    "Live eligibility or payouts"
+  ],
+  "next_steps": [
+    "Implement scoped preview API and Express dashboard login links locally",
+    "Preserve historical account routing",
+    "Complete isolated Sandbox onboarding and payment/refund acceptance before activation"
+  ],
+  "onboarding_design": "Four generated concept boards and interactive workflow gallery in docs/design/onboarding-2026-10-20; no app onboarding implemented."
+}
