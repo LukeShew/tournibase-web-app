@@ -4,7 +4,7 @@
 > on both hosts. All 35 migrations are applied. Staging now uses Express with
 > platform-paid processing, Stripe-owned connected-account losses and the approved
 > per-ticket fees. Historical orders keep their original account. Sandbox purchase
-> and single-pass refund checks passed; remaining acceptance is tracked below.
+> and pass/full-order refund checks passed; remaining acceptance is tracked below.
 > Production pricing is unchanged and checkout stays disabled. Onboarding UI is on hold
 > at the user's request. See [current launch checklist](launch-readiness-2026-10-20.md).
 
@@ -16,8 +16,10 @@ The October 20 account-transition code is deployed to both hosts at `7ea3a1b`.
 Staging has the new fee configuration and a ready Express account. TB-002045
 confirmed a $50.09 purchase, $3.85 application fee and $46.24 director net.
 A $19.19 single-pass refund returned $17.49 ticket value and $1.70 fee, leaving
-the other pass active. Remaining-order/low-balance acceptance is still under
-verification. Production retains legacy 2% plus $0.30 per order with checkout
+the other pass active. The remaining $30.90 refund then succeeded; Stripe and
+TourniBase confirm $50.09 fully refunded, all $3.85 of fees returned, both passes
+refunded, and zero pending/failed amount. Explicit low-balance/pending/failure
+branch acceptance is still open. Production retains legacy 2% plus $0.30 per order with checkout
 disabled. The October 17 evidence below describes the older release.
 
 The pending buyer fee is $1 for each paid ticket through $10, or $1 plus 4% of

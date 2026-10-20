@@ -4,7 +4,7 @@
 > on both hosts. All 35 migrations are applied. Staging now uses Express with
 > platform-paid processing, Stripe-owned connected-account losses and the approved
 > per-ticket fees. Historical orders keep their original account. Sandbox purchase
-> and single-pass refund checks passed; remaining acceptance is tracked below.
+> and pass/full-order refund checks passed; remaining acceptance is tracked below.
 > Production pricing is unchanged and checkout stays disabled. Onboarding UI is on hold
 > at the user's request. See [current launch checklist](launch-readiness-2026-10-20.md).
 
@@ -45,7 +45,7 @@ before expanding into a larger platform.
 | Production app | [tournibase.com](https://tournibase.com) |
 | Payments | Direct charges to director accounts; staging uses the Sandbox and production is isolated for live Connect with paid checkout disabled |
 | Environment split | Deployed with one Vercel project and one Supabase project; organizations are isolated as `test` or `live` |
-| Database | 33 hosted/local migrations, including tier snapshots, refund-advance reporting, and dashboard/loss metadata; no historical repricing |
+| Database | 35 hosted/local migrations, including tier snapshots, refund-advance reporting, and retained account history; no historical repricing |
 | Email | Live through Resend and end-to-end tested |
 | Offline access | Downloadable pass PNG for Photos or Files |
 | Refund support | TourniBase full-order and pass-specific refunds with connected-account webhook synchronization |
@@ -94,7 +94,9 @@ legacy 2% + $0.30 per order with paid checkout off. Staging has `per_ticket_v2`
 with 400 BPS, 100 fixed cents and the Sandbox QA override false. Order TB-002045
 proved $46.24 director net from a $50.09 payment with a $3.85 buyer/application
 fee, two unique passes and a sent receipt. Its $19.19 single-pass refund returned
-exactly $1.70 of the fee. Remaining refund checks and live eligibility are tracked
+exactly $1.70 of the fee. The remaining $30.90 was then refunded successfully:
+all $50.09 and $3.85 of fees returned, both passes refunded, nothing pending/failed.
+Further refund edge cases and live eligibility are tracked
 in the launch checklist; Sandbox evidence is not a live payout verification.
 
 The current actionable gates are tracked in
@@ -340,7 +342,7 @@ Supabase project. The October buyer-fee/refund-lifecycle migrations and October
 reached Ready on October 17; the current application source is `7ea3a1b` on both
 sites. The October 17 Sandbox refund cases and zero-fee restoration are
 verified. The October 20 tiers are active in staging with Express. Purchase
-allocation, receipt/pass fulfillment and single-pass refund passed; remaining
+allocation, receipt/pass fulfillment and pass/full-order refunds passed; remaining
 refund acceptance and live configuration are tracked in the launch checklist.
 Real-director launch preparation remains deferred.
 

@@ -135,12 +135,16 @@ Keep production `TOURNIBASE_PAID_CHECKOUT_ENABLED=false` during QA.
   Stripe's payment breakdown confirms $46.24 net for the director and $3.85
   application fee. Two unique passes were issued; the receipt delivery is sent.
   Single-pass refund returned $19.19 ($17.49 base + $1.70 fee), disabled only
-  the Sunday pass and left $28.75 director net. The remaining-order refund
-  confirmation stalled the browser controls; no second refund completion is
-  confirmed. Do not submit a new refund until the existing request is inspected.
-  User was asked to close/dismiss the stuck staging Orders tab. Last database
-  check: $19.19 refunded, $0 pending/failed, Weekend pass active, Sunday refunded.
+  the Sunday pass and left $28.75 director net. After the user cleared the browser
+  confirmation, the existing remaining-order refund was verified without retry:
+  Stripe refunded $30.90 at 21:06 UTC. Total refunded is $50.09, including all
+  $3.85 of the buyer/application fee; pending/failed amounts are zero and both
+  passes are refunded. Stripe shows $0 director net. This verifies pass and full
+  refunds, but does not by itself prove every pending/failure/low-balance branch.
   This is Sandbox evidence, not a live payout verification.
+- Documentation/migration-identity commit `1992c64` subsequently reached Ready
+  on both branches: production `H6bLbtgSFJdcDJQiQ53uYnzTrNxK` and staging
+  `DV23RRc8tFwboK44FD4Tmh6j8Fxg`. Runtime code is unchanged from `7ea3a1b`.
 - Post-transition security advisor adds only an expected RLS-with-no-policy
   informational notice for the private admin-only audit table. Existing
   leaked-password and intentional metrics-wrapper notices remain as above.

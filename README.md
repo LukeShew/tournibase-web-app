@@ -4,7 +4,7 @@
 > on both hosts. All 35 migrations are applied. Staging now uses Express with
 > platform-paid processing, Stripe-owned connected-account losses and the approved
 > per-ticket fees. Historical orders keep their original account. Sandbox purchase
-> and single-pass refund checks passed; remaining acceptance is tracked below.
+> and pass/full-order refund checks passed; remaining acceptance is tracked below.
 > Production pricing is unchanged and checkout stays disabled. Onboarding UI is on hold
 > at the user's request. See [current launch checklist](docs/launch-readiness-2026-10-20.md).
 

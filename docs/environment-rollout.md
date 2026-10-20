@@ -4,7 +4,7 @@
 > on both hosts. All 35 migrations are applied. Staging now uses Express with
 > platform-paid processing, Stripe-owned connected-account losses and the approved
 > per-ticket fees. Historical orders keep their original account. Sandbox purchase
-> and single-pass refund checks passed; remaining acceptance is tracked below.
+> and pass/full-order refund checks passed; remaining acceptance is tracked below.
 > Production pricing is unchanged and checkout stays disabled. Onboarding UI is on hold
 > at the user's request. See [current launch checklist](launch-readiness-2026-10-20.md).
 
@@ -46,7 +46,9 @@ legacy 2% + $0.30 per order with paid checkout off. Staging has `per_ticket_v2`
 with 400 BPS, 100 fixed cents and the Sandbox QA override false. Order TB-002045
 proved $46.24 director net from a $50.09 payment with a $3.85 buyer/application
 fee, two unique passes and a sent receipt. Its $19.19 single-pass refund returned
-exactly $1.70 of the fee. Remaining refund checks and live eligibility are tracked
+exactly $1.70 of the fee. The remaining $30.90 was then refunded successfully:
+all $50.09 and $3.85 of fees returned, both passes refunded, nothing pending/failed.
+Further refund edge cases and live eligibility are tracked
 in the launch checklist; Sandbox evidence is not a live payout verification.
 
 The current actionable gates are tracked in
