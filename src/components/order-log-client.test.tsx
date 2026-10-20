@@ -1,6 +1,6 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { getOrderPassRefundAmountCents, OrderLogClient, RefundLifecycleNotice, StripePaymentReviewNotice, type OrderLogOrder, type OrderLogPass } from "./order-log-client";
+import { getOrderPassRefundAmountCents, hasPaidPassValue, OrderLogClient, RefundLifecycleNotice, StripePaymentReviewNotice, type OrderLogOrder, type OrderLogPass } from "./order-log-client";
 
 const pass: OrderLogPass = {
   id: 1,
@@ -29,6 +29,11 @@ const order: OrderLogOrder = {
 };
 
 describe("buyer fee in director order details", () => {
+  it("does not offer a Stripe refund for free passes or missing items", () => {
+    expect(hasPaidPassValue(order, pass)).toBe(true);
+    expect(hasPaidPassValue({ ...order, order_items: [{ ...order.order_items[0], unit_amount_cents: 0 }] }, pass)).toBe(false);
+    expect(hasPaidPassValue(order, { ...pass, order_item_id: 999 })).toBe(false);
+  });
   it("does not invite an app retry after a failed refund", () => {
     const html = renderToStaticMarkup(<StripePaymentReviewNotice order={{ ...order, refund_failed_amount: "10.30" }} />);
     expect(html).toContain("directly in Stripe");

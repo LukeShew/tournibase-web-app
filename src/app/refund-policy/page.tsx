@@ -11,7 +11,18 @@ export const metadata: Metadata = {
 export default function RefundPolicyPage() {
   return (
     <LegalPageShell eyebrow="Support" title="Refund policy">
-      <p className="text-sm text-slate-500">Last updated: October 17, 2026</p>
+      <p className="text-sm text-slate-500">Last updated: October 20, 2026</p>
+
+      <LegalSection title="The short version">
+        <p>
+          Approved refunds include the refunded ticket’s price and its TourniBase
+          buyer fee. Canceled events require full refunds for affected admission
+          orders. Under the director-free setup, TourniBase absorbs nonreturned
+          processing costs; organizers still return refunded ticket proceeds and
+          cover valid event-related chargebacks. TourniBase covers losses caused
+          by its own errors.
+        </p>
+      </LegalSection>
 
       <LegalSection title="Who handles refunds">
         <p>
@@ -19,6 +30,39 @@ export default function RefundPolicyPage() {
           and handles refund decisions. Buyers should contact the organizer
           listed on the event page or in the TourniBase confirmation email and
           include their order number.
+        </p>
+      </LegalSection>
+
+      <LegalSection title="Canceled events">
+        <p>
+          If an event is canceled, the organizer must notify buyers and arrange
+          full refunds of the affected admission orders, including TourniBase
+          buyer fees. Contact the organizer or TourniBase support with the event
+          and order number. Cancellation refunds require action by the organizer
+          and support; they are not triggered automatically by editing an event.
+        </p>
+      </LegalSection>
+
+      <LegalSection title="Who covers refund costs">
+        <p>
+          The organizer returns the ticket proceeds and TourniBase returns its
+          buyer fee. Under the director-free setup, TourniBase absorbs original
+          processing costs that Stripe does not return. If proceeds have already
+          been paid out, the organizer remains responsible for funding the
+          ticket-price portion. Historical orders retain their original payment
+          arrangement rather than being repriced by a later plan change.
+        </p>
+      </LegalSection>
+
+      <LegalSection title="Payment disputes and chargebacks">
+        <p>
+          Organizers cover valid chargebacks caused by their event or actions,
+          including the disputed payment and applicable dispute charges.
+          TourniBase covers losses caused by its own errors. Support reviews
+          the cause and evidence, while Stripe and card-network procedures
+          determine the payment dispute. Do not send a separate refund for an
+          open dispute without checking with support, to avoid paying twice.
+          Nothing in this policy limits rights that applicable law gives buyers.
         </p>
       </LegalSection>
 
@@ -46,7 +90,9 @@ export default function RefundPolicyPage() {
         <p>
           Refunds are processed through the organizer’s connected Stripe
           account. TourniBase should update pass status shortly after Stripe
-          sends the webhook event. The money returning to a card can take
+          sends the webhook event. A pending refund is not a completed refund.
+          A failed refund requires support review; do not submit it repeatedly.
+          The money returning to a card can take
           longer because it depends on Stripe, the card network, and the
           buyer’s bank.
         </p>

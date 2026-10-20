@@ -201,6 +201,18 @@ export default async function SettingsPage({
               ? " TourniBase covers ordinary payment processing, so the organization receives its full ticket price before refunds or disputes."
               : " Stripe processing fees still come out of the organization’s proceeds."}
           </p>
+          {directorFreePricing ? (
+            <p className="mt-3 text-sm leading-6 text-slate-600">
+              Approved refunds return the ticket price and buyer fee. TourniBase
+              absorbs nonreturned processing costs; organizers return ticket
+              proceeds for refunds and cover valid event-related chargebacks.
+              TourniBase covers losses caused by its own errors. Canceled events
+              require full refunds.{' '}
+              <Link href="/refund-policy" className="font-medium text-brand underline underline-offset-4">
+                Read the refund and dispute policy
+              </Link>
+            </p>
+          ) : null}
         </div>
       </section>
 

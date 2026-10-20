@@ -479,6 +479,7 @@ function OrderDetailsModal({
                       {order.payment_status !== "refunded" &&
                       pass.status !== "refunded" &&
                       pass.status !== "voided" &&
+                      hasPaidPassValue(order, pass) &&
                       canRefundStripePayment ? (
                         <button
                           type="button"
@@ -576,6 +577,11 @@ export function RefundLifecycleNotice({ order }: { order: OrderLogOrder }) {
       </p>
     ) : null}
   </>;
+}
+
+export function hasPaidPassValue(order: OrderLogOrder, pass: OrderLogPass) {
+  const item = order.order_items.find((candidate) => candidate.id === pass.order_item_id);
+  return item !== undefined && Number.isSafeInteger(item.unit_amount_cents) && item.unit_amount_cents > 0;
 }
 
 export function getOrderPassRefundAmountCents(order: OrderLogOrder, pass: OrderLogPass) {

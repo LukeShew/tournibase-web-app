@@ -10,6 +10,15 @@
 
 Last updated against local implementation and recorded hosted checks: October 20, 2026
 
+Evening follow-up: new pricing passed mixed/free/boundary purchases, exact
+pass/full refunds, pending completion, later failure correction and retry
+rejection. Admission, duplicate/refunded-pass blocking and scanner revocation
+also passed. Temporary ticket options are inactive. The user-approved refund,
+cancellation and dispute policy and free-pass refund-button fix are prepared
+locally, not deployed. All 439 tests/41 files, TypeScript, lint and build pass.
+Both hosted branches remain `f3b1b2f`, with runtime from `7ea3a1b`.
+See [complete evidence and current launch gates](qa-launch-follow-up-2026-10-20.md).
+
 ## Current direction
 
 TourniBase is currently a web-based digital gate system for youth basketball
@@ -40,7 +49,7 @@ before expanding into a larger platform.
 | Item | Current state |
 | --- | --- |
 | Progress | All 19 numbered phases complete |
-| Current phase | Investigate the selected Express model's preview eligibility and validate the pending per-ticket pricing release |
+| Current phase | Sandbox Express/pricing acceptance passed for core flows; complete live eligibility, operational readiness and policy deployment |
 | Next phase | Finish payment acceptance and live pilot readiness; new-director onboarding UI is on hold at the user's request |
 | Production app | [tournibase.com](https://tournibase.com) |
 | Payments | Direct charges to director accounts; staging uses the Sandbox and production is isolated for live Connect with paid checkout disabled |
@@ -50,7 +59,7 @@ before expanding into a larger platform.
 | Offline access | Downloadable pass PNG for Photos or Files |
 | Refund support | TourniBase full-order and pass-specific refunds with connected-account webhook synchronization |
 | Legal/support pages | Footer links to Terms, Privacy, Refund Policy, and Support |
-| Launch dependency | Resolve platform-paid processing and insufficient-balance refunds, deploy and validate the new pricing, complete live director onboarding, explicitly enable checkout, and obtain genuine pilot payment/payout evidence |
+| Launch dependency | Deploy policy/UI follow-up; commercial hosting and backup recovery; remaining controlled low-balance/mobile checks; live director onboarding and pricing configuration; explicit checkout activation and genuine payment/payout evidence |
 
 No original numbered MVP phases remain. The pricing change and guided setup
 below are later work, not completed phases. See the [Final MVP Handoff](./mvp-handoff.md) for
@@ -162,13 +171,14 @@ Tourney is an adjacent tournament-operations product.
 QR tickets and app-free buying are not unique advantages. TourniBase must prove
 easy setup, reliable connected payments, clear gate decisions, reconciliation,
 and event-day support. It currently lacks true offline gate validation and
-native Wallet passes. Do not claim lowest total cost or no director fees:
-Stripe processing still comes from the director's proceeds.
+native Wallet passes. Do not claim lowest total cost. Legacy orders retain
+director-paid processing; new staging orders use platform-paid processing.
 
-The pending October 20 model is intended to remove ordinary processing
-deductions from director proceeds, but that claim is not yet verified or active.
-Refund/dispute exceptions and prominent customer-facing wording still need a
-separate policy decision; changing Terms alone does not complete that work.
+The October 20 director-free model is verified in Sandbox, not live. Refund,
+cancellation and dispute conditions are approved and prepared locally with
+prominent Settings wording. Real-account eligibility and publication remain
+gates before marketing the live offer; changing Terms alone does not complete
+payment setup or establish an automatic cancellation/dispute collection process.
 
 The October 17 [source-backed market report](../../../docs/market-competition-2026-10-17.md)
 contains current official pricing, feature limits, vendor/brand corrections,

@@ -11,6 +11,13 @@
 Checkpoint: October 20, 2026. This is a continuation record, not a launch
 approval or published refund/dispute policy.
 
+Evening follow-up: boundary/mixed/free purchases, pass/full refunds, pending
+completion, later failure, app retry rejection and admission/revocation passed.
+The user approved the refund/dispute allocation; website wording is prepared
+locally, not published. Latest suite: 439 tests/41 files plus typecheck/lint/build.
+Both deployed branches remain `f3b1b2f`. The definitive remaining gates and test
+limits are in [follow-up QA](qa-launch-follow-up-2026-10-20.md).
+
 ## Current continuation
 
 Express account creation now uses the per-request `2026-09-30.preview`
@@ -102,7 +109,8 @@ TourniBase's responsibility for its own expenses or negative balance.
 Express offers payment, payout, bank-detail, refund, dispute, and reporting
 workflows. Sandbox access requires a server-generated login link. The local dashboard and order routes now create fresh Express login links
 and retain full-Dashboard deep links. Historical order account IDs remain
-authoritative. No existing organization has been switched.
+authoritative. Only the approved staging organization's future purchases were
+switched; historical orders retain their original connection.
 [Express Dashboard](https://docs.stripe.com/connect/express-dashboard),
 [account configuration](https://docs.stripe.com/connect/accounts-v2/connected-account-configuration).
 
@@ -130,14 +138,15 @@ insufficient funds. Pass cancellation and refunded totals remain success-only.
 A failed/canceled refund preserves the advance for manual reconciliation;
 there is no automatic recovery or buyer-refund retry.
 
-Before activation, authorize the staging connection transition; validate mixed/free/
-boundary quantities, fee transfer, platform processing, receipts, partial/full
-and low-balance refunds, historical routing and environment separation. Local
-checks and October 17 legacy orders are not acceptance of the new model.
+The approved staging transition and mixed/free/boundary purchases are complete,
+along with exact partial/full refunds, pending completion and failure handling.
+A controlled low-balance/provider-reason check remains open. The October 20
+evidence and limitations are recorded in the follow-up QA report; October 17
+legacy orders are not acceptance of the new model.
 
 Keep production checkout off until a real director is ready and the live
 launch gates are satisfied. Refund/dispute policy and clear offer conditions
-still need approval. No new legal promise has been published.
+are approved and prepared locally. No new legal promise has been published.
 
 ## New-account introduction — on hold
 

@@ -10,6 +10,11 @@
 
 Last updated: October 20, 2026
 
+Latest follow-up: orders 2046–2049 verified boundary/free purchases, pending
+refund completion, exact pass/full refunds and a later failure with app retry
+rejection. The approved policy and free-pass refund-button fix are local and
+await push/deployment. See [QA evidence](qa-launch-follow-up-2026-10-20.md).
+
 ## Pricing rollout — staging active, live checkout off
 
 The October 20 account-transition code is deployed to both hosts at `7ea3a1b`.
@@ -18,8 +23,9 @@ confirmed a $50.09 purchase, $3.85 application fee and $46.24 director net.
 A $19.19 single-pass refund returned $17.49 ticket value and $1.70 fee, leaving
 the other pass active. The remaining $30.90 refund then succeeded; Stripe and
 TourniBase confirm $50.09 fully refunded, all $3.85 of fees returned, both passes
-refunded, and zero pending/failed amount. Explicit low-balance/pending/failure
-branch acceptance is still open. Production retains legacy 2% plus $0.30 per order with checkout
+refunded, and zero pending/failed amount. Follow-up orders 2046–2048 also passed
+pending completion, failure correction and app retry rejection. Controlled
+low-balance/provider-reason verification remains open. Production retains legacy 2% plus $0.30 per order with checkout
 disabled. The October 17 evidence below describes the older release.
 
 The pending buyer fee is $1 for each paid ticket through $10, or $1 plus 4% of
@@ -36,14 +42,16 @@ in Sandbox. Live eligibility remains unverified. Tiered Checkout checks both pla
 Stripe-owned losses; existing account routing is preserved. Express login
 links and account creation are now deployed.
 
-### Local work; hosted blocker: insufficient connected-account balance
+### Refund funding: observed early return, remaining controlled check
 
 The previous release returned its application fee only after the buyer
 refund succeeded. A director's connected balance may contain only the base
 ticket proceeds, while a full buyer refund also needs the fee held by the
 platform. An insufficient-funds refund can therefore remain pending. The
-new-model early-funding path is deployed and locally tested, but its low-balance
-Sandbox acceptance remains outstanding.
+new-model early-funding path is deployed and locally tested. Order 2046 observed
+a $1.70 fee return while the buyer refund remained pending, followed by full
+completion. Exact provider pending-reason inspection and a deliberately
+controlled balance-exhaustion test remain outstanding.
 
 The deployed path advances only the saved order/pass fee for Stripe-reported
 `pending_reason=insufficient_funds`, with idempotent retries. Buyer-refunded
@@ -64,16 +72,29 @@ Keep historical orders routed to their original connected account during any
 future account migration; never replace old refund routing with a new Express
 account.
 
-### Refund/dispute policy remains a decision
+### Approved refund/dispute policy — prepared, not published
 
-The new ordinary-sale goal is that directors retain their full base ticket
-revenue and TourniBase pays processing. That is not yet an active or verified
-promise. Refund eligibility, responsibility for non-returned processing costs,
-dispute principal/fees, and the wording of any free-director offer still require
-an approved policy. No new Terms or refund/dispute promise has been published
-by this implementation. Cost-affecting conditions must be clear near the offer,
-not only in Terms. See the
-[pricing handoff](pricing-handoff-2026-10-20.md).
+The user approved ticket-plus-buyer-fee refunds; TourniBase absorbs nonreturned
+processing under the director-free setup; canceled events require full refunds;
+organizers cover valid event-related chargebacks and TourniBase covers its own
+errors. Local Terms, Refund Policy and prominent Settings conditions implement
+that wording. Historical orders retain their original payment arrangement.
+Publication requires the next approved deployment. Legal review is still advised.
+
+Support must identify the original connected account and order, review existing
+refund/dispute records, and confirm funding before action. For cancellation,
+organizers notify buyers and coordinate each affected order's full refund;
+editing event status does not automatically refund orders. Reconcile ticket
+principal, buyer fee, platform fee advances and nonreturned processing separately.
+Do not issue a second refund against an open dispute. Record the evidence and
+responsible party; this policy adds no automatic dispute-debit mechanism.
+Maintain funds to cover TourniBase's processing/refund costs and review unresolved
+pending/failed cases rather than repeatedly submitting them.
+
+Order 2048 is intentionally retained as a Sandbox failed-refund case: $11.41
+failed, $0 completed, $1.40 fee advance retained, pass blocked. The app rejects
+a repeat attempt. Do not silently clear this evidence or treat it as a live debt.
+See [current QA limits](qa-launch-follow-up-2026-10-20.md).
 
 ## Historical deployed release — October 17
 

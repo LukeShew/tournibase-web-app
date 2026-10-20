@@ -3,6 +3,22 @@
 This is the current continuation record. Historical October 17 tests do not
 verify the new pricing model. Production checkout stays disabled.
 
+## Latest follow-up — October 20 evening
+
+Mixed-tier/boundary and free checkout, exact partial/full refunds, pending-to-
+success, later refund failure and app retry rejection, first admission,
+duplicate/refunded-pass rejection, and scanner revocation passed in staging.
+Orders 2046–2049 have sent receipt records. Temporary ticket options are inactive;
+zero active scanner links remain. No real payments or camera use occurred.
+
+The approved refund/dispute policy and free-pass refund-button fix are prepared
+locally, not deployed. Latest validation: 439 tests/41 files, TypeScript, lint,
+webpack build. Both hosted branches remain `f3b1b2f` (runtime `7ea3a1b`).
+See [detailed evidence and updated launch gates](qa-launch-follow-up-2026-10-20.md).
+Supabase Free lacks project backups and leaked-password protection; Vercel's
+commercial-plan requirement is unresolved. Live director onboarding, pricing
+activation and a genuine payment/payout remain outstanding.
+
 ## Completed this continuation
 
 - Implemented Accounts v2 Express creation for `per_ticket_v2`, using
@@ -99,13 +115,17 @@ Keep production `TOURNIBASE_PAID_CHECKOUT_ENABLED=false` during QA.
 - [x] Deploy matching reviewed application code; both builds and public smoke checks pass.
 - [x] Validate compatible staging organization setup and safe historical routing.
 - [x] Activate new tiers in staging only; live activation remains gated.
-- [ ] Sandbox mixed-tier/free/boundary purchases; verify processing payer,
-      platform fee, director proceeds, receipt and individual passes.
-- [ ] Pass/full/low-balance refunds; pending/failure/retry and exact accounting.
-      Local funding code is not Stripe acceptance evidence.
+- [x] Sandbox mixed-tier/free/boundary purchases and exact saved fees; receipt
+      submission and unique passes. Stripe allocation verified on order 2045.
+- [x] Pass/full refunds, pending-to-success, failure correction and app retry
+      rejection. A controlled low-balance/provider-reason check remains open;
+      early fee return was observed, but is not exhaustive funding proof.
 - [ ] New-director onboarding UI: on hold at the user's request; do not build yet.
 - [ ] Full public/authenticated/mobile/gate QA, without camera.
-- [ ] Final refund/dispute/cancellation policy and clear offer conditions.
+- [x] User-approved refund/dispute/cancellation policy prepared with visible
+      offer conditions; publication and legal/operating review remain open.
+- [ ] Approve push and deploy this follow-up to both hosts.
+- [ ] Commercial hosting, backup coverage and a successful recovery drill.
 - [ ] Operational security review. Production npm audit: zero advisories.
       Full npm audit: five dev-only findings from the same unpatched braces
       advisory (GHSA-vfj7-8cjw-p6xm); no unsafe toolchain downgrade applied.

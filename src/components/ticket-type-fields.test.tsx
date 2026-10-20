@@ -3,13 +3,15 @@ import { describe, expect, it } from "vitest";
 import { TicketTypeFields } from "./ticket-type-fields";
 
 describe("director ticket-price guidance", () => {
-  it("explains the base price, buyer fee, and remaining processing cost", () => {
+  it("explains the base price without assuming a legacy fee or processing payer", () => {
     const html = renderToStaticMarkup(
       <TicketTypeFields defaults={{ validFrom: "2026-10-17", validUntil: "2026-10-18" }} disabled={false} errors={{}} idPrefix="ticket-new" />,
     );
     expect(html).toContain("Base admission price");
-    expect(html).toContain("added once per online order");
-    expect(html).toContain("processing is still deducted from your proceeds");
+    expect(html).toContain("Your payment setup in Settings explains");
+    expect(html).toContain("Approved refunds return the ticket price");
+    expect(html).not.toContain("added once per online order");
+    expect(html).not.toContain("processing is still deducted from your proceeds");
     expect(html).toContain('aria-describedby="ticket-new-price-help"');
     expect(html).toContain('aria-describedby="ticket-new-description-help"');
     expect(html).toContain("avoid advertising a base price");

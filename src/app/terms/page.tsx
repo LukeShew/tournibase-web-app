@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 export default function TermsPage() {
   return (
     <LegalPageShell eyebrow="Legal" title="Terms of use">
-      <p className="text-sm text-slate-500">Last updated: October 17, 2026</p>
+      <p className="text-sm text-slate-500">Last updated: October 20, 2026</p>
 
       <LegalSection title="What TourniBase does">
         <p>
@@ -47,18 +47,54 @@ export default function TermsPage() {
       <LegalSection title="Payments and refunds">
         <p>
           Card payments are processed through the event organizer’s connected
-          Stripe account. Stripe deducts its processing fees from the
-          organizer’s proceeds and controls the organizer’s bank payout
-          schedule. TourniBase does not store full card numbers.
+          Stripe account. Stripe controls bank payout timing. TourniBase does
+          not store full card numbers. Under the director-free payment setup,
+          TourniBase covers ordinary payment processing and the organizer keeps
+          the base ticket price on completed sales, before refunds or disputes.
+          Historical orders keep the processing arrangement and fees recorded
+          when they were purchased; a later plan change does not reprice them.
         </p>
         <p>
           Buyers pay any TourniBase service fee in addition to the ticket
           price. The ticket subtotal, service fee, and total are shown before
           checkout. Stripe transfers the service fee to TourniBase as an
           application fee; it does not reduce the organizer’s ticket price.
-          Refund requests and decisions are handled by the event organizer.
+          The fee supports online ticketing, mobile passes, and payment handling.
+          Refund requests and decisions are handled by the event organizer,
+          subject to the cancellation policy and applicable consumer rights.
           Refund timing can depend on Stripe, the card network, and the
           buyer’s bank.
+        </p>
+      </LegalSection>
+
+      <LegalSection title="Refunds, cancellations, and disputes">
+        <p>
+          Approved refunds return the refunded ticket’s price and its associated
+          TourniBase buyer fee. Organizers return the corresponding ticket
+          proceeds; TourniBase returns its fee. Under the director-free setup,
+          TourniBase also absorbs payment-processing costs that Stripe does not
+          return. Free for directors means ordinary completed ticket sales, not
+          that organizers may keep proceeds from refunded or disputed sales.
+        </p>
+        <p>
+          A canceled event requires full refunds, including buyer fees, for its
+          affected admission orders. Organizers must notify buyers and coordinate
+          refunds promptly, including providing funds if ticket proceeds have
+          already been paid out. TourniBase does not automatically detect an
+          event cancellation or issue every cancellation refund.
+        </p>
+        <p>
+          Organizers are responsible for valid chargebacks caused by their event
+          or actions, including the disputed payment and applicable dispute
+          charges. TourniBase covers losses caused by its own errors. Stripe and
+          card-network dispute procedures still apply. Contact support so the
+          cause, evidence, and allocation can be reviewed; a dispute is not an
+          instruction to issue a second refund. These terms do not limit
+          nonwaivable consumer rights.
+        </p>
+        <p>
+          See the <a href="/refund-policy" className="font-medium text-brand underline underline-offset-4">refund and dispute policy</a>{' '}
+          for the process and refund status guidance.
         </p>
       </LegalSection>
 

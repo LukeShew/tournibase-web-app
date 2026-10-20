@@ -75,8 +75,10 @@ export function TicketTypeFields({
         </div>
         <p id={`${idPrefix}-price-help`} className="mt-2 text-xs leading-5 text-slate-400">
           Enter the ticket value before any TourniBase fee. Buyers see totals
-          including the applicable fee, added once per online order. Stripe
-          processing is still deducted from your proceeds.
+          including the applicable fee. Your payment setup in Settings explains
+          who pays processing costs. Approved refunds return the ticket price
+          and its buyer fee; cancellation and dispute responsibilities are
+          explained in the refund policy.
         </p>
       </FormField>
 
