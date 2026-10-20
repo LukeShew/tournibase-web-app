@@ -9,12 +9,14 @@ export function getIdlePublicationMessage({
   checkoutConfigured,
   hasPaidTickets,
   paymentReady,
+  processingSetupRequired = false,
   status,
 }: {
   activeTicketCount: number;
   checkoutConfigured: boolean;
   hasPaidTickets: boolean;
   paymentReady: boolean;
+  processingSetupRequired?: boolean;
   status: TournamentPublicationStatus;
 }) {
   if (status === "closed" || status === "archived") {
@@ -28,6 +30,13 @@ export function getIdlePublicationMessage({
     return {
       className: "text-amber-700",
       text: "Add an active ticket before publishing.",
+    };
+  }
+
+  if (hasPaidTickets && !paymentReady && processingSetupRequired) {
+    return {
+      className: "text-amber-700",
+      text: "Paid checkout is paused. Contact TourniBase support in Settings to finish processing setup; reconnecting Stripe will not resolve it.",
     };
   }
 

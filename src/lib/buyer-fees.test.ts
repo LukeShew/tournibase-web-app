@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getBuyerFeeRefundedCents, getPassBuyerFeeCents, type BuyerFeeOrderItem } from "./buyer-fees";
+import { getBuyerFeeFundingTargetCents, getBuyerFeeRefundedCents, getPassBuyerFeeCents, type BuyerFeeOrderItem } from "./buyer-fees";
 
 function shares(items: BuyerFeeOrderItem[], fee: number) {
   return items.flatMap((item) => Array.from({ length: item.quantity }, (_, index) =>
@@ -26,6 +26,36 @@ describe("buyer fee allocation", () => {
 
   it("keeps zero-fee and historical tickets unchanged", () => {
     expect(shares([{ id: 1, quantity: 3, unit_amount_cents: 1800 }], 0)).toEqual([0, 0, 0]);
+  });
+
+  it("refunds the charged fee for each ticket instead of spreading new tiered fees by price", () => {
+    const items = [
+      { id: 1, quantity: 2, unit_amount_cents: 1500, buyer_fee_unit_amount_cents: 160 },
+      { id: 2, quantity: 1, unit_amount_cents: 500, buyer_fee_unit_amount_cents: 100 },
+      { id: 3, quantity: 1, unit_amount_cents: 1001, buyer_fee_unit_amount_cents: 140 },
+      { id: 4, quantity: 2, unit_amount_cents: 0, buyer_fee_unit_amount_cents: 0 },
+    ];
+    expect(shares(items, 560)).toEqual([160, 160, 100, 140, 0, 0]);
+    expect(shares([...items].reverse(), 560)).toEqual([0, 0, 140, 100, 160, 160]);
+  });
+
+  it("uses saved fees even if the current pricing rules would charge something different", () => {
+    const items = [{ id: 1, quantity: 2, unit_amount_cents: 1500, buyer_fee_unit_amount_cents: 175 }];
+    expect(shares(items, 350)).toEqual([175, 175]);
+    expect(shares([{ ...items[0], buyer_fee_unit_amount_cents: 0 }], 0)).toEqual([0, 0]);
+  });
+
+  it("rejects incomplete, invalid or inconsistent saved fees before requesting a refund", () => {
+    const item = { id: 1, quantity: 1, unit_amount_cents: 1500, buyer_fee_unit_amount_cents: 160 };
+    const input = { buyerFeeCents: 160, orderItems: [item], orderItemId: 1, sequenceNumber: 1 };
+    expect(() => getPassBuyerFeeCents({ ...input, buyerFeeCents: 159 })).toThrow("original order fee");
+    expect(() => getPassBuyerFeeCents({ ...input, buyerFeeCents: 0 })).toThrow("original order fee");
+    expect(() => getPassBuyerFeeCents({ ...input, orderItems: [item, { id: 2, quantity: 1, unit_amount_cents: 500 }] })).toThrow("missing");
+    expect(() => getPassBuyerFeeCents({ ...input, orderItems: [{ ...item, buyer_fee_unit_amount_cents: -1 }] })).toThrow("nonnegative");
+    expect(() => getPassBuyerFeeCents({ ...input, orderItems: [{ ...item, buyer_fee_unit_amount_cents: 1.5 }] })).toThrow("nonnegative");
+    expect(() => getPassBuyerFeeCents({ ...input, orderItems: [{ ...item, unit_amount_cents: 0 }] })).toThrow("Complimentary");
+    expect(() => getPassBuyerFeeCents({ ...input, feePolicy: "per_ticket_v2", orderItems: [{ ...item, buyer_fee_unit_amount_cents: null }] })).toThrow("missing");
+    expect(() => getPassBuyerFeeCents({ ...input, buyerFeeCents: 0, feePolicy: "per_ticket_v2", orderItems: [{ ...item, buyer_fee_unit_amount_cents: null }] })).toThrow("missing");
   });
 
   it("allocates mixed prices and awkward pennies without losing money", () => {
@@ -119,5 +149,126 @@ describe("buyer fee refund accounting", () => {
     expect(() => getBuyerFeeRefundedCents({ ...input, refunds: [refund("re_1", 1024, 24)],
       expectedPassRefunds: new Map([[1, { ticketCents: 1000, buyerFeeCents: 23 }]]),
     })).toThrow("original pass");
+  });
+});
+
+describe("bounded application-fee funding for pending refunds", () => {
+  const pendingInput = {
+    orderId: 1,
+    buyerFeeCents: 260,
+    chargeAmountCents: 2260,
+    chargeAmountRefundedCents: 0,
+    expectedPassRefunds: new Map([
+      [1, { ticketCents: 500, buyerFeeCents: 100 }],
+      [2, { ticketCents: 1500, buyerFeeCents: 160 }],
+    ]),
+  };
+  const pendingPass = (id: number, amount: number, fee: number) => ({
+    ...refund(`re_${id}`, amount, fee, "pending"), pending_reason: "insufficient_funds",
+  });
+  const full = {
+    id: "re_full", amount: 2260, status: "pending", pending_reason: "insufficient_funds",
+    metadata: { order_id: "1" },
+  };
+
+  it("funds only the original fee for an insufficient-funds whole-order refund", () => {
+    expect(getBuyerFeeFundingTargetCents({ ...pendingInput, refunds: [full] })).toBe(260);
+    expect(getBuyerFeeRefundedCents({ ...pendingInput, refunds: [full] })).toBe(0);
+  });
+
+  it("uses exact mixed-pass fees instead of proportional advances", () => {
+    const child = pendingPass(1, 600, 100);
+    expect(getBuyerFeeFundingTargetCents({ ...pendingInput, refunds: [child] })).toBe(100);
+    expect(getBuyerFeeFundingTargetCents({
+      ...pendingInput, refunds: [child, pendingPass(2, 1660, 160)],
+    })).toBe(260);
+  });
+
+  it("deduplicates deliveries and combines a successful pass with an eligible remaining-order refund", () => {
+    const child = refund("re_1", 600, 100);
+    const remaining = { ...full, amount: 1660 };
+    expect(getBuyerFeeFundingTargetCents({
+      ...pendingInput, chargeAmountRefundedCents: 600, refunds: [child, remaining, remaining],
+    })).toBe(260);
+    expect(getBuyerFeeRefundedCents({
+      ...pendingInput, chargeAmountRefundedCents: 600, refunds: [child, remaining],
+    })).toBe(100);
+  });
+
+  it.each([
+    { status: "pending", pending_reason: "processing" },
+    { status: "pending", pending_reason: null },
+    { status: "requires_action", pending_reason: "insufficient_funds" },
+    { status: "failed", pending_reason: "insufficient_funds" },
+    { status: "canceled", pending_reason: "insufficient_funds" },
+  ])("does not fund a refund with status/reason %j", (state) => {
+    expect(getBuyerFeeFundingTargetCents({
+      ...pendingInput, refunds: [{ ...full, ...state }],
+    })).toBe(0);
+  });
+
+  it("does not guess a fee for an external or incomplete whole-order partial refund", () => {
+    expect(getBuyerFeeFundingTargetCents({
+      ...pendingInput, refunds: [{ ...full, amount: 600, metadata: {} }],
+    })).toBe(0);
+    expect(getBuyerFeeFundingTargetCents({
+      ...pendingInput, refunds: [{ ...full, amount: 600 }],
+    })).toBe(0);
+  });
+
+  it("does not fund the remainder while a different refund is still processing", () => {
+    expect(getBuyerFeeFundingTargetCents({
+      ...pendingInput,
+      refunds: [{ ...pendingPass(1, 600, 100), pending_reason: "processing" }, { ...full, amount: 1660 }],
+    })).toBe(0);
+  });
+
+  it("rejects tampered pass metadata even if pending refunds sum to the entire charge", () => {
+    const child = pendingPass(1, 600, 100);
+    for (const metadata of [
+      { ...child.metadata, buyer_fee_refund_cents: "99", ticket_refund_cents: "501" },
+      { ...child.metadata, pass_id: "999" },
+      { ...child.metadata, order_id: "2" },
+      { ...child.metadata, buyer_fee_refund_cents: "-1" },
+    ]) {
+      expect(() => getBuyerFeeFundingTargetCents({
+        ...pendingInput, refunds: [{ ...child, metadata }, pendingPass(2, 1660, 160)],
+      })).toThrow(/metadata/);
+    }
+    expect(() => getBuyerFeeFundingTargetCents({
+      ...pendingInput, expectedPassRefunds: undefined, refunds: [child],
+    })).toThrow("original pass");
+    expect(() => getBuyerFeeFundingTargetCents({
+      ...pendingInput, refunds: [{ ...full, metadata: { order_id: "1", pass_id: "" } }],
+    })).toThrow("metadata");
+  });
+
+  it("rejects multiple active refunds of the same pass and inconsistent snapshots", () => {
+    const child = pendingPass(1, 600, 100);
+    expect(() => getBuyerFeeFundingTargetCents({
+      ...pendingInput, refunds: [child, { ...child, id: "re_duplicate_pass" }],
+    })).toThrow("same pass");
+    expect(() => getBuyerFeeFundingTargetCents({
+      ...pendingInput, refunds: [child, { ...child, amount: 601 }],
+    })).toThrow("snapshots changed");
+    expect(() => getBuyerFeeFundingTargetCents({
+      ...pendingInput, refunds: [child, full],
+    })).toThrow("totals changed");
+  });
+
+  it("retains successful fee accounting when an eligible request later succeeds or fails", () => {
+    const pending = pendingPass(2, 1660, 160);
+    const child = refund("re_1", 600, 100);
+    expect(getBuyerFeeFundingTargetCents({
+      ...pendingInput, chargeAmountRefundedCents: 600, refunds: [child, pending],
+    })).toBe(260);
+    expect(getBuyerFeeFundingTargetCents({
+      ...pendingInput, chargeAmountRefundedCents: 2260,
+      refunds: [child, { ...pending, status: "succeeded" }],
+    })).toBe(260);
+    expect(getBuyerFeeFundingTargetCents({
+      ...pendingInput, chargeAmountRefundedCents: 600,
+      refunds: [child, { ...pending, status: "failed" }],
+    })).toBe(100);
   });
 });

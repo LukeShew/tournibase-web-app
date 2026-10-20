@@ -3,6 +3,7 @@ import {
   assertStripeEventMatchesAppEnvironment,
   assertStripeRoutingMatches,
   calculatePlatformFeeCents,
+  calculateOrderPlatformFeeCents,
   getApplicationFeeRefundTargetCents,
   getPlatformFeeConfiguration,
   getStripeDashboardPaymentUrl,
@@ -10,7 +11,60 @@ import {
   getStripeRequestOptions,
   isCurrentStripeEnvironment,
   isPaidStripeRefundAmountCents,
+  TIERED_PLATFORM_FEE_CONFIGURATION,
 } from "./stripe-connect-payments";
+
+describe("per-ticket pricing", () => {
+  const configuration = TIERED_PLATFORM_FEE_CONFIGURATION;
+
+  it.each([
+    [0, 0], [1, 100], [500, 100], [999, 100], [1000, 100],
+    [1001, 140], [1012, 140], [1013, 141], [1500, 160], [2000, 180], [2500, 200],
+  ])("charges the correct fee for a %i-cent ticket", (price, fee) => {
+    expect(calculatePlatformFeeCents(price, configuration)).toBe(fee);
+  });
+
+  it("selects the tier per ticket, never from the cart subtotal", () => {
+    expect(calculateOrderPlatformFeeCents([
+      { quantity: 2, unit_amount_cents: 1000 },
+      { quantity: 1, unit_amount_cents: 2000 },
+      { quantity: 3, unit_amount_cents: 0 },
+    ], configuration)).toBe(380);
+    expect(calculateOrderPlatformFeeCents([{ quantity: 2, unit_amount_cents: 500 }], configuration)).toBe(200);
+    expect(calculateOrderPlatformFeeCents([{ quantity: 1, unit_amount_cents: 1000 }], configuration)).toBe(100);
+  });
+
+  it("rounds each pass once before applying quantity, consistent with individual quotes", () => {
+    expect(calculateOrderPlatformFeeCents([{ quantity: 3, unit_amount_cents: 1013 }], configuration)).toBe(423);
+    expect(calculateOrderPlatformFeeCents([{ quantity: 0, unit_amount_cents: 2000 }], configuration)).toBe(0);
+    expect(calculateOrderPlatformFeeCents([], configuration)).toBe(0);
+  });
+
+  it("matches the 1,000-spectator tournament example", () => {
+    expect(calculateOrderPlatformFeeCents([
+      { quantity: 800, unit_amount_cents: 2000 },
+      { quantity: 200, unit_amount_cents: 1500 },
+    ], configuration)).toBe(176000);
+  });
+
+  it("preserves explicitly historical order-based calculations", () => {
+    expect(calculateOrderPlatformFeeCents([
+      { quantity: 2, unit_amount_cents: 1000 },
+      { quantity: 1, unit_amount_cents: 2000 },
+    ], { basisPoints: 200, fixedCents: 30 })).toBe(110);
+  });
+
+  it("loads the new policy explicitly and rejects invalid money or configuration", () => {
+    expect(getPlatformFeeConfiguration({ TOURNIBASE_PLATFORM_FEE_POLICY: "per_ticket_v2",
+      TOURNIBASE_PLATFORM_FEE_BPS: "400", TOURNIBASE_PLATFORM_FEE_FIXED_CENTS: "100" })).toEqual(configuration);
+    expect(() => getPlatformFeeConfiguration({ TOURNIBASE_PLATFORM_FEE_POLICY: "unknown" })).toThrow("TOURNIBASE_PLATFORM_FEE_POLICY");
+    for (const bad of [-1, 1.5, Number.NaN, Number.POSITIVE_INFINITY]) {
+      expect(() => calculateOrderPlatformFeeCents([{ quantity: bad, unit_amount_cents: 1000 }], configuration)).toThrow();
+      expect(() => calculateOrderPlatformFeeCents([{ quantity: 1, unit_amount_cents: bad }], configuration)).toThrow();
+    }
+    expect(() => calculateOrderPlatformFeeCents([{ quantity: 2, unit_amount_cents: Number.MAX_SAFE_INTEGER }], configuration)).toThrow("exceeds");
+  });
+});
 
 describe("Stripe Connect payment helpers", () => {
   it("defaults platform fees to zero", () => {

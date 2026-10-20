@@ -1,8 +1,22 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { PublicTicketForm, TicketOfferPrice, TicketPriceSummary } from "./public-ticket-form";
+import { TIERED_PLATFORM_FEE_CONFIGURATION } from "@/lib/stripe-connect-payments";
 
 describe("upfront ticket offer pricing", () => {
+  it.each([[10, "$11.00"], [10.01, "$11.41"], [15, "$16.60"], [20, "$21.80"], [0, "$0.00"]])(
+    "shows the exact new one-pass total for a $%s ticket", (price, expected) => {
+      const html = renderToStaticMarkup(<TicketOfferPrice ticketPrice={price} platformFeeConfiguration={TIERED_PLATFORM_FEE_CONFIGURATION} />);
+      expect(html).toContain(expected);
+    },
+  );
+
+  it("explains that displayed per-pass totals include processing", () => {
+    const html = renderToStaticMarkup(<PublicTicketForm eventName="Tournament" eventSlug="tournament" eventTimeZone="America/New_York" platformFeeConfiguration={TIERED_PLATFORM_FEE_CONFIGURATION} tickets={[{ id: 1, name: "Saturday", price: 10, quantityLimit: 10, description: null, validFrom: "2026-10-17T04:00:00Z", validUntil: "2026-10-18T03:59:59Z" }]} />);
+    expect(html).toContain("$11.00");
+    expect(html).toContain("processing for each paid pass");
+    expect(html).not.toContain("once on the whole order");
+  });
   it("advertises the fee-inclusive one-pass total, not just the base price", () => {
     const html = renderToStaticMarkup(<TicketOfferPrice ticketPrice={10} platformFeeConfiguration={{ basisPoints: 200, fixedCents: 30 }} />);
     expect(html).toContain("$10.50");
@@ -28,6 +42,21 @@ describe("upfront ticket offer pricing", () => {
 });
 
 describe("buyer checkout price summary", () => {
+  it("sums each selected pass fee, including adult plus child and free passes", () => {
+    const html = renderToStaticMarkup(<TicketPriceSummary ticketSubtotalCents={3000} items={[
+      { quantity: 1, unit_amount_cents: 2000 },
+      { quantity: 2, unit_amount_cents: 500 },
+      { quantity: 1, unit_amount_cents: 0 },
+    ]} platformFeeConfiguration={TIERED_PLATFORM_FEE_CONFIGURATION} />);
+    expect(html).toContain("$30.00");
+    expect(html).toContain("$3.80");
+    expect(html).toContain("$33.80");
+    expect(html).toContain("payment processing");
+  });
+
+  it("cannot silently use the subtotal as a single-ticket tier", () => {
+    expect(() => renderToStaticMarkup(<TicketPriceSummary ticketSubtotalCents={2000} platformFeeConfiguration={TIERED_PLATFORM_FEE_CONFIGURATION} />)).toThrow("selected ticket prices");
+  });
   it("shows a $10 ticket plus the $0.50 buyer fee before checkout", () => {
     const html = renderToStaticMarkup(<TicketPriceSummary ticketSubtotalCents={1000} platformFeeConfiguration={{ basisPoints: 200, fixedCents: 30 }} />);
     expect(html).toContain("Ticket subtotal");

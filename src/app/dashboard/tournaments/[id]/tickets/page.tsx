@@ -7,7 +7,10 @@ import {
   type TicketTypeRecord,
 } from "@/components/ticket-type-card";
 import { requireDirector } from "@/lib/auth";
-import { isOrganizationStripeAccountReady } from "@/lib/stripe-connect";
+import {
+  isOrganizationStripeAccountReady,
+  isOrganizationStripeProcessingSetupRequired,
+} from "@/lib/stripe-connect";
 import { createClient } from "@/lib/supabase/server";
 import { formatEventDateRange } from "@/lib/tournaments";
 
@@ -93,6 +96,9 @@ export default async function TicketTypesPage({
   const paymentReady =
     tournament.status !== "published" ||
     (await isOrganizationStripeAccountReady(tournament.organization_id));
+  const processingSetupRequired =
+    !paymentReady &&
+    (await isOrganizationStripeProcessingSetupRequired(tournament.organization_id));
 
   return (
     <div className="pb-12">
@@ -144,9 +150,18 @@ export default async function TicketTypesPage({
 
       {!paymentReady ? (
         <div className="mt-6 rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 text-sm leading-6 text-amber-800">
-          Paid tickets cannot be created or activated on this published event
-          until the organization’s Stripe account is ready. Free tickets remain
-          available.
+          {processingSetupRequired
+            ? "Paid tickets cannot be created or activated on this published event until TourniBase finishes payment processing setup. Reconnecting Stripe will not resolve it."
+            : "Paid tickets cannot be created or activated on this published event until the organization’s Stripe account is ready."}{" "}
+          Free tickets remain available.
+          {processingSetupRequired ? (
+            <Link
+              href={`/dashboard/settings?event=${tournamentId}`}
+              className="mt-2 block font-semibold underline underline-offset-4"
+            >
+              Contact TourniBase support in Settings
+            </Link>
+          ) : null}
         </div>
       ) : null}
 

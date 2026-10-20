@@ -12,6 +12,100 @@ validation are unfinished.
 
 ## Current rollout status
 
+### October 20 checkpoint: per-ticket release held locally
+
+The pending application change is local only, not pushed, deployed, or activated
+at this checkpoint. Both hosted sites remain on `ab2db87`. Production retains
+the legacy 2% plus $0.30-per-order fee configuration and
+`TOURNIBASE_PAID_CHECKOUT_ENABLED=false`; staging retains the
+legacy $0 fee. Do not read the October 17 receipts below as acceptance of the
+new pricing or platform-paid processing.
+
+The selected replacement is per paid ticket: $1 through $10, or $1 plus 4% of
+the **whole** base price above $10, rounded to cents per unit. Free tickets have
+no fee. Both environments are intended to use these tiers after activation;
+staging still uses only Sandbox accounts, payments, and test email handling.
+
+Migration `20261020001124_add_tiered_buyer_fee_snapshots.sql` is applied to the
+shared Supabase project, which has 31 applied migrations. There are 32 local
+migrations: `20261020064938_exclude_buyer_fee_refund_advances_from_director_proceeds.sql`
+is locally tested but not applied to hosted Supabase. The applied tiered
+snapshot migration adds `orders.fee_policy`, `orders.processing_fee_payer`,
+`order_items.buyer_fee_unit_amount_cents`, the nullable connected-account
+`fees_collector`, and a separate service-only tiered reservation RPC. Legacy
+reservation callers remain supported. Historical orders are not repriced.
+The October 20 hosted read found 2,041 orders, no per-ticket-policy orders, no
+platform-payer orders, no populated unit-fee snapshots, and no live connected
+accounts. The one Sandbox account has an unverified (`NULL`) fee collector.
+
+Final local validation passed 421 tests across 40 files, ESLint, TypeScript,
+the production webpack build, and diff checks.
+All 32 local migrations and both legacy/new-tier SQL regressions passed in
+isolated PGlite. These checks do not constitute hosted new-policy
+purchase/refund acceptance.
+
+Open gates:
+
+1. The user selected the simpler Express Dashboard, then limited the provider
+   scope to **research only**. No new Sandbox account, conversion, preview
+   enrollment, or Stripe/provider configuration change has been performed.
+   Sandbox/live eligibility, activation, and actual fee/liability settings are
+   not verified. Do not change them without separate authorization.
+2. Verify the selected Stripe account actually charges processing to the
+   platform. The pending paid-checkout path fails closed on unknown or
+   director-paid processing; ordinary director proceeds must equal base
+   ticket revenue before describing the service as free for directors.
+3. Verify insufficient-connected-balance refund funding and accounting with Stripe.
+   Deployed application-fee reversal happens only after the buyer refund
+   succeeds, so a pending refund may wait for funds still held by the platform.
+   Early funding and the reporting correction are implemented and locally
+   tested. Exact per-pass funding, idempotency, failed/canceled reconciliation,
+   and low-balance behavior still need isolated Sandbox acceptance. No hosted
+   fix or successful provider test is claimed.
+4. Deploy matching reviewed application code and coordinate the opt-in
+   configuration; then validate the new pricing, fee transfer, processing
+   payer, director proceeds, receipts, partial/full refunds, historical orders,
+   and environment separation in Sandbox. No new-tier hosted acceptance has
+   been completed.
+5. Keep live checkout disabled until a real director is connected and the
+   separately authorized live launch gates are satisfied.
+
+While Express remains research-only, local `per_ticket_v2` account creation is
+blocked before any Stripe creation call. Existing-account synchronization
+and legacy account behavior remain available; do not silently fall back to
+creating a Full Dashboard account. Local tiered paid Checkout freshly
+verifies both platform-paid processing and Stripe-owned payment-loss
+responsibility. Before any future Express rollout, implement its authenticated
+dashboard-login flow, persist/verify account configuration metadata, and review
+an explicit account-migration plan that preserves every historical order's
+original connected-account routing for refunds.
+
+Express has additional platform costs beyond processing. See the
+[verified published US cost notes](pricing-handoff-2026-10-20.md#express-cost-research);
+those rates do not establish preview or live eligibility for TourniBase.
+
+Pending configuration, **not currently saved or activated in Vercel**:
+
+```text
+TOURNIBASE_PLATFORM_FEE_POLICY=per_ticket_v2
+TOURNIBASE_PLATFORM_FEE_BPS=400
+TOURNIBASE_PLATFORM_FEE_FIXED_CENTS=100
+TOURNIBASE_SANDBOX_FEE_QA_ENABLED=false
+```
+
+The $10 threshold is enforced in application/database logic, not a separate
+Vercel variable. Leaving the policy unset preserves legacy configuration during
+the additive rollout. Under the new policy, the old temporary zero-fee-staging
+override procedure below is no longer the normal policy; staging and production
+will show the same tiers. It remains historical evidence for the legacy release.
+
+The next product phase is the requested Canva-like new-account introduction
+and setup guide, including Stripe and the first event. It is queued after the
+payment-model verification, not implemented, and does not authorize forced setup
+gating. See the [durable handoff](pricing-handoff-2026-10-20.md).
+
+### Historical deployed checkpoint — October 17
+
 Status checkpoint: October 17, 2026, after the matching `7425b18` deployments
 reached Ready and the authorized Sandbox fee/refund cases below passed.
 Staging's zero-fee variables, restoration deployment, and stable-host display
@@ -179,6 +273,9 @@ this implementation.
 
 ## Environment contract
 
+This table describes the currently deployed legacy configuration. The pending
+per-ticket configuration and its unmet activation gates are recorded above.
+
 | Setting | Staging | Production |
 | --- | --- | --- |
 | Stable URL | `https://staging.tournibase.com` | `https://tournibase.com` |
@@ -277,6 +374,10 @@ their old webhook secret in staging: the onboarding Sandbox API key cannot
 retrieve or refund old Test-mode payment objects.
 
 ### Temporary Sandbox fee acceptance procedure
+
+Historical legacy-policy procedure: the October 20 tiered release uses the
+same fees in both environments and does not use this maintenance override.
+Do not run these old fee settings as acceptance of the new pricing model.
 
 Implementation status: the strict `TOURNIBASE_SANDBOX_FEE_QA_ENABLED` guard is
 deployed in `5590ac4`, with both environments Ready. The approved nonzero-fee
@@ -411,6 +512,13 @@ needed. Add `https://staging.tournibase.com/email-confirmed` only if controlled
 staging signup is intentionally enabled later.
 
 ## Migration files
+
+The project has 31 applied migrations as of October 20, including
+`20261020001124_add_tiered_buyer_fee_snapshots.sql`. Its hosted migration version
+is also the local filename; the earlier generated draft timestamp is not an
+additional migration. This additive migration alone does not activate pricing.
+The 32nd local migration, `20261020064938`, corrects fee-advance reporting and
+has not been applied to the shared project.
 
 All three rollout migrations are in migration history and applied to the
 canonical Supabase project:

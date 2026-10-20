@@ -13,6 +13,15 @@ Production app:
 
 ## Current status
 
+- October 20 pricing update: per-ticket pricing and platform-paid processing
+  are prepared locally, not deployed or activated; both hosted sites remain on
+  `ab2db87`. The shared database
+  migration is applied; Express/Stripe loss-protection preview eligibility and
+  new-pricing Sandbox acceptance are still open. See the
+  [pricing handoff](docs/pricing-handoff-2026-10-20.md).
+- Express is the preferred future dashboard, but the latest user instruction
+  is research only: no new Sandbox account, conversion, preview enrollment, or
+  Stripe/provider setting change. Preview and live eligibility remain unverified.
 - All 19 numbered web MVP phases complete
 - Stripe Connect hosted onboarding and direct-charge payments
 - Final repository review and MVP handoff complete
@@ -47,6 +56,7 @@ Current progress and remaining work:
 - [Refund and Support Process](docs/refund-support.md)
 - [Final MVP Handoff](docs/mvp-handoff.md)
 - [Staging and Production Rollout](docs/environment-rollout.md)
+- [Pending Pricing and Next-Phase Handoff](docs/pricing-handoff-2026-10-20.md)
 
 ## What the MVP does
 
@@ -130,15 +140,17 @@ Current progress and remaining work:
 | `STRIPE_CONNECTED_PAYMENTS_WEBHOOK_SECRET` | Server only | Verifies connected-account Checkout and refund events |
 | `STRIPE_CONNECT_ACCOUNT_WEBHOOK_SECRET` | Server only | Verifies Accounts v2 onboarding, requirement, capability, and closure events |
 | `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Browser-safe configuration | Matching Stripe mode and account |
-| `TOURNIBASE_PLATFORM_FEE_BPS` | Server only | `0` in staging and exactly `200` in production |
-| `TOURNIBASE_PLATFORM_FEE_FIXED_CENTS` | Server only | `0` in staging and exactly `30` in production |
+| `TOURNIBASE_PLATFORM_FEE_POLICY` | Server only | Pending opt-in `per_ticket_v2`; unset retains the currently deployed legacy policy |
+| `TOURNIBASE_PLATFORM_FEE_BPS` | Server only | Pending per-ticket policy: exactly `400` in both environments. Current deployed legacy values: staging `0`, production `200` |
+| `TOURNIBASE_PLATFORM_FEE_FIXED_CENTS` | Server only | Pending per-ticket policy: exactly `100` in both environments. Current deployed legacy values: staging `0`, production `30` |
 | `NEXT_PUBLIC_SITE_URL` | Browser and server | Base URL used for pass, scanner, success, and cancel links |
 | `EMAIL_PROVIDER` | Server only | `disabled` locally; all hosted targets require `resend` |
 | `RESEND_API_KEY` | Server only | Sending-only Resend API key |
 | `EMAIL_FROM` | Server only | Verified sender, such as `TourniBase <passes@tournibase.com>` |
 | `TOURNIBASE_EMAIL_OVERRIDE_TO` | Server only | Staging-only forced recipient; must be `lsautomates@gmail.com` |
 
-Local values must use:
+For local work on the pending per-ticket release, use the values in
+`.env.example`:
 
 ```text
 TOURNIBASE_APP_ENVIRONMENT=test
@@ -147,9 +159,16 @@ NEXT_PUBLIC_SITE_URL=http://localhost:3000
 STRIPE_SECRET_KEY=sk_test_...
 TOURNIBASE_STRIPE_PLATFORM_ACCOUNT_ID=acct_...
 NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_...
-TOURNIBASE_PLATFORM_FEE_BPS=0
-TOURNIBASE_PLATFORM_FEE_FIXED_CENTS=0
+TOURNIBASE_PLATFORM_FEE_POLICY=per_ticket_v2
+TOURNIBASE_PLATFORM_FEE_BPS=400
+TOURNIBASE_PLATFORM_FEE_FIXED_CENTS=100
+TOURNIBASE_SANDBOX_FEE_QA_ENABLED=false
 ```
+
+These local settings are not evidence of hosted activation. Paid per-ticket
+checkout also requires a verified Stripe account with platform-paid processing;
+unknown or director-paid processing fails closed. Do not copy these pricing
+values into hosted environments before resolving the rollout gates.
 
 Use the Supabase **publishable** key in the browser variable and the
 **secret** key only in `SUPABASE_SECRET_KEY`. Never put a secret or legacy
@@ -192,7 +211,12 @@ That route uses sample data and returns 404 in production. See
 
 ## Supabase setup
 
-The schema is managed by the SQL files in `supabase/migrations`.
+The schema is managed by the SQL files in `supabase/migrations`. As of October
+20, 2026, 31 migrations are applied to the shared project, including
+`20261020001124_add_tiered_buyer_fee_snapshots.sql`. There are 32 local
+migrations: the additional reporting correction `20261020064938` is local only.
+The applied additive change does not activate the pending application release
+or reprice old orders.
 
 ### Apply migrations to a hosted project
 
@@ -282,11 +306,12 @@ platform's live mode.
 TourniBase is the Connect platform. Each organization creates one connected
 Stripe account from **Settings → Payments** and completes Stripe-hosted
 onboarding. The organizer is the seller and merchant of record. Paid Checkout
-Sessions use direct charges on that organizer's connected account, so Stripe
+Sessions use direct charges on that organizer's connected account. In the
+currently deployed legacy setup, Stripe
 deducts its processing fees and pays out the remaining balance according to
 the organizer's Stripe payout schedule.
 
-For new orders, the buyer-paid TourniBase service fee is calculated as
+The currently deployed legacy buyer-paid TourniBase service fee is calculated as
 `round(ticket subtotal in cents × basis points / 10,000) + fixed cents`
 and added once to the ticket subtotal. The full buyer payment is charged on the
 organizer's connected account, and Stripe transfers the service fee to
@@ -295,23 +320,49 @@ ticket-sales metrics; Stripe processing fees still reduce director proceeds.
 Free orders incur no service fee. Historical orders retain their original
 fee treatment.
 
-The buyer-paid-fee migration is applied. Matching application deployment to both
-branches is still required before this new pricing takes effect. See the
-[rollout status](docs/environment-rollout.md).
+That legacy buyer-paid-fee release was deployed on October 17. The pending
+October 20 replacement is **per paid ticket**: $1 through $10, or $1 plus 4% of
+the **whole base ticket price** above $10, rounded to cents for each ticket.
+Free tickets have no fee. For example, a $10 ticket costs $11 and a $20 ticket
+costs $21.80. The intended model leaves the full base ticket price with the
+director and charges processing to TourniBase. The buyer fee is gross platform
+revenue before processing and other platform costs, not guaranteed profit.
 
-Staging must use:
+This replacement is not active. Activation requires enabling a supported
+Stripe account model, verifying platform-paid processing, deploying
+matching application code, and passing new Sandbox purchase/refund checks.
+Insufficient-connected-balance refund funding and its accounting/retry behavior
+are implemented and tested locally, but provider acceptance remains a launch
+blocker. The final local suite passed 421 tests across 40 files, lint, TypeScript,
+the production webpack build, all 32 migrations, and both SQL regressions.
+The user selected the simpler Express Dashboard, then limited provider work to
+research only into Stripe loss protection in public preview. Eligibility, activation, and the
+actual fee/liability settings are not verified. No connected account has been
+created, replaced, or reconfigured, and no provider settings were changed.
+Published US platform-managed Connect pricing includes $2 per monthly active
+account plus 0.25% + $0.25 per payout, on top of processing; see the
+[source-backed cost notes](docs/pricing-handoff-2026-10-20.md#express-cost-research).
+See the
+[rollout status](docs/environment-rollout.md) and
+[durable handoff](docs/pricing-handoff-2026-10-20.md).
+
+Current deployed staging configuration, pending the coordinated change:
 
 ```text
 TOURNIBASE_PLATFORM_FEE_BPS=0
 TOURNIBASE_PLATFORM_FEE_FIXED_CENTS=0
 ```
 
-Production must use exactly:
+Current deployed production configuration, with paid checkout still disabled:
 
 ```text
 TOURNIBASE_PLATFORM_FEE_BPS=200
 TOURNIBASE_PLATFORM_FEE_FIXED_CENTS=30
 ```
+
+The pending policy uses `per_ticket_v2`, `400` basis points, and `100` fixed
+cents on **both** sites, with Sandbox money only in staging. Historical orders
+keep their saved fee policy, unit fee, and processing-payer treatment.
 
 ### Hosted endpoints
 
@@ -330,6 +381,9 @@ Subscribe it to:
 - `checkout.session.async_payment_failed`
 - `checkout.session.expired`
 - `charge.refunded`
+- `refund.created`
+- `refund.updated`
+- `refund.failed`
 
 Enable delivery for events from connected accounts. Copy each endpoint's
 `whsec_...` signing secret into that target's

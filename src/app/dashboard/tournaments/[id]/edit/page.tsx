@@ -12,6 +12,7 @@ import { getIdlePublicationMessage } from "@/lib/publication-message";
 import {
   getStripeConnectConfigurationIssues,
   isOrganizationStripeAccountReady,
+  isOrganizationStripeProcessingSetupRequired,
 } from "@/lib/stripe-connect";
 import { getStripeConfigurationIssues } from "@/lib/stripe";
 import { getSupabaseAdminConfigurationIssues } from "@/lib/supabase/admin";
@@ -102,6 +103,10 @@ export default async function EditTournamentPage({
   const paymentReady =
     !hasPaidTickets ||
     (await isOrganizationStripeAccountReady(tournament.organization_id));
+  const processingSetupRequired =
+    hasPaidTickets &&
+    !paymentReady &&
+    (await isOrganizationStripeProcessingSetupRequired(tournament.organization_id));
   const checkoutConfigured =
     isPaidCheckoutEnabled() &&
     getStripeConfigurationIssues({
@@ -114,6 +119,7 @@ export default async function EditTournamentPage({
     checkoutConfigured,
     hasPaidTickets,
     paymentReady,
+    processingSetupRequired,
     status: tournament.status,
   });
 
@@ -177,6 +183,7 @@ export default async function EditTournamentPage({
               hasPaidTickets={hasPaidTickets}
               organizationId={tournament.organization_id}
               paymentReady={paymentReady}
+              processingSetupRequired={processingSetupRequired}
               publicPath={`/e/${tournament.public_slug}`}
               showIdleMessage={false}
               status={tournament.status}

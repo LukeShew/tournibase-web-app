@@ -122,6 +122,25 @@ export function assertPlatformFeeEnvironmentConfiguration(
   environment: EnvironmentVariables = process.env,
 ) {
   const appEnvironment = getAppEnvironment(environment);
+  const policy = environment.TOURNIBASE_PLATFORM_FEE_POLICY?.trim();
+  if (policy && policy !== "per_ticket_v2") {
+    throw new Error("TOURNIBASE_PLATFORM_FEE_POLICY must be per_ticket_v2 when configured.");
+  }
+  if (policy === "per_ticket_v2") {
+    const basisPoints = readNonnegativeInteger(environment.TOURNIBASE_PLATFORM_FEE_BPS, "TOURNIBASE_PLATFORM_FEE_BPS");
+    const fixedCents = readNonnegativeInteger(environment.TOURNIBASE_PLATFORM_FEE_FIXED_CENTS, "TOURNIBASE_PLATFORM_FEE_FIXED_CENTS");
+    if (basisPoints !== 400 || fixedCents !== 100) {
+      throw new Error("Per-ticket pricing requires exactly 400 basis points and 100 fixed cents in both environments.");
+    }
+    const qaFlag = environment.TOURNIBASE_SANDBOX_FEE_QA_ENABLED?.trim();
+    if (qaFlag !== undefined && qaFlag !== "false") {
+      throw new Error("TOURNIBASE_SANDBOX_FEE_QA_ENABLED must be false with per-ticket pricing.");
+    }
+    if (isHostedDeployment(environment)) assertDeploymentTargetMatchesAppEnvironment(environment);
+    return { policy, basisPoints, fixedCents, percentageThresholdCents: 1000 } as const;
+  }
+  // Keep the previous fee configuration readable during an additive rollout.
+  // Existing orders always retain their immutable fee snapshots.
   const sandboxFeeQaFlag = environment.TOURNIBASE_SANDBOX_FEE_QA_ENABLED;
   const sandboxFeeQaValue = sandboxFeeQaFlag?.trim();
   if (sandboxFeeQaFlag !== undefined &&

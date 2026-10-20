@@ -12,6 +12,7 @@ import {
   type OrganizationStripeAccount,
   type StripeConnectStatus,
 } from "@/lib/stripe-connect";
+import { getPlatformFeeConfiguration } from "@/lib/stripe-connect-payments";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = {
@@ -42,7 +43,7 @@ export default async function SettingsPage({
       ? await supabase
           .from("organization_stripe_accounts")
           .select(
-            "organization_id, stripe_account_id, stripe_environment, account_closed, onboarding_complete, charges_enabled, payouts_enabled, card_payments_status, payouts_status, requirements_currently_due, requirements_eventually_due, requirements_past_due, requirements_pending_verification, disabled_reason, last_synced_at",
+            "organization_id, stripe_account_id, stripe_environment, account_closed, onboarding_complete, charges_enabled, payouts_enabled, card_payments_status, payouts_status, requirements_currently_due, requirements_eventually_due, requirements_past_due, requirements_pending_verification, disabled_reason, fees_collector, last_synced_at",
           )
           .in("organization_id", organizationIds)
           .eq("stripe_environment", environment)
@@ -64,6 +65,8 @@ export default async function SettingsPage({
       : null;
   const configurationReady =
     getStripeConnectConfigurationIssues().length === 0;
+  const directorFreePricing =
+    getPlatformFeeConfiguration().policy === "per_ticket_v2";
   const finalizingOrganizationId =
     resolvedSearchParams.payments === "onboarding_returned" &&
     resolvedSearchParams.organization &&
@@ -168,6 +171,13 @@ export default async function SettingsPage({
                   ) !== "ready"
                 }
                 configurationReady={configurationReady}
+                processingSetupRequired={
+                  directorFreePricing &&
+                  (resolvedSearchParams.payments === "processing_setup_required" ||
+                    (stripeAccounts.has(organization.id) &&
+                      stripeAccounts.get(organization.id)?.fees_collector !==
+                        "application"))
+                }
                 organization={organization}
                 selectedEvent={selectedEvent}
               />
@@ -186,7 +196,9 @@ export default async function SettingsPage({
             The tournament organization is the seller for its admission
             orders. Stripe handles payment processing and bank payouts.
             Buyers pay the TourniBase service fee on top of the ticket price.
-            Stripe processing fees still come out of the organization’s proceeds.
+            {directorFreePricing
+              ? " TourniBase covers ordinary payment processing, so the organization receives its full ticket price before refunds or disputes."
+              : " Stripe processing fees still come out of the organization’s proceeds."}
           </p>
         </div>
       </section>
@@ -213,38 +225,52 @@ function OrganizationPayments({
   configurationReady,
   finalizing,
   organization,
+  processingSetupRequired,
   selectedEvent,
 }: {
   account: OrganizationStripeAccount | null;
   configurationReady: boolean;
   finalizing: boolean;
   organization: { id: number; name: string };
+  processingSetupRequired: boolean;
   selectedEvent: string | null;
 }) {
   const status = getStripeConnectStatus(account);
-  const displayedStatus = finalizing ? "under_review" : status;
+  const confirming = finalizing && !processingSetupRequired;
+  const displayedStatus = processingSetupRequired
+    ? "processing_setup_required"
+    : confirming
+      ? "under_review"
+      : status;
   const action =
-    finalizing
-      ? null
-      : status === "not_connected"
+    processingSetupRequired
+      ? account
         ? {
-            href: "/api/stripe/connect/start",
-            label: "Connect Stripe",
+            href: "/api/stripe/connect/dashboard",
+            label: "Open Stripe Dashboard",
           }
-        : status === "ready"
+        : null
+      : confirming
+        ? null
+        : status === "not_connected"
           ? {
-              href: "/api/stripe/connect/dashboard",
-              label: "Open Stripe Dashboard",
+              href: "/api/stripe/connect/start",
+              label: "Connect Stripe",
             }
-          : status === "under_review"
-            ? null
-            : {
-                href: "/api/stripe/connect/start",
-                label:
-                  status === "restricted"
-                    ? "Resolve in Stripe"
-                    : "Continue setup",
-              };
+          : status === "ready"
+            ? {
+                href: "/api/stripe/connect/dashboard",
+                label: "Open Stripe Dashboard",
+              }
+            : status === "under_review"
+              ? null
+              : {
+                  href: "/api/stripe/connect/start",
+                  label:
+                    status === "restricted"
+                      ? "Resolve in Stripe"
+                      : "Continue setup",
+                };
 
   return (
     <div className="px-6 py-6">
@@ -254,9 +280,11 @@ function OrganizationPayments({
           <div className="mt-3 flex flex-wrap items-center gap-3">
             <PaymentStatusBadge status={displayedStatus} />
             <p className="text-sm text-slate-500">
-              {finalizing
-                ? "TourniBase is confirming the latest status with Stripe."
-                : getPaymentStatusDescription(status)}
+              {processingSetupRequired
+                ? "Paid checkout is paused while TourniBase completes payment processing setup."
+                : confirming
+                  ? "TourniBase is confirming the latest status with Stripe."
+                  : getPaymentStatusDescription(status)}
             </p>
           </div>
           {account ? (
@@ -279,7 +307,13 @@ function OrganizationPayments({
               ) : null}
             </div>
           ) : null}
-          {finalizing ? (
+          {processingSetupRequired ? (
+            <p className="mt-3 max-w-xl text-sm font-medium text-amber-700">
+              Contact TourniBase support to enable processing covered by
+              TourniBase. Repeating Stripe onboarding will not fix this.
+              Your existing account and past orders are unchanged.
+            </p>
+          ) : confirming ? (
             <StripeConnectStatusPoller organizationId={organization.id} />
           ) : account &&
           (account.requirements_currently_due.length > 0 ||
@@ -291,17 +325,25 @@ function OrganizationPayments({
         </div>
 
         <div className="flex shrink-0 flex-wrap gap-2">
+          {processingSetupRequired ? (
+            <Link
+              href="/support"
+              className="inline-flex h-11 items-center justify-center rounded-2xl bg-brand-strong px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-500"
+            >
+              Contact support
+            </Link>
+          ) : null}
           {action ? (
             <ConnectForm
               action={action.href}
               disabled={!configurationReady}
               label={action.label}
               organizationId={organization.id}
-              primary
+              primary={!processingSetupRequired}
               selectedEvent={selectedEvent}
             />
           ) : null}
-          {account && !finalizing ? (
+          {account && !confirming ? (
             <ConnectForm
               action="/api/stripe/connect/refresh"
               disabled={!configurationReady}
@@ -359,7 +401,11 @@ function ConnectForm({
   );
 }
 
-function PaymentStatusBadge({ status }: { status: StripeConnectStatus }) {
+function PaymentStatusBadge({
+  status,
+}: {
+  status: StripeConnectStatus | "processing_setup_required";
+}) {
   const className =
     status === "ready"
       ? "bg-emerald-100 text-emerald-800"
@@ -367,7 +413,7 @@ function PaymentStatusBadge({ status }: { status: StripeConnectStatus }) {
         ? "bg-red-100 text-red-800"
         : status === "under_review"
           ? "bg-blue-100 text-blue-800"
-          : status === "setup_required"
+          : status === "setup_required" || status === "processing_setup_required"
             ? "bg-amber-100 text-amber-800"
             : "bg-slate-100 text-slate-700";
 
@@ -375,7 +421,9 @@ function PaymentStatusBadge({ status }: { status: StripeConnectStatus }) {
     <span
       className={`rounded-full px-3 py-1 text-xs font-semibold ${className}`}
     >
-      {getStripeConnectStatusLabel(status)}
+      {status === "processing_setup_required"
+        ? "Processing setup needed"
+        : getStripeConnectStatusLabel(status)}
     </span>
   );
 }
@@ -405,7 +453,9 @@ function PaymentNotice({ result }: { result: string }) {
       ? "No Stripe account is connected yet."
       : result === "configuration_error"
         ? "Stripe Connect server settings are incomplete."
-        : "Stripe account setup could not be updated. Try again or contact support.";
+        : result === "processing_setup_required"
+          ? "Contact TourniBase support to finish payment processing setup. Paid checkout remains paused so processing fees are not charged to the organization."
+          : "Stripe account setup could not be updated. Try again or contact support.";
 
   return (
     <div

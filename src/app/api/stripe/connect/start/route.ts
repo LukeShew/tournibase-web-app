@@ -9,8 +9,10 @@ import {
   createStripeConnectOnboardingLink,
   getOrganizationStripeAccount,
   getStripeConnectConfigurationIssues,
+  StripeConnectFeeConfigurationError,
   synchronizeOrganizationStripeAccount,
 } from "@/lib/stripe-connect";
+import { getPlatformFeeConfiguration } from "@/lib/stripe-connect-payments";
 import { getSiteUrl } from "@/lib/site-url";
 
 export const runtime = "nodejs";
@@ -84,6 +86,14 @@ async function startConnect({
           displayName: ownership.organization.name,
           organizationId,
         });
+    if (
+      getPlatformFeeConfiguration().policy === "per_ticket_v2" &&
+      account.fees_collector !== "application"
+    ) {
+      // Repeating onboarding cannot change an existing account's fee payer.
+      // Keep it intact and direct the director to TourniBase support instead.
+      throw new StripeConnectFeeConfigurationError();
+    }
     const siteUrl = getSiteUrl();
     const refreshUrl = new URL(
       "/api/stripe/connect/start",
@@ -115,7 +125,12 @@ async function startConnect({
       message: error instanceof Error ? error.message : "Unknown error",
       organizationId,
     });
-    fallbackUrl.searchParams.set("payments", "connect_error");
+    fallbackUrl.searchParams.set(
+      "payments",
+      error instanceof StripeConnectFeeConfigurationError
+        ? "processing_setup_required"
+        : "connect_error",
+    );
     return NextResponse.redirect(fallbackUrl, 303);
   }
 }

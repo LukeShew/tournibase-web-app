@@ -61,6 +61,20 @@ describe("buyer fee in director order details", () => {
     expect(getOrderPassRefundAmountCents({ ...order, buyer_fee_amount: "0.00", amount_total: "30.00" }, pass)).toBe(1000);
   });
 
+  it("shows the original per-ticket fee for tiered orders instead of a proportional share", () => {
+    const tiered: OrderLogOrder = { ...order, fee_policy: "per_ticket_v2", buyer_fee_amount: "3.80", amount_total: "43.80",
+      order_items: [
+        { ...order.order_items[0], quantity: 2, buyer_fee_unit_amount_cents: 100 },
+        { ...order.order_items[0], id: 11, quantity: 1, unit_amount_cents: 2000, buyer_fee_unit_amount_cents: 180 },
+      ],
+    };
+    expect(getOrderPassRefundAmountCents(tiered, pass)).toBe(1100);
+    expect(getOrderPassRefundAmountCents(tiered, { ...pass, order_item_id: 11 })).toBe(2180);
+    expect(() => getOrderPassRefundAmountCents({ ...tiered,
+      order_items: tiered.order_items.map((item) => ({ ...item, buyer_fee_unit_amount_cents: null })),
+    }, pass)).toThrow();
+  });
+
   it("distributes fractional cents without overstating the sum refunded", () => {
     const withRemainder = { ...order, buyer_fee_amount: "1.00", amount_total: "31.00" };
     const amounts = [1, 2, 3].map((sequence_number) => getOrderPassRefundAmountCents(withRemainder, { ...pass, sequence_number }));

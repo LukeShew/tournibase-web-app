@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { getPassBuyerFeeCents } from "@/lib/buyer-fees";
+import { getPassBuyerFeeCents, type BuyerFeePolicy } from "@/lib/buyer-fees";
 import type { RefundActionResponse } from "@/lib/refund-action-response";
 
 export type OrderLogItem = {
@@ -11,6 +11,7 @@ export type OrderLogItem = {
   quantity: number;
   ticket_name: string;
   unit_amount_cents: number;
+  buyer_fee_unit_amount_cents?: number | null;
   valid_from: string;
   valid_until: string;
 };
@@ -33,6 +34,7 @@ export type OrderLogOrder = {
   refund_failed_amount?: number | string;
   buyer_email: string;
   buyer_fee_amount: number | string;
+  fee_policy?: BuyerFeePolicy | null;
   buyer_name: string;
   buyer_phone: string | null;
   created_at: string;
@@ -582,6 +584,7 @@ export function getOrderPassRefundAmountCents(order: OrderLogOrder, pass: OrderL
 
   return item.unit_amount_cents + getPassBuyerFeeCents({
     buyerFeeCents: Math.round(Number(order.buyer_fee_amount ?? 0) * 100),
+    feePolicy: order.fee_policy,
     orderItems: order.order_items,
     orderItemId: item.id,
     sequenceNumber: pass.sequence_number,

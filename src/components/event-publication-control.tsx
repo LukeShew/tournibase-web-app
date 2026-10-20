@@ -16,6 +16,7 @@ export function EventPublicationControl({
   hasPaidTickets,
   organizationId,
   paymentReady,
+  processingSetupRequired = false,
   publicPath,
   showIdleMessage = true,
   status,
@@ -28,6 +29,7 @@ export function EventPublicationControl({
   hasPaidTickets: boolean;
   organizationId: number;
   paymentReady: boolean;
+  processingSetupRequired?: boolean;
   publicPath: string;
   showIdleMessage?: boolean;
   status: TournamentStatus;
@@ -68,6 +70,7 @@ export function EventPublicationControl({
     checkoutConfigured,
     hasPaidTickets,
     paymentReady,
+    processingSetupRequired,
     status,
   });
   const visibleMessage = state.message
@@ -103,7 +106,14 @@ export function EventPublicationControl({
                 : "Publish ticket page"}
           </button>
         </form>
-        {hasPaidTickets && !paymentReady ? (
+        {hasPaidTickets && !paymentReady && processingSetupRequired ? (
+          <Link
+            href={`/dashboard/settings?event=${tournamentId}`}
+            className="inline-flex h-11 items-center justify-center rounded-2xl bg-brand-strong px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-500"
+          >
+            Payment setup help
+          </Link>
+        ) : hasPaidTickets && !paymentReady ? (
           <form action="/api/stripe/connect/start" method="post">
             <input
               type="hidden"

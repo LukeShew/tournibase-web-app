@@ -1,6 +1,75 @@
 # TourniBase Refund and Support Process
 
-Last updated: October 17, 2026
+Last updated: October 20, 2026
+
+## Pending pricing change — not activated
+
+The October 20 per-ticket implementation is local only; both hosted sites
+remain on `ab2db87`. Its additive migration `20261020001124` is applied, but no
+order uses the new policy and no new-pricing
+hosted Sandbox purchase/refund has been validated. Production retains legacy
+2% plus $0.30-per-order configuration with paid checkout disabled; staging
+retains $0 fees. The acceptance evidence below is from the October 17 release.
+
+The pending buyer fee is $1 for each paid ticket through $10, or $1 plus 4% of
+the **whole base ticket price** above $10, rounded per unit. Free tickets have
+no fee. New `per_ticket_v2` orders save the unit fee on each order item and
+record the processing payer. A pass-specific refund uses that saved fee, not
+today's configuration and not a proportional share of the total order fee.
+For example, a $15 ticket plus $5 ticket carries fees of $1.60 and $1.00:
+refunding only the $5 pass returns $6.00. Legacy orders retain their existing
+proportional allocation and original processing-payer treatment.
+
+Platform-paid processing has not been enabled or verified. The user selected
+the simpler Express Dashboard, then limited provider work to research only.
+No new Sandbox account, account conversion, preview enrollment, or provider
+configuration change has been made. Sandbox/live eligibility, preview
+activation, and actual fee/liability settings remain unverified.
+Paid tiered checkout must reject unknown/director-paid processing and must
+verify Stripe-owned payment-loss responsibility. New tiered account creation
+must remain paused before Stripe calls during this research-only phase.
+
+### Local work; hosted blocker: insufficient connected-account balance
+
+The deployed application returns its application fee only after the buyer
+refund succeeds. A director's connected balance may contain only the base
+ticket proceeds, while a full buyer refund also needs the fee held by the
+platform. An insufficient-funds refund can therefore remain pending. The
+new-model early-funding path is implemented and tested locally, not deployed.
+
+The local path advances only the saved order/pass fee for Stripe-reported
+`pending_reason=insufficient_funds`, with idempotent retries. Buyer-refunded
+amounts and pass cancellation still depend on actual refund success. Actual fee
+advances remain recorded after a failed/canceled buyer refund for manual review;
+the app does not recover the advance or automatically retry the buyer refund.
+Any fee advanced before success must not be counted as director ticket
+proceeds. Before activation, an isolated low-balance Sandbox case must
+prove completion without duplicate fee reversals or incorrect reporting.
+Local tests do not establish provider completion for this new funding path.
+
+There are 32 local migrations and 31 applied hosted migrations. The reporting
+correction `20261020064938` is local only: its SQL regression verifies advances
+never inflate director ticket proceeds, even if the buyer refund later fails,
+while preserving historical fee treatment. Both SQL suites pass with all 32
+local migrations. The final application suite passed 421 tests across 40 files,
+ESLint, TypeScript, the production webpack build, and diff checks. That does
+not prove provider funding or refund completion.
+Keep historical orders routed to their original connected account during any
+future account migration; never replace old refund routing with a new Express
+account.
+
+### Refund/dispute policy remains a decision
+
+The new ordinary-sale goal is that directors retain their full base ticket
+revenue and TourniBase pays processing. That is not yet an active or verified
+promise. Refund eligibility, responsibility for non-returned processing costs,
+dispute principal/fees, and the wording of any free-director offer still require
+an approved policy. No new Terms or refund/dispute promise has been published
+by this implementation. Cost-affecting conditions must be clear near the offer,
+not only in Terms. See the
+[pricing handoff](pricing-handoff-2026-10-20.md).
+
+## Historical deployed release — October 17
 
 Release checkpoint: the buyer-fee and refund-lifecycle database migrations are
 applied. Matching `7425b18` staging/production deployments are Ready, and both
@@ -20,7 +89,7 @@ and a production webpack build. Its matching deployments are verified Ready;
 it addresses the synchronization behavior described below. Production checkout
 remains disabled, and staging's normal fee stays zero.
 
-## Deployed acceptance evidence
+## October 17 deployed acceptance evidence — legacy pricing
 
 - Order `2040`: zero-fee purchase and successful individual-pass/full remaining
   refund, with delivered receipts.
@@ -37,7 +106,7 @@ remains disabled, and staging's normal fee stays zero.
 See [Payment readiness QA](qa-payment-readiness-2026-10-17.md) for evidence and
 remaining limits. These are Sandbox results, not proof of live bank settlement.
 
-## Current MVP policy
+## Currently deployed refund behavior — legacy pricing
 
 Tournament organizers are the sellers and merchants of record. Connected
 orders are direct charges on each organizer's Stripe account. Directors can
@@ -48,8 +117,9 @@ updates revenue totals, invalidates successfully refunded passes, and sends the
 buyer a refund confirmation email. A submitted refund is not necessarily a
 successful refund; pending and failed states are tracked separately.
 
-New production orders add 2% of the admission subtotal plus $0.30 once per order
-for the buyer. A full refund includes the remaining buyer fee. A pass refund
+The deployed production configuration adds 2% of the admission subtotal plus
+$0.30 once per paid order for the buyer, but live checkout is still disabled.
+A full refund includes the remaining buyer fee. A pass refund
 includes its exact allocated share of that fee, with cents allocated
 deterministically across the purchased passes. Historical orders keep their
 original pricing treatment; zero-fee staging orders request no application-fee
@@ -184,6 +254,10 @@ https://tournibase.com/api/stripe/webhook
 
 ## Before real customer payments
 
+Resolve the October 20 Stripe account-model and insufficient-balance refund
+blockers above first. Deploy and validate the selected per-ticket model in
+Sandbox; the historical October 17 acceptance is not a substitute.
+
 Run the Sandbox regression before enabling production checkout:
 
 1. Buy a test pass.
@@ -200,11 +274,18 @@ handling, duplicate/out-of-order deliveries, and an early partial refund before
 initial receipt delivery. A failed refund must not produce a false completed
 refund email or silently re-enable a blocked pass.
 
+For the pending release, also verify mixed $10-or-less and above-$10 passes,
+cent rounding, free passes, exact saved per-pass fees, processing charged to
+TourniBase, full base-price director proceeds, and legacy-order refunds.
+Use isolated connected-balance conditions to prove the buyer-fee portion can
+be funded when the director balance has only ticket principal.
+
 Have the real pilot director complete live Connect onboarding. After deployment
 and technical checks, use a genuine authorized pilot purchase for real
 admission—not a fabricated live transaction for testing. Confirm the total
-charge, successful webhook, receipt, passes, 2% plus 30-cent buyer-funded
-application fee, Stripe processing, director proceeds, and reporting. Refund a
+charge, successful webhook, receipt, passes, the selected per-ticket buyer-funded
+application fee, platform-paid Stripe processing, full base-price director
+proceeds, and reporting. Refund a
 live purchase only for a legitimate, authorized reason. A successful Sandbox
 flow does not prove a director's real bank payout; verify that separately.
 

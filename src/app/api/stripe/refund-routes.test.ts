@@ -50,6 +50,7 @@ function makeOrder() {
     payment_status: "paid",
     platform_fee_amount: "0.00",
     buyer_fee_amount: "0.00",
+    fee_policy: "legacy_order_v1",
     stripe_checkout_id: "cs_test_order",
     stripe_connected_account_id: "acct_director",
     stripe_environment: "test",
@@ -80,7 +81,7 @@ let refundHistory: Refund[];
 let selections: Map<string, string>;
 let filters: Array<[string, unknown]>;
 let idempotentRequests: Map<string, string>;
-let orderItems: Array<{ id: number; quantity: number; unit_amount_cents: number }>;
+let orderItems: Array<{ id: number; quantity: number; unit_amount_cents: number; buyer_fee_unit_amount_cents?: number | null }>;
 
 beforeEach(() => {
   vi.resetAllMocks();
@@ -495,6 +496,29 @@ it("reuses a buyer-fee refund after failed synchronization without returning the
   expect(mocks.createRefund).toHaveBeenCalledOnce();
   expect(refundHistory).toHaveLength(1);
   expect(refundHistory[0].amount).toBe(1847);
+});
+
+it("refunds the saved tiered fee for a cheaper ticket in a mixed order", async () => {
+  Object.assign(order, { buyer_fee_amount: "2.60", platform_fee_amount: "2.60", amount_total: "22.60", fee_policy: "per_ticket_v2" });
+  pass.order_items.unit_amount_cents = 500;
+  orderItems = [
+    { id: 2136, quantity: 1, unit_amount_cents: 500, buyer_fee_unit_amount_cents: 100 },
+    { id: 2137, quantity: 1, unit_amount_cents: 1500, buyer_fee_unit_amount_cents: 160 },
+  ];
+  expect((await refundPass(request({ orderId: 1957, passId: 4788 }))).status).toBe(200);
+  expect(selections.get("order_items")).toContain("buyer_fee_unit_amount_cents");
+  expect(mocks.createRefund).toHaveBeenCalledWith({
+    amount: 600,
+    payment_intent: "pi_test_order",
+    metadata: { order_id: "1957", pass_id: "4788", buyer_fee_policy: "buyer_fee_v1",
+      buyer_fee_refund_cents: "100", ticket_refund_cents: "500" },
+  }, { stripeAccount: "acct_director", idempotencyKey: "tournibase-pass-refund-4788-buyer-fee-v1" });
+});
+
+it("blocks a new-policy refund when its original per-ticket fees are absent", async () => {
+  Object.assign(order, { buyer_fee_amount: "5.16", platform_fee_amount: "5.16", amount_total: "59.16", fee_policy: "per_ticket_v2" });
+  expect((await refundPass(request({ orderId: 1957, passId: 4788 }))).status).toBe(502);
+  expect(mocks.createRefund).not.toHaveBeenCalled();
 });
 
 it("refunds the remaining complete payment after a buyer-fee pass refund, with stable retries", async () => {

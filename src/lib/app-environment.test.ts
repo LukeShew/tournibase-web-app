@@ -224,7 +224,30 @@ describe("TourniBase application environment", () => {
     ).toThrow("RESEND_API_KEY");
   });
 
-  it("keeps test fees at zero and requires a live fee before checkout", () => {
+  it.each(["test", "live"])("uses the identical approved per-ticket pricing in %s", (environment) => {
+    const configuration = {
+      TOURNIBASE_APP_ENVIRONMENT: environment,
+      TOURNIBASE_PLATFORM_FEE_POLICY: "per_ticket_v2",
+      TOURNIBASE_PLATFORM_FEE_BPS: "400",
+      TOURNIBASE_PLATFORM_FEE_FIXED_CENTS: "100",
+      TOURNIBASE_SANDBOX_FEE_QA_ENABLED: "false",
+    };
+    expect(assertPlatformFeeEnvironmentConfiguration(configuration)).toEqual({
+      policy: "per_ticket_v2", basisPoints: 400, fixedCents: 100, percentageThresholdCents: 1000,
+    });
+    for (const [basisPoints, fixedCents] of [["0", "0"], ["200", "30"], ["400", "0"], ["500", "100"]]) {
+      expect(() => assertPlatformFeeEnvironmentConfiguration({ ...configuration,
+        TOURNIBASE_PLATFORM_FEE_BPS: basisPoints, TOURNIBASE_PLATFORM_FEE_FIXED_CENTS: fixedCents,
+      })).toThrow("exactly 400");
+    }
+    expect(() => assertPlatformFeeEnvironmentConfiguration({ ...configuration, TOURNIBASE_SANDBOX_FEE_QA_ENABLED: "true" })).toThrow("must be false");
+  });
+
+  it("rejects an unknown fee policy", () => {
+    expect(() => assertPlatformFeeEnvironmentConfiguration({ TOURNIBASE_APP_ENVIRONMENT: "live", TOURNIBASE_PLATFORM_FEE_POLICY: "typo" })).toThrow("POLICY");
+  });
+
+  it("preserves legacy test fees at zero and the historical live fee during rollout", () => {
     expect(
       assertPlatformFeeEnvironmentConfiguration({
         TOURNIBASE_APP_ENVIRONMENT: "test",

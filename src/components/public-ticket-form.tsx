@@ -3,8 +3,10 @@
 import { useState, type FormEvent } from "react";
 import { eventDateFromTimestamp } from "@/lib/event-time";
 import {
+  calculateOrderPlatformFeeCents,
   calculatePlatformFeeCents,
   type PlatformFeeConfiguration,
+  type PlatformFeeOrderItem,
 } from "@/lib/stripe-connect-payments";
 import { formatEventDateRange } from "@/lib/tournaments";
 
@@ -45,6 +47,10 @@ export function PublicTicketForm({
         (quantities[ticket.id] ?? 0),
     0,
   );
+  const feeItems = tickets.map((ticket) => ({
+    quantity: quantities[ticket.id] ?? 0,
+    unit_amount_cents: Math.round(Number(ticket.price) * 100),
+  }));
 
   function changeQuantity(ticket: PublicTicketOption, change: number) {
     const maximum = Math.min(ticket.quantityLimit ?? 10, 10);
@@ -128,9 +134,9 @@ export function PublicTicketForm({
         </p>
         {platformFeeConfiguration.basisPoints > 0 || platformFeeConfiguration.fixedCents > 0 ? (
           <p className="mt-2 text-sm leading-6 text-slate-400">
-            Prices include the TourniBase fee for one pass. For multiple passes,
-            the fee is calculated once on the whole order. Your total updates
-            below.
+            {platformFeeConfiguration.policy === "per_ticket_v2"
+              ? "Prices include ticketing and payment processing for each paid pass. Your total updates below."
+              : "Prices include the TourniBase fee for one pass. For multiple passes, the fee is calculated once on the whole order. Your total updates below."}
           </p>
         ) : null}
 
@@ -217,6 +223,7 @@ export function PublicTicketForm({
         <p className="mt-1 text-xs text-slate-500">{eventName}</p>
         <TicketPriceSummary
           ticketSubtotalCents={ticketSubtotalCents}
+          items={feeItems}
           platformFeeConfiguration={platformFeeConfiguration}
         />
       </section>
@@ -302,6 +309,7 @@ export function PublicTicketForm({
           </div>
           <TicketPriceSummary
             ticketSubtotalCents={ticketSubtotalCents}
+            items={feeItems}
             platformFeeConfiguration={platformFeeConfiguration}
           />
         </div>
@@ -333,14 +341,18 @@ export function PublicTicketForm({
 export function TicketPriceSummary({
   ticketSubtotalCents,
   platformFeeConfiguration,
+  items,
 }: {
   ticketSubtotalCents: number;
   platformFeeConfiguration: PlatformFeeConfiguration;
+  items?: readonly PlatformFeeOrderItem[];
 }) {
-  const buyerFeeCents = calculatePlatformFeeCents(
-    ticketSubtotalCents,
-    platformFeeConfiguration,
-  );
+  if (platformFeeConfiguration.policy === "per_ticket_v2" && !items) {
+    throw new Error("Per-ticket quotes require the selected ticket prices and quantities.");
+  }
+  const buyerFeeCents = items
+    ? calculateOrderPlatformFeeCents(items, platformFeeConfiguration)
+    : calculatePlatformFeeCents(ticketSubtotalCents, platformFeeConfiguration);
 
   return (
     <dl className="mt-4 space-y-3" aria-live="polite">
@@ -353,7 +365,9 @@ export function TicketPriceSummary({
           <dt>
             TourniBase service fee
             <span className="mt-1 block text-xs text-slate-400">
-              For online ticketing and digital pass delivery.
+              {platformFeeConfiguration.policy === "per_ticket_v2"
+                ? "Includes ticketing, digital passes, and payment processing."
+                : "For online ticketing and digital pass delivery."}
             </span>
           </dt>
           <dd className="font-mono">{formatCurrency(buyerFeeCents / 100)}</dd>

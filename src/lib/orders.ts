@@ -2,7 +2,14 @@ import "server-only";
 
 import type Stripe from "stripe";
 import { getAppEnvironment } from "@/lib/app-environment";
-import { getBuyerFeeRefundedCents, getPassBuyerFeeCents, type BuyerFeeOrderItem } from "@/lib/buyer-fees";
+import {
+  getBuyerFeeFundingTargetCents,
+  getBuyerFeeRefundedCents,
+  getPassBuyerFeeCents,
+  isRefundWaitingForFunds,
+  type BuyerFeeOrderItem,
+  type BuyerFeePolicy,
+} from "@/lib/buyer-fees";
 import { attemptOrderConfirmationEmail } from "@/lib/email/order-confirmation";
 import { getRefundLifecycle } from "@/lib/refund-lifecycle";
 import {
@@ -27,6 +34,7 @@ type OrderRecord = {
   amount_total: number | string;
   buyer_fee_amount: number | string;
   buyer_fee_refunded: number | string;
+  fee_policy?: BuyerFeePolicy;
   refund_pending_amount: number | string;
   refund_failed_amount: number | string;
   refund_sync_version: number;
@@ -48,7 +56,7 @@ type OrderRecord = {
 };
 
 const orderRecordSelection =
-  "id, tournament_id, buyer_name, amount_total, amount_refunded, buyer_fee_amount, buyer_fee_refunded, refund_pending_amount, refund_failed_amount, refund_sync_version, payment_status, stripe_connected_account_id, stripe_environment, platform_fee_amount, platform_fee_refunded, stripe_payment_intent_id, stripe_charge_id, tournaments!inner(organizations!inner(operating_environment))";
+  "id, tournament_id, buyer_name, amount_total, amount_refunded, buyer_fee_amount, buyer_fee_refunded, fee_policy, refund_pending_amount, refund_failed_amount, refund_sync_version, payment_status, stripe_connected_account_id, stripe_environment, platform_fee_amount, platform_fee_refunded, stripe_payment_intent_id, stripe_charge_id, tournaments!inner(organizations!inner(operating_environment))";
 
 type OrderItemRecord = {
   id: number;
@@ -385,18 +393,23 @@ async function syncFreshStripeChargeRefund(
       Number(order.refund_pending_amount) === 0 && Number(order.refund_failed_amount) === 0) {
     return { status: "not_refunded" };
   }
-  const buyerFeeRefundedCents = getBuyerFeeRefundedCents({
+  const expectedPassRefunds = buyerFeeCents > 0 &&
+    (refundStatus === "partial_refund" || refunds.some(isRefundWaitingForFunds))
+    ? await getExpectedPassRefunds(order.id, buyerFeeCents, refunds, order.fee_policy)
+    : undefined;
+  const buyerFeeRefundInput = {
     buyerFeeCents,
     chargeAmountCents: latestCharge.amount,
     chargeAmountRefundedCents: lifecycle.succeededCents,
     orderId: order.id,
     refunds,
-    expectedPassRefunds: buyerFeeCents > 0 && refundStatus === "partial_refund"
-      ? await getExpectedPassRefunds(order.id, buyerFeeCents, refunds)
-      : undefined,
-  });
+    expectedPassRefunds,
+  };
+  const buyerFeeRefundedCents = getBuyerFeeRefundedCents(buyerFeeRefundInput);
+  const applicationFeeFundingTargetCents =
+    getBuyerFeeFundingTargetCents(buyerFeeRefundInput);
   const platformFeeRefundedCents =
-    await synchronizeApplicationFeeRefund(successfulCharge, order, buyerFeeRefundedCents);
+    await synchronizeApplicationFeeRefund(successfulCharge, order, applicationFeeFundingTargetCents);
   const paymentIntentId =
     typeof latestCharge.payment_intent === "string"
       ? latestCharge.payment_intent
@@ -471,9 +484,9 @@ async function syncFreshStripeChargeRefund(
   };
 }
 
-async function getExpectedPassRefunds(orderId: number, buyerFeeCents: number, refunds: Stripe.Refund[]) {
+async function getExpectedPassRefunds(orderId: number, buyerFeeCents: number, refunds: Stripe.Refund[], feePolicy?: BuyerFeePolicy) {
   const passIds = [...new Set(refunds
-    .filter((refund) => refund.status === "succeeded" &&
+    .filter((refund) => (refund.status === "succeeded" || isRefundWaitingForFunds(refund)) &&
       refund.metadata?.order_id === String(orderId) &&
       refund.metadata?.buyer_fee_policy === "buyer_fee_v1")
     .map((refund) => Number(refund.metadata?.pass_id))
@@ -485,7 +498,7 @@ async function getExpectedPassRefunds(orderId: number, buyerFeeCents: number, re
   const [{ data: passRows, error: passError }, { data: itemRows, error: itemError }] = await Promise.all([
     supabase.from("passes").select("id, order_item_id, sequence_number")
       .eq("order_id", orderId).in("id", passIds),
-    supabase.from("order_items").select("id, quantity, unit_amount_cents").eq("order_id", orderId),
+    supabase.from("order_items").select("id, quantity, unit_amount_cents, buyer_fee_unit_amount_cents").eq("order_id", orderId),
   ]);
   if (passError) throw passError;
   if (itemError) throw itemError;
@@ -497,7 +510,7 @@ async function getExpectedPassRefunds(orderId: number, buyerFeeCents: number, re
     expected.set(pass.id, {
       ticketCents: item.unit_amount_cents,
       buyerFeeCents: getPassBuyerFeeCents({
-        buyerFeeCents, orderItems: items, orderItemId: item.id, sequenceNumber: pass.sequence_number,
+        buyerFeeCents, orderItems: items, orderItemId: item.id, sequenceNumber: pass.sequence_number, feePolicy,
       }),
     });
   }
@@ -784,7 +797,7 @@ async function getStripePaymentIdentifiers(
 async function synchronizeApplicationFeeRefund(
   charge: Stripe.Charge,
   order: OrderRecord,
-  buyerFeeRefundedCents: number,
+  applicationFeeFundingTargetCents: number,
 ) {
   const applicationFeeId =
     typeof charge.application_fee === "string"
@@ -805,7 +818,7 @@ async function synchronizeApplicationFeeRefund(
 
   const buyerFeeCents = Math.round(Number(order.buyer_fee_amount ?? 0) * 100);
   const targetRefundCents = buyerFeeCents > 0
-    ? Math.min(applicationFee.amount, buyerFeeRefundedCents)
+    ? Math.min(applicationFee.amount, applicationFeeFundingTargetCents)
     : getApplicationFeeRefundTargetCents({
       applicationFeeCents: applicationFee.amount,
       chargeAmountCents: charge.amount,

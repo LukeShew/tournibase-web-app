@@ -14,6 +14,7 @@ import {
   getStripeConnectConfigurationIssues,
   getStripeConnectStatus,
 } from "@/lib/stripe-connect";
+import { getPlatformFeeConfiguration } from "@/lib/stripe-connect-payments";
 import { createClient } from "@/lib/supabase/server";
 import { formatEventDateRange } from "@/lib/tournaments";
 
@@ -102,8 +103,14 @@ export default async function TournamentOverviewPage({
   }
 
   const stripeStatus = getStripeConnectStatus(stripeAccount);
+  const hasPaidTickets = (paidTicketResult.data?.length ?? 0) > 0;
+  const processingSetupRequired =
+    hasPaidTickets &&
+    getPlatformFeeConfiguration().policy === "per_ticket_v2" &&
+    stripeAccount !== null &&
+    stripeAccount.fees_collector !== "application";
   const needsStripeConnection =
-    (paidTicketResult.data?.length ?? 0) > 0 && stripeStatus !== "ready";
+    hasPaidTickets && stripeStatus !== "ready";
   const connectConfigured =
     getStripeConnectConfigurationIssues().length === 0;
   const publicPath = `/e/${tournament.public_slug}`;
@@ -157,7 +164,13 @@ export default async function TournamentOverviewPage({
             Run this event
           </h2>
           <div className="mt-5 space-y-3">
-            {needsStripeConnection ? (
+            {processingSetupRequired ? (
+              <ToolLink
+                href={`/dashboard/settings?event=${tournamentId}`}
+                title="Finish payment setup"
+                description="Contact TourniBase support in Settings to enable processing covered by TourniBase."
+              />
+            ) : needsStripeConnection ? (
               <StripeToolForm
                 configured={connectConfigured}
                 organizationId={tournament.organization_id}

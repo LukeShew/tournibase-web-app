@@ -2,10 +2,10 @@
 
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
-import { calculatePlatformFeeCents } from "@/lib/stripe-connect-payments";
+import { calculatePlatformFeeCents, TIERED_PLATFORM_FEE_CONFIGURATION } from "@/lib/stripe-connect-payments";
 
 // Illustrative product prices, identical on staging and production.
-const demoFeeConfiguration = { basisPoints: 200, fixedCents: 30 };
+const demoFeeConfiguration = TIERED_PLATFORM_FEE_CONFIGURATION;
 const demoPriceFormatter = new Intl.NumberFormat("en-US", {
   style: "currency",
   currency: "USD",
@@ -83,7 +83,8 @@ export function LandingScrollStory({
           <p className="mt-6 max-w-2xl text-lg leading-8 text-slate-600">
             These product views use the same components and visual system as
             TourniBase itself. The names and figures shown are demo data. Example
-            prices include a TourniBase fee of 2% plus $0.30 per order.
+            prices include a $1 fee per paid pass through $10. Above $10, the
+            fee is $1 plus 4% of the ticket price.
           </p>
         </div>
 

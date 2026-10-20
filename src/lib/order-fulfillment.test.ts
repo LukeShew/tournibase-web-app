@@ -17,7 +17,7 @@ let applicationFeeId: string | null;
 let applicationFeeAmount: number;
 let applicationFeeRefunded: number;
 let refundPassIds: number[];
-let leadingRefunds: Array<{ id?: string; amount?: number; status: string; metadata: Record<string, string> }>;
+let leadingRefunds: Array<{ id?: string; amount?: number; status: string; pending_reason?: string | null; metadata: Record<string, string> }>;
 let afterUpsert: (() => void) | undefined;
 let beforeRefundUpdate: (() => void) | undefined;
 let refundUpdateAttempts: number;
@@ -109,6 +109,11 @@ beforeEach(() => {
   vi.stubEnv("TOURNIBASE_APP_ENVIRONMENT", "test");
   vi.stubEnv("STRIPE_SECRET_KEY", "");
   vi.clearAllMocks();
+  stripe.applicationFees.createRefund.mockImplementation(async (_id, params, options) => {
+    expect(options.idempotencyKey).toBeTruthy();
+    applicationFeeRefunded += params.amount;
+    return { id: "fr_test", amount: params.amount };
+  });
   order = {
     id: 1, tournament_id: 2, buyer_name: "Test", amount_total: "20.00", amount_refunded: "0.00",
     payment_status: "pending", platform_fee_amount: "0.00", platform_fee_refunded: "0.00",
@@ -131,6 +136,201 @@ beforeEach(() => {
   afterUpsert = undefined;
   beforeRefundUpdate = undefined;
   refundUpdateAttempts = 0;
+});
+
+describe("insufficient-funds application-fee funding", () => {
+  const pendingPass = (id: number, amount: number, fee: number) => ({
+    id: `re_pending_${id}`, amount, status: "pending", pending_reason: "insufficient_funds",
+    metadata: {
+      order_id: "1", pass_id: String(id), buyer_fee_policy: "buyer_fee_v1",
+      buyer_fee_refund_cents: String(fee), ticket_refund_cents: String(amount - fee),
+    },
+  });
+  const full = () => ({
+    id: "re_full", amount: 2260, status: "pending", pending_reason: "insufficient_funds",
+    metadata: { order_id: "1" },
+  });
+  const sync = () => syncStripeChargeRefund({ id: "ch_test", livemode: false }, "acct_test");
+
+  beforeEach(() => {
+    Object.assign(order, {
+      payment_status: "paid", amount_total: "22.60", buyer_fee_amount: "2.60",
+      platform_fee_amount: "2.60", fee_policy: "per_ticket_v2",
+    });
+    chargeAmount = 2260;
+    applicationFeeId = "fee_tiered";
+    applicationFeeAmount = 260;
+    orderItems = [
+      { id: 10, order_id: 1, quantity: 1, unit_amount_cents: 500, buyer_fee_unit_amount_cents: 100 },
+      { id: 11, order_id: 1, quantity: 1, unit_amount_cents: 1500, buyer_fee_unit_amount_cents: 160 },
+    ];
+    passes = [
+      { id: 1, order_id: 1, order_item_id: 10, sequence_number: 1, status: "active" },
+      { id: 2, order_id: 1, order_item_id: 11, sequence_number: 1, status: "active" },
+    ];
+    stripe.applicationFees.createRefund.mockImplementation(async (_id, params, options) => {
+      expect(options.idempotencyKey).toBeTruthy();
+      applicationFeeRefunded += params.amount;
+      return { id: "fr_test", amount: params.amount };
+    });
+  });
+
+  it("funds only the original fee for a full pending refund without reporting a buyer refund", async () => {
+    leadingRefunds = [full()];
+    expect(await sync()).toEqual({ status: "not_refunded" });
+    await sync();
+    expect(applicationFeeRefunded).toBe(260);
+    expect(order).toMatchObject({
+      payment_status: "paid", amount_refunded: "0.00", buyer_fee_refunded: "0.00",
+      platform_fee_refunded: "2.60", refund_pending_amount: "22.60",
+    });
+    expect(passes.map(pass => pass.status)).toEqual(["active", "active"]);
+    expect(stripe.applicationFees.createRefund).toHaveBeenCalledOnce();
+    expect(stripe.applicationFees.createRefund.mock.calls[0][1].amount).toBe(260);
+  });
+
+  it("funds an exact mixed-price pass fee and completes accounting only after Stripe succeeds", async () => {
+    leadingRefunds = [pendingPass(1, 600, 100)];
+    await sync();
+    await sync();
+    expect(order).toMatchObject({
+      amount_refunded: "0.00", buyer_fee_refunded: "0.00", platform_fee_refunded: "1.00",
+      refund_pending_amount: "6.00",
+    });
+    expect(passes.map(pass => pass.status)).toEqual(["active", "active"]);
+    leadingRefunds[0].status = "succeeded";
+    refunded = 600;
+    expect(await sync()).toMatchObject({
+      status: "partial_refund", amountRefundedCents: 600, buyerFeeRefundedCents: 100,
+      succeededRefundIds: ["re_pending_1"],
+    });
+    expect(order).toMatchObject({
+      amount_refunded: "6.00", buyer_fee_refunded: "1.00", platform_fee_refunded: "1.00",
+      refund_pending_amount: "0.00",
+    });
+    expect(passes.map(pass => pass.status)).toEqual(["refunded", "active"]);
+    expect(stripe.applicationFees.createRefund).toHaveBeenCalledOnce();
+  });
+
+  it("completes a full refund only after Stripe succeeds without returning the fee twice", async () => {
+    leadingRefunds = [full()];
+    await sync();
+    leadingRefunds[0].status = "succeeded";
+    refunded = 2260;
+    expect(await sync()).toMatchObject({
+      status: "refunded", amountRefundedCents: 2260, buyerFeeRefundedCents: 260,
+      succeededRefundIds: ["re_full"],
+    });
+    await sync();
+    expect(order).toMatchObject({
+      payment_status: "refunded", amount_refunded: "22.60", buyer_fee_refunded: "2.60",
+      platform_fee_refunded: "2.60", refund_pending_amount: "0.00",
+    });
+    expect(passes.map(pass => pass.status)).toEqual(["refunded", "refunded"]);
+    expect(stripe.applicationFees.createRefund).toHaveBeenCalledOnce();
+  });
+
+  it.each(["failed", "canceled"])("retains the actual fee advance without retrying or claiming success after %s", async (status) => {
+    leadingRefunds = [pendingPass(1, 600, 100)];
+    await sync();
+    leadingRefunds[0].status = status;
+    expect(await sync()).toEqual({ status: "not_refunded" });
+    await sync();
+    expect(order).toMatchObject({
+      payment_status: "paid", amount_refunded: "0.00", buyer_fee_refunded: "0.00",
+      platform_fee_refunded: "1.00", refund_pending_amount: "0.00", refund_failed_amount: "6.00",
+    });
+    expect(passes.map(pass => pass.status)).toEqual(["active", "active"]);
+    expect(stripe.applicationFees.createRefund).toHaveBeenCalledOnce();
+  });
+
+  it.each([
+    { status: "pending", pending_reason: "processing" },
+    { status: "pending", pending_reason: null },
+    { status: "requires_action", pending_reason: "insufficient_funds" },
+  ])("does not advance fees for other unresolved states %j", async (state) => {
+    leadingRefunds = [{ ...full(), ...state }];
+    await sync();
+    expect(applicationFeeRefunded).toBe(0);
+    expect(order.buyer_fee_refunded).toBe("0.00");
+    expect(stripe.applicationFees.createRefund).not.toHaveBeenCalled();
+  });
+
+  it("rejects pending metadata that changes a saved fee even when the whole charge is pending", async () => {
+    const child = pendingPass(1, 600, 100);
+    child.metadata.buyer_fee_refund_cents = "99";
+    child.metadata.ticket_refund_cents = "501";
+    leadingRefunds = [child, pendingPass(2, 1660, 160)];
+    await expect(sync()).rejects.toThrow("original pass");
+    expect(stripe.applicationFees.createRefund).not.toHaveBeenCalled();
+    expect(order.platform_fee_refunded).toBe("0.00");
+  });
+
+  it("rejects absent pass fee snapshots before advancing any fees", async () => {
+    delete orderItems[0].buyer_fee_unit_amount_cents;
+    leadingRefunds = [pendingPass(1, 600, 100)];
+    await expect(sync()).rejects.toThrow("snapshot is missing");
+    expect(stripe.applicationFees.createRefund).not.toHaveBeenCalled();
+  });
+
+  it("deduplicates the same pending refund and never advances ticket principal", async () => {
+    const child = pendingPass(1, 600, 100);
+    leadingRefunds = [child, child];
+    await sync();
+    expect(order).toMatchObject({
+      platform_fee_refunded: "1.00", refund_pending_amount: "6.00", amount_refunded: "0.00",
+    });
+    expect(applicationFeeRefunded).toBe(100);
+  });
+
+  it("funds the exact remaining fee after an earlier pass refund succeeded", async () => {
+    leadingRefunds = [{ ...pendingPass(1, 600, 100), status: "succeeded" }];
+    refunded = 600;
+    await sync();
+    leadingRefunds.push({ ...full(), amount: 1660 });
+    await sync();
+    await sync();
+    expect(order).toMatchObject({
+      amount_refunded: "6.00", buyer_fee_refunded: "1.00", platform_fee_refunded: "2.60",
+      refund_pending_amount: "16.60",
+    });
+    expect(passes.map(pass => pass.status)).toEqual(["refunded", "active"]);
+    expect(stripe.applicationFees.createRefund.mock.calls.map(call => call[1].amount)).toEqual([100, 160]);
+  });
+
+  it("serializes competing pending funding targets without duplicating the fee advance", async () => {
+    leadingRefunds = [pendingPass(1, 600, 100), pendingPass(2, 1660, 160)];
+    stripe.refunds.list.mockImplementationOnce(() => ({
+      async *[Symbol.asyncIterator]() { yield pendingPass(1, 600, 100); },
+    }));
+    const initialReads: Array<(value: { id: string; amount: number; amount_refunded: number }) => void> = [];
+    stripe.applicationFees.retrieve.mockImplementationOnce(() => new Promise((resolve) => {
+      initialReads.push(resolve);
+    })).mockImplementationOnce(() => new Promise((resolve) => {
+      initialReads.push(resolve);
+      initialReads.forEach(complete => complete({ id: "fee_tiered", amount: 260, amount_refunded: 0 }));
+    }));
+    const requests = new Map<string, string>();
+    stripe.applicationFees.createRefund.mockImplementation(async (_id, params, options) => {
+      const previous = requests.get(options.idempotencyKey);
+      if (previous && previous !== JSON.stringify(params)) throw new Error("Stripe idempotency parameters differ.");
+      if (!previous) {
+        requests.set(options.idempotencyKey, JSON.stringify(params));
+        applicationFeeRefunded += params.amount;
+      }
+      return { id: "fr_test", amount: params.amount };
+    });
+    const results = await Promise.allSettled([sync(), sync()]);
+    expect(results.filter(result => result.status === "rejected")).toHaveLength(1);
+    await sync();
+    await sync();
+    expect(applicationFeeRefunded).toBe(260);
+    expect(order).toMatchObject({
+      payment_status: "paid", amount_refunded: "0.00", buyer_fee_refunded: "0.00",
+      platform_fee_refunded: "2.60", refund_pending_amount: "22.60",
+    });
+    expect(passes.map(pass => pass.status)).toEqual(["active", "active"]);
+  });
 });
 
 afterEach(() => {
@@ -375,6 +575,39 @@ describe("checkout fulfillment and out-of-order refunds", () => {
     expect(order).toMatchObject({ amount_refunded: "30.70", buyer_fee_refunded: "0.70", platform_fee_refunded: "0.70", payment_status: "refunded" });
     expect(stripe.applicationFees.createRefund).toHaveBeenCalledTimes(2);
     expect(stripe.applicationFees.createRefund.mock.calls[1][1].amount).toBe(46);
+  });
+
+  it("reverses exact new per-ticket fees for mixed prices and returns the remainder only once", async () => {
+    Object.assign(order, { amount_total: "22.60", buyer_fee_amount: "2.60", platform_fee_amount: "2.60", fee_policy: "per_ticket_v2" });
+    chargeAmount = 2260;
+    applicationFeeId = "fee_tiered";
+    applicationFeeAmount = 260;
+    orderItems = [
+      { id: 10, order_id: 1, quantity: 1, unit_amount_cents: 500, buyer_fee_unit_amount_cents: 100 },
+      { id: 11, order_id: 1, quantity: 1, unit_amount_cents: 1500, buyer_fee_unit_amount_cents: 160 },
+    ];
+    passes = [
+      { id: 1, order_id: 1, order_item_id: 10, sequence_number: 1, status: "active" },
+      { id: 2, order_id: 1, order_item_id: 11, sequence_number: 1, status: "active" },
+    ];
+    refunded = 600;
+    leadingRefunds = [{ id: "re_child", amount: 600, status: "succeeded", metadata: {
+      order_id: "1", pass_id: "1", buyer_fee_policy: "buyer_fee_v1", buyer_fee_refund_cents: "100", ticket_refund_cents: "500",
+    } }];
+    await syncStripeChargeRefund({ id: "ch_test", livemode: false }, "acct_test");
+    await syncStripeChargeRefund({ id: "ch_test", livemode: false }, "acct_test");
+    expect(order).toMatchObject({ amount_refunded: "6.00", buyer_fee_refunded: "1.00", platform_fee_refunded: "1.00" });
+    expect(passes.map(pass => pass.status)).toEqual(["refunded", "active"]);
+    expect(stripe.applicationFees.createRefund).toHaveBeenCalledOnce();
+    expect(stripe.applicationFees.createRefund.mock.calls[0][1].amount).toBe(100);
+
+    refunded = 2260;
+    await syncStripeChargeRefund({ id: "ch_test", livemode: false }, "acct_test");
+    await syncStripeChargeRefund({ id: "ch_test", livemode: false }, "acct_test");
+    expect(order).toMatchObject({ amount_refunded: "22.60", buyer_fee_refunded: "2.60", platform_fee_refunded: "2.60", payment_status: "refunded" });
+    expect(passes.map(pass => pass.status)).toEqual(["refunded", "refunded"]);
+    expect(stripe.applicationFees.createRefund).toHaveBeenCalledTimes(2);
+    expect(stripe.applicationFees.createRefund.mock.calls[1][1].amount).toBe(160);
   });
 
   it("preserves a newer buyer fee refund during concurrent reconciliation", async () => {

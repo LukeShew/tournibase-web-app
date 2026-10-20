@@ -1,6 +1,6 @@
 # TourniBase Overview
 
-Last updated and verified against the local repository: October 17, 2026
+Last updated against local implementation and recorded hosted checks: October 20, 2026
 
 ## Current direction
 
@@ -32,20 +32,76 @@ before expanding into a larger platform.
 | Item | Current state |
 | --- | --- |
 | Progress | All 19 numbered phases complete |
-| Current phase | Final Stripe live-mode setup and pilot readiness |
-| Next phase | Onboard the real pilot director when the user resumes live launch preparation |
+| Current phase | Investigate the selected Express model's preview eligibility and validate the pending per-ticket pricing release |
+| Next phase | After the payment model is resolved, build the requested guided new-account introduction and setup flow; live pilot onboarding remains a separate launch gate |
 | Production app | [tournibase.com](https://tournibase.com) |
 | Payments | Direct charges to director accounts; staging uses the Sandbox and production is isolated for live Connect with paid checkout disabled |
 | Environment split | Deployed with one Vercel project and one Supabase project; organizations are isolated as `test` or `live` |
-| Database | All 30 migrations applied, including buyer fees `20261017234245` and refund lifecycle `20261018000545` |
+| Database | 31 hosted migrations, including tiered snapshots `20261020001124`; 32 local migrations with reporting correction `20261020064938` still local only; no historical order repricing |
 | Email | Live through Resend and end-to-end tested |
 | Offline access | Downloadable pass PNG for Photos or Files |
 | Refund support | TourniBase full-order and pass-specific refunds with connected-account webhook synchronization |
 | Legal/support pages | Footer links to Terms, Privacy, Refund Policy, and Support |
-| Launch dependency | Complete director live onboarding, explicitly enable checkout, and obtain genuine pilot payment/payout evidence |
+| Launch dependency | Resolve platform-paid processing and insufficient-balance refunds, deploy and validate the new pricing, complete live director onboarding, explicitly enable checkout, and obtain genuine pilot payment/payout evidence |
 
-No numbered phases remain. See the [Final MVP Handoff](./mvp-handoff.md) for
+No original numbered MVP phases remain. The pricing change and guided setup
+below are later work, not completed phases. See the [Final MVP Handoff](./mvp-handoff.md) for
 routes, environment variables, database state, local testing, and launch work.
+
+### October 20 pending pricing release — not activated
+
+The user selected a buyer fee **per paid ticket**:
+
+- Base price $10 or less: $1.
+- Base price above $10: $1 plus 4% of the **whole** base price, rounded to cents
+  per ticket—not 4% of only the amount above $10.
+- Free tickets: $0.
+
+The intended director proceeds equal the full base ticket price, with Stripe
+processing charged to TourniBase. The buyer fee is not all profit: processing
+and other platform costs come out of it. Both staging and production will use
+the same tiers; staging transactions remain Sandbox-only.
+
+Code and local regression coverage are prepared but not pushed or deployed;
+both hosted sites remain on `ab2db87`. Migration `20261020001124` is applied to
+the shared Supabase project and adds immutable per-ticket fee and processing-payer
+snapshots. Historical orders keep their original terms. The hosted check found
+2,041 orders, zero per-ticket-policy orders, zero platform-payer orders, and
+zero populated unit-fee snapshots.
+
+The user selected the simpler Express Dashboard, then instructed “Only research
+it for now.” No new Sandbox account, conversion, preview enrollment, or provider
+setting change is authorized by that follow-up or has been performed.
+Eligibility in Sandbox/live, preview activation, and
+the actual processing-payer/liability settings are not verified, so activation
+remains blocked. No account has been replaced or reconfigured.
+The existing Sandbox account's fee-collector snapshot is unverified (`NULL`);
+there is no live connected organization. The new paid-checkout path rejects
+unknown or director-paid processing rather than deducting costs from directors.
+
+Production still has the legacy 2% plus $0.30-per-order configuration with paid
+checkout disabled. Staging still has its legacy zero-fee configuration. The
+new-tier hosted Sandbox purchase, processing allocation, partial/full refund,
+receipt, and reporting checks have **not** been performed. An additional launch
+blocker is funding refunds when the connected account lacks the buyer-fee
+portion: the deployed app returns the application fee only after the buyer
+refund succeeds. Early funding is implemented and tested locally, and local-only
+migration `20261020064938` prevents fee advances from becoming director revenue.
+Isolated low-balance Sandbox acceptance and provider reconciliation checks
+remain outstanding. The October 17 evidence
+below does not validate this new model. See the
+[pricing handoff](./pricing-handoff-2026-10-20.md) for the remaining gates.
+
+Final local validation passed 421 tests across 40 files, ESLint, TypeScript,
+the production webpack build, and diff checks. All 32 local migrations and both
+legacy/new-tier SQL regressions passed in isolated PGlite. These are local
+checks, not new hosted payment acceptance. New tiered account creation is
+blocked before Stripe calls while Express remains research-only; no account
+has been converted. Express adds
+platform costs beyond processing; see the
+[official-source cost notes](./pricing-handoff-2026-10-20.md#express-cost-research).
+
+### Historical deployed acceptance — October 17
 
 Live Stripe keys, separate webhook destinations, and dedicated card-only
 Checkout configurations are configured. The payment-method configuration is
@@ -107,6 +163,11 @@ and event-day support. It currently lacks true offline gate validation and
 native Wallet passes. Do not claim lowest total cost or no director fees:
 Stripe processing still comes from the director's proceeds.
 
+The pending October 20 model is intended to remove ordinary processing
+deductions from director proceeds, but that claim is not yet verified or active.
+Refund/dispute exceptions and prominent customer-facing wording still need a
+separate policy decision; changing Terms alone does not complete that work.
+
 The October 17 [source-backed market report](../../../docs/market-competition-2026-10-17.md)
 contains current official pricing, feature limits, vendor/brand corrections,
 and pilot measurements. It also flags prominent upfront fee-inclusive ticket
@@ -136,7 +197,8 @@ pricing as a launch requirement; this documentation is not legal certification.
 - Public tournament ticket page
 - Ticket quantity selection and buyer contact collection
 - Fee-inclusive one-pass offers and a full-order total before buyer details;
-  the fixed buyer fee is charged once per order, not once per pass
+  the deployed legacy fixed fee is charged once per order. The pending release
+  instead sums immutable per-ticket fees
 - Stripe-hosted direct-charge checkout on the event organizer's connected
   account, scoped to the application's test or live environment
 - One individual mobile pass per purchased admission
@@ -169,6 +231,9 @@ pricing as a launch requirement; this documentation is not legal certification.
 - Active scanner-link and unscanned-pass totals
 
 ## Core end-to-end flow
+
+This describes the currently deployed legacy pricing. The October 20
+per-ticket replacement above has not been activated.
 
 1. A director logs in and creates a tournament.
 2. The director creates active ticket types and publishes the event.
@@ -215,6 +280,15 @@ Not included:
 
 ## Postponed work
 
+### Next phase: guided director introduction and setup
+
+The user requested a Canva-like introduction for new accounts, explaining the
+app and guiding important setup such as connecting Stripe and creating the
+first event. Queue this after the payment model is resolved. It is not
+implemented, and no decision has been made to require completion before
+directors can use the app. Keep the same introduction, UI, routes, and behavior
+on staging and production, aside from the intentional environment boundaries.
+
 ### Waitlist website
 
 The existing waitlist site is a separate repository, Vercel project, Supabase
@@ -250,8 +324,10 @@ gate staff can use it without installing anything.
   target
 - One canonical Supabase project with immutable organization environment
   routing
-- Test checkout at a $0 application fee; live checkout at exactly 2% plus 30
-  cents added for the buyer once per paid order after its launch gate
+- Currently deployed test checkout at a $0 application fee; production's
+  legacy configuration is 2% plus 30 cents per paid order, with checkout off.
+  The pending opt-in `per_ticket_v2` policy uses the same per-ticket tiers on
+  both sites and requires verified platform-paid processing
 - Dedicated environment-specific Checkout payment-method configurations, with
   card methods and eligible card wallets only
 - Immutable buyer-fee snapshots, exact pass-level fee refunds, and versioned
@@ -259,10 +335,13 @@ gate staff can use it without installing anything.
 
 The environment-isolation application code is deployed to staging and
 production. Its additive and contract migrations are applied to the shared
-Supabase project. The October buyer-fee/refund-lifecycle migrations are applied;
-the matching `7425b18` application deployments are Ready in both environments.
-The documented Sandbox refund cases and zero-fee restoration are verified;
-real-director launch preparation is deferred until the user is ready.
+Supabase project. The October buyer-fee/refund-lifecycle migrations and October
+20 tiered snapshot migration are applied. Matching `7425b18` deployments
+reached Ready on October 17; the current hosted source is `ab2db87` on both
+sites. The October 17 Sandbox refund cases and zero-fee restoration are
+verified. The October 20 tiered application
+changes are not deployed or validated through hosted Sandbox purchases.
+Real-director launch preparation remains deferred.
 
 See [MVP Architecture](./mvp-architecture.md) and
 [Database Schema](./database-schema.md) for implementation details.
@@ -287,7 +366,7 @@ See [MVP Architecture](./mvp-architecture.md) and
 
 - Live Stripe API keys, both production webhook destinations, and dedicated
   payment-method configurations are configured. Production paid checkout
-  remains disabled pending real director
+  remains disabled pending verification of the selected payment model and real director
   onboarding. No live director organization/connected account is ready yet;
   genuine pilot payment and payout evidence remain outstanding.
 - Production Supabase Auth signup is enabled and independently verified. The
@@ -295,8 +374,9 @@ See [MVP Architecture](./mvp-architecture.md) and
   organization inserts remain blocked.
 - Sandbox and live connected accounts are separate, so every production
   director must complete live onboarding before the first tournament.
-- TourniBase does not hold tournament proceeds. Stripe deducts processing fees
-  from the director's connected account and controls bank payout timing.
+- Under the deployed legacy setup, Stripe deducts processing fees from the
+  director's connected account and controls bank payout timing. The pending
+  release must verify TourniBase as processing payer before a tiered paid sale.
 - Staging charges no TourniBase fee. Production is configured for exactly 2%
   of admission subtotal plus 30 cents once per paid order, paid on top by the
   buyer once its paid-checkout kill switch is enabled. Reports exclude this
@@ -348,4 +428,5 @@ See [MVP Architecture](./mvp-architecture.md) and
 - [Refund and Support Process](./refund-support.md)
 - [Final MVP Handoff](./mvp-handoff.md)
 - [Staging and Production Rollout](./environment-rollout.md)
+- [Pending Pricing and Next-Phase Handoff](./pricing-handoff-2026-10-20.md)
 - [Repository setup and test guide](../README.md)

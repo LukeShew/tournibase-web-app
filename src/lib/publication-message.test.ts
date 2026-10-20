@@ -2,6 +2,19 @@ import { describe, expect, it } from "vitest";
 import { getIdlePublicationMessage } from "./publication-message";
 
 describe("event publication messaging", () => {
+  it.each(["draft", "published"] as const)("explains TourniBase-side processing setup for a %s paid event", (status) => {
+    const message = getIdlePublicationMessage({
+      activeTicketCount: 1,
+      checkoutConfigured: true,
+      hasPaidTickets: true,
+      paymentReady: false,
+      processingSetupRequired: true,
+      status,
+    });
+    expect(message.text).toContain("Contact TourniBase support in Settings");
+    expect(message.text).not.toContain("Connect a ready Stripe account");
+  });
+
   it("keeps a published free-only event ready without Stripe configuration", () => {
     expect(
       getIdlePublicationMessage({

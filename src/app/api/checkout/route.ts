@@ -12,7 +12,7 @@ import {
 } from "@/lib/stripe";
 import { attemptOrderConfirmationEmail } from "@/lib/email/order-confirmation";
 import {
-  calculatePlatformFeeCents,
+  calculateOrderPlatformFeeCents,
   getPlatformFeeConfiguration,
   getStripeEnvironment,
   getStripeRequestOptions,
@@ -26,6 +26,7 @@ import {
 } from "@/lib/supabase/admin";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { buildCheckoutLineItems } from "@/lib/checkout-pricing";
+import { assertStripeAccountCoversProcessing } from "@/lib/stripe-connect";
 
 export const runtime = "nodejs";
 const CHECKOUT_INTEGRATION_IDENTIFIER = "tournibase_dhkgywdx";
@@ -60,6 +61,8 @@ type ReservedCheckout = {
   amount_total_cents: number;
   ticket_subtotal_cents: number;
   buyer_fee_amount_cents: number;
+  fee_policy?: string;
+  processing_fee_payer?: string;
   inventory_expires_at: string;
   order_id: number;
   tournament_id: number;
@@ -75,6 +78,7 @@ type ReservedCheckout = {
     quantity: number;
     ticket_type_id: number;
     unit_amount_cents: number;
+    buyer_fee_unit_amount_cents?: number | null;
   }>;
 };
 
@@ -234,13 +238,15 @@ export async function POST(request: NextRequest) {
     const quantities = new Map(
       parsed.data.items.map((item) => [item.ticketTypeId, item.quantity]),
     );
-    const ticketSubtotalCents = selectedTicketRows!.reduce(
-      (total, ticket) =>
-        total + Math.round(Number(ticket.price) * 100) * quantities.get(ticket.id)!,
-      0,
+    const pricedItems = selectedTicketRows!.map((ticket) => ({
+      quantity: quantities.get(ticket.id)!,
+      unit_amount_cents: Math.round(Number(ticket.price) * 100),
+    }));
+    const ticketSubtotalCents = pricedItems.reduce(
+      (total, item) => total + item.unit_amount_cents * item.quantity, 0,
     );
     const expectedTotalCents = ticketSubtotalCents +
-      calculatePlatformFeeCents(ticketSubtotalCents, platformFeeConfiguration);
+      calculateOrderPlatformFeeCents(pricedItems, platformFeeConfiguration);
 
     if (expectedTotalCents > 0 && expectedTotalCents < MINIMUM_PAID_CHECKOUT_CENTS) {
       return minimumCheckoutError();
@@ -252,8 +258,9 @@ export async function POST(request: NextRequest) {
     return checkoutError();
   }
 
+  const tieredPricing = platformFeeConfiguration.policy === "per_ticket_v2";
   const { data: reservationData, error: reservationError } = await supabase.rpc(
-    "reserve_checkout_order_with_buyer_fee",
+    tieredPricing ? "reserve_checkout_order_with_tiered_fee" : "reserve_checkout_order_with_buyer_fee",
     {
       p_buyer_email: parsed.data.email,
       p_buyer_name: buyerName,
@@ -268,19 +275,26 @@ export async function POST(request: NextRequest) {
       p_platform_fee_bps: platformFeeConfiguration.basisPoints,
       p_platform_fee_fixed_cents: platformFeeConfiguration.fixedCents,
       p_stripe_environment: stripeEnvironment,
+      ...(tieredPricing ? { p_percentage_threshold_cents: 1000 } : {}),
     },
   );
 
   if (reservationError || !reservationData) {
     const message = reservationError?.message ?? "Checkout could not be reserved.";
+    const processingSetupRequired =
+      message === "Platform-paid Stripe processing must be verified before checkout.";
     const expected = /not accepting|not available|expired|remaining|quantity|ticket/i.test(message);
     console.error("[checkout] atomic reservation failed", {
       code: reservationError?.code,
       message,
     });
     return NextResponse.json(
-      { error: expected ? message : "Secure checkout could not be started. Try again." },
-      { status: expected ? 409 : 500 },
+      {
+        error: processingSetupRequired
+          ? "Online checkout is temporarily unavailable while the event organizer's payment setup is updated."
+          : expected ? message : "Secure checkout could not be started. Try again.",
+      },
+      { status: processingSetupRequired ? 503 : expected ? 409 : 500 },
     );
   }
 
@@ -307,6 +321,12 @@ export async function POST(request: NextRequest) {
   const platformFeeCents = reservation.platform_fee_amount_cents;
   let lineItems: ReturnType<typeof buildCheckoutLineItems>;
   try {
+    if (tieredPricing && (
+      reservation.fee_policy !== "per_ticket_v2" ||
+      reservation.processing_fee_payer !== "platform"
+    )) {
+      throw new Error("Reserved order does not match the per-ticket processing policy.");
+    }
     lineItems = buildCheckoutLineItems({
       items: selectedTickets,
       ticketSubtotalCents: reservation.ticket_subtotal_cents,
@@ -418,6 +438,26 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  if (tieredPricing) {
+    try {
+      // Do not charge a new-policy order on a legacy account that would still
+      // deduct processing from the organizer. Verify Stripe, not a stale cache.
+      await assertStripeAccountCoversProcessing({
+        connectedAccountId: routing.connectedAccountId,
+        environment: routing.environment,
+      });
+    } catch (error) {
+      console.error("[checkout] director processing coverage is not ready", {
+        orderId: order.id,
+        message: error instanceof Error ? error.message : "Stripe fee payer could not be verified",
+      });
+      await markOrderFailed(order.id);
+      return NextResponse.json({
+        error: "Online checkout is temporarily unavailable while the event organizer's payment setup is updated.",
+      }, { status: 503 });
+    }
+  }
+
   try {
     const stripe = await getVerifiedStripe();
     const session = await stripe.checkout.sessions.create(
@@ -431,6 +471,7 @@ export async function POST(request: NextRequest) {
         metadata: {
           order_id: String(order.id),
           tournament_id: String(reservation.tournament_id),
+          fee_policy: tieredPricing ? "per_ticket_v2" : "legacy_order_v1",
         },
         ...(amountTotalCents > 0
           ? {
@@ -441,6 +482,7 @@ export async function POST(request: NextRequest) {
                 metadata: {
                   order_id: String(order.id),
                   tournament_id: String(reservation.tournament_id),
+                  fee_policy: tieredPricing ? "per_ticket_v2" : "legacy_order_v1",
                 },
               },
             }

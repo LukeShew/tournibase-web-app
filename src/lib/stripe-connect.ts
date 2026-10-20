@@ -3,6 +3,7 @@ import "server-only";
 import type Stripe from "stripe";
 import { getAppEnvironment } from "@/lib/app-environment";
 import { getVerifiedStripe } from "@/lib/stripe";
+import { getPlatformFeeConfiguration } from "@/lib/stripe-connect-payments";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
 export type StripeConnectStatus =
@@ -17,6 +18,7 @@ export type OrganizationStripeAccount = {
   card_payments_status: string;
   charges_enabled: boolean;
   disabled_reason: string | null;
+  fees_collector: string | null;
   last_synced_at: string | null;
   onboarding_complete: boolean;
   organization_id: number;
@@ -37,6 +39,49 @@ const ACCOUNT_INCLUDES: Stripe.V2.Core.AccountRetrieveParams.Include[] = [
   "identity",
   "requirements",
 ];
+
+export class StripeConnectFeeConfigurationError extends Error {
+  readonly code = "STRIPE_DIRECTOR_FEE_CONFIGURATION_REQUIRED";
+
+  constructor(message?: string, options?: ErrorOptions) {
+    super(
+      message ??
+        "Paid checkout is unavailable while this organization's Stripe payment setup is updated. TourniBase must cover processing fees before director-free checkout can start. Contact TourniBase support.",
+      options,
+    );
+    this.name = "StripeConnectFeeConfigurationError";
+  }
+}
+
+/** Validate the exact account reserved for a new director-free payment. */
+export async function assertStripeAccountCoversProcessing({
+  connectedAccountId,
+  environment,
+}: {
+  connectedAccountId: string | null;
+  environment: "live" | "test";
+}): Promise<void> {
+  if (!connectedAccountId?.trim() || environment !== getAppEnvironment()) {
+    throw new StripeConnectFeeConfigurationError();
+  }
+
+  const stripe = await getVerifiedStripe();
+  const account = await stripe.v2.core.accounts.retrieve(connectedAccountId, {
+    include: ["defaults"],
+  });
+
+  if (
+    account.id !== connectedAccountId ||
+    (account.livemode ? "live" : "test") !== environment ||
+    account.closed === true ||
+    account.defaults?.responsibilities?.fees_collector !== "application" ||
+    account.defaults?.responsibilities?.losses_collector !== "stripe"
+  ) {
+    // Responsibilities cannot be changed after Merchant configuration is added.
+    // Preserve existing accounts and never fall back to charging the director.
+    throw new StripeConnectFeeConfigurationError();
+  }
+}
 
 export function getStripeConnectConfigurationIssues() {
   return [
@@ -114,7 +159,7 @@ export async function getOrganizationStripeAccount(
   const { data, error } = await admin
     .from("organization_stripe_accounts")
     .select(
-      "organization_id, stripe_account_id, stripe_environment, account_closed, onboarding_complete, charges_enabled, payouts_enabled, card_payments_status, payouts_status, requirements_currently_due, requirements_eventually_due, requirements_past_due, requirements_pending_verification, disabled_reason, last_synced_at",
+      "organization_id, stripe_account_id, stripe_environment, account_closed, onboarding_complete, charges_enabled, payouts_enabled, card_payments_status, payouts_status, requirements_currently_due, requirements_eventually_due, requirements_past_due, requirements_pending_verification, disabled_reason, fees_collector, last_synced_at",
     )
     .eq("organization_id", organizationId)
     .eq("stripe_environment", getAppEnvironment())
@@ -143,7 +188,27 @@ export async function isOrganizationStripeAccountReady(
     throw error;
   }
 
-  return data === true;
+  if (data !== true) {
+    return false;
+  }
+
+  if (getPlatformFeeConfiguration().policy === "per_ticket_v2") {
+    const account = await getOrganizationStripeAccount(organizationId);
+    return account?.fees_collector === "application";
+  }
+
+  return true;
+}
+
+export async function isOrganizationStripeProcessingSetupRequired(
+  organizationId: number,
+) {
+  if (getPlatformFeeConfiguration().policy !== "per_ticket_v2") {
+    return false;
+  }
+
+  const account = await getOrganizationStripeAccount(organizationId);
+  return account !== null && account.fees_collector !== "application";
 }
 
 export async function createOrganizationStripeAccount({
@@ -155,6 +220,20 @@ export async function createOrganizationStripeAccount({
   displayName: string;
   organizationId: number;
 }) {
+  const existingAccount = await getOrganizationStripeAccount(organizationId);
+  if (existingAccount) {
+    return synchronizeOrganizationStripeAccount(existingAccount);
+  }
+
+  if (getPlatformFeeConfiguration().policy === "per_ticket_v2") {
+    // Express with platform-paid fees and Stripe-owned losses is selected, but
+    // its preview eligibility and complete account lifecycle remain unverified.
+    // Do not create an account with a different configuration as a fallback.
+    throw new StripeConnectFeeConfigurationError(
+      "New Stripe connections are paused while TourniBase verifies its Express payment setup. Contact TourniBase support; no Stripe account was created.",
+    );
+  }
+
   const stripe = await getVerifiedStripe();
   const environment = getAppEnvironment();
   const account = await stripe.v2.core.accounts.create(
@@ -316,7 +395,7 @@ async function persistStripeAccountState({
       onConflict: "organization_id,stripe_environment",
     })
     .select(
-      "organization_id, stripe_account_id, stripe_environment, account_closed, onboarding_complete, charges_enabled, payouts_enabled, card_payments_status, payouts_status, requirements_currently_due, requirements_eventually_due, requirements_past_due, requirements_pending_verification, disabled_reason, last_synced_at",
+      "organization_id, stripe_account_id, stripe_environment, account_closed, onboarding_complete, charges_enabled, payouts_enabled, card_payments_status, payouts_status, requirements_currently_due, requirements_eventually_due, requirements_past_due, requirements_pending_verification, disabled_reason, fees_collector, last_synced_at",
     )
     .single();
 
@@ -386,6 +465,7 @@ export function mapStripeAccountState(
     charges_enabled:
       account.closed !== true && cardCapability?.status === "active",
     disabled_reason: disabledReason,
+    fees_collector: account.defaults?.responsibilities?.fees_collector ?? null,
     last_synced_at: new Date().toISOString(),
     onboarding_complete:
       account.closed !== true &&
