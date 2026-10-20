@@ -1,5 +1,15 @@
 # TourniBase Overview
 
+> Latest publication follow-up, October 20: mobile header fixes at `e752035`
+> are pushed and Ready on both main and staging. iPhone 17/iOS 26.5 Safari
+> simulator review covered the production home/login and staging buyer page.
+> Production support-form QA was delivered to the monitored inbox; Luke
+> confirmed first-event support coverage. Paid upgrades are deferred, not
+> resolved: commercial hosting, backup/restore, refund funding, and a physical
+> phone spot-check remain open. Live director onboarding and actual payment/
+> payout verification stay last; production checkout remains OFF. See the
+> current launch-operations document. This supersedes the local-only note below.
+
 > Latest checkpoint: Production tiers are now deployed at `7xueMzU89efWHMYtwvqhZsthMeb8`
 > (source `105536d`), with paid checkout still OFF. Stripe confirmed order 2046's
 > insufficient-funds pending reason and eventual refund completion. Narrow-phone
