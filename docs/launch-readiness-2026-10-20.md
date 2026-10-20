@@ -16,7 +16,8 @@ verify the new pricing model. Production checkout stays disabled.
 - Added dashboard/loss responsibility synchronization and cached readiness
   checks, alongside the existing fresh Stripe check before paid Checkout.
 - Applied refund-advance reporting migration `20261020195327` and account-cache
-  migration `20261020195330`. Shared Supabase and local schema have 33 migrations.
+  migration `20261020195330`. Shared Supabase has 33 applied migrations; one
+  additional transition migration is local and pending approval below.
   The old local reporting timestamp `20261020064938` was renamed to match its
   hosted identity; do not apply it twice.
 - Verified new columns, invoker reporting, denied direct metric execution for
@@ -39,6 +40,33 @@ Existing `acct_1Tui4qBDCykX1MuY` remains the original staging connection.
 Incompatible accounts are not automatically replaced. A transition needs a
 ready replacement and an explicit switch for future orders, preserving all
 historical order IDs/routing. That transition has not happened.
+
+### Staging transition approval and safety checkpoint
+
+The user approved switching future staging purchases to the isolated Express
+account. A guarded direct update was rejected by the existing immutable-routing
+trigger and rolled back. Inspection also found that the current order-integrity
+trigger requires the current connection even for historical refund updates.
+Do not disable these triggers or delete/replace the connection ad hoc.
+
+Local migration `20261020203108_preserve_connected_account_transitions.sql`
+adds an admin-only, Sandbox-only transition with an archived old connection,
+expected owner/account checks and a replacement initially marked unverified.
+Unchanged historical order snapshots remain updateable, while new orders still
+require the current account. All original routing immutability guards remain.
+The private helper is inaccessible to anon, authenticated and service_role;
+only a database administrator can invoke it. It cannot transition live accounts.
+The 34-migration disposable run and all three SQL suites passed, including
+historical refund updates, new-account reservations, retired-account rejection,
+wrong-owner/live/stale-account rejection and immutable routing checks.
+
+The hosted migration was blocked by automated safety review because it changes
+shared staging/production database rules. Explicit shared-schema approval was
+requested. No migration or connection switch has been applied. Read-only
+verification still found the old staging account, 2,041 orders and no transition
+history table. No Vercel environment settings changed. Next: obtain approval,
+apply and verify the migration, invoke the guarded transition, use staging's
+Refresh status to fetch genuine Stripe readiness, then configure/test tiers.
 
 ## Pricing and deployment gates
 
