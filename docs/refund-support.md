@@ -1,23 +1,24 @@
 # TourniBase Refund and Support Process
 
-> October 20 launch work: Express creation and authenticated dashboard access
-> are deployed on both hosts at `d44431a`. Both fee and loss responsibility are checked; no
-> existing account is replaced automatically. All 33 migrations are applied.
-> The isolated Sandbox account now has active payments and payouts, but remains
-> unlinked to TourniBase. New-tier payment/refund acceptance and live eligibility
-> remain open. Production checkout stays disabled. Onboarding UI work is on hold
+> October 20 launch work: matching account-transition code `7ea3a1b` is deployed
+> on both hosts. All 35 migrations are applied. Staging now uses Express with
+> platform-paid processing, Stripe-owned connected-account losses and the approved
+> per-ticket fees. Historical orders keep their original account. Sandbox purchase
+> and single-pass refund checks passed; remaining acceptance is tracked below.
+> Production pricing is unchanged and checkout stays disabled. Onboarding UI is on hold
 > at the user's request. See [current launch checklist](launch-readiness-2026-10-20.md).
 
 Last updated: October 20, 2026
 
-## Pending pricing change — not activated
+## Pricing rollout — staging active, live checkout off
 
-The October 20 per-ticket/Express code is deployed to both hosts at `d44431a`;
-the new fee configuration is not activated. Its additive migration `20261020001124` is applied, but no
-order uses the new policy and no new-pricing
-hosted Sandbox purchase/refund has been validated. Production retains legacy
-2% plus $0.30-per-order configuration with paid checkout disabled; staging
-retains $0 fees. The acceptance evidence below is from the October 17 release.
+The October 20 account-transition code is deployed to both hosts at `7ea3a1b`.
+Staging has the new fee configuration and a ready Express account. TB-002045
+confirmed a $50.09 purchase, $3.85 application fee and $46.24 director net.
+A $19.19 single-pass refund returned $17.49 ticket value and $1.70 fee, leaving
+the other pass active. Remaining-order/low-balance acceptance is still under
+verification. Production retains legacy 2% plus $0.30 per order with checkout
+disabled. The October 17 evidence below describes the older release.
 
 The pending buyer fee is $1 for each paid ticket through $10, or $1 plus 4% of
 the **whole base ticket price** above $10, rounded per unit. Free tickets have
@@ -28,9 +29,8 @@ For example, a $15 ticket plus $5 ticket carries fees of $1.60 and $1.00:
 refunding only the $5 pass returns $6.00. Legacy orders retain their existing
 proportional allocation and original processing-payer treatment.
 
-Express configuration acceptance is verified only on the isolated Sandbox
-account. Hosted onboarding, payment allocation and live eligibility remain
-unverified. Local tiered Checkout checks both platform-paid processing and
+Express configuration, onboarding and purchase allocation are verified only
+in Sandbox. Live eligibility remains unverified. Tiered Checkout checks both platform-paid processing and
 Stripe-owned losses; existing account routing is preserved. Express login
 links and account creation are now deployed.
 
@@ -53,10 +53,10 @@ proceeds. Before activation, an isolated low-balance Sandbox case must
 prove completion without duplicate fee reversals or incorrect reporting.
 Local tests do not establish provider completion for this new funding path.
 
-All 33 local migrations are applied to hosted Supabase. Reporting correction
+All 35 migrations are applied to hosted Supabase. Reporting correction
 `20261020195327` excludes fee advances from director proceeds, even after a
-failed buyer refund, while preserving historical treatment. Both SQL suites
-pass. The application passed 434 tests, ESLint, TypeScript and a production
+failed buyer refund, while preserving historical treatment. All three SQL suites
+pass. The application passed 436 tests, ESLint, TypeScript and a production
 webpack build. These checks do not prove provider funding or refund completion.
 Keep historical orders routed to their original connected account during any
 future account migration; never replace old refund routing with a new Express

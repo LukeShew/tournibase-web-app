@@ -1,11 +1,11 @@
 # TourniBase Overview
 
-> October 20 launch work: Express creation and authenticated dashboard access
-> are deployed on both hosts at `d44431a`. Both fee and loss responsibility are checked; no
-> existing account is replaced automatically. All 33 migrations are applied.
-> The isolated Sandbox account now has active payments and payouts, but remains
-> unlinked to TourniBase. New-tier payment/refund acceptance and live eligibility
-> remain open. Production checkout stays disabled. Onboarding UI work is on hold
+> October 20 launch work: matching account-transition code `7ea3a1b` is deployed
+> on both hosts. All 35 migrations are applied. Staging now uses Express with
+> platform-paid processing, Stripe-owned connected-account losses and the approved
+> per-ticket fees. Historical orders keep their original account. Sandbox purchase
+> and single-pass refund checks passed; remaining acceptance is tracked below.
+> Production pricing is unchanged and checkout stays disabled. Onboarding UI is on hold
 > at the user's request. See [current launch checklist](launch-readiness-2026-10-20.md).
 
 Last updated against local implementation and recorded hosted checks: October 20, 2026
@@ -56,7 +56,7 @@ No original numbered MVP phases remain. The pricing change and guided setup
 below are later work, not completed phases. See the [Final MVP Handoff](./mvp-handoff.md) for
 routes, environment variables, database state, local testing, and launch work.
 
-### October 20 pending pricing release — not activated
+### October 20 pricing release — staging active, live checkout off
 
 The user selected a buyer fee **per paid ticket**:
 
@@ -79,21 +79,23 @@ No existing connected account is replaced automatically.
 The isolated Sandbox account `acct_1USX6aBDCy7Cmb69` accepted this configuration.
 The user completed hosted onboarding. Stripe now shows payments and payouts
 active, Express dashboard, Application fee collection and Stripe negative-balance
-collection. It remains unlinked and has no payments.
-Configuration acceptance is not proof of fee settlement, refunds, payouts, or
-live eligibility. The existing staging connection is unchanged.
+collection. It now handles future staging purchases; the old account remains
+stored for historical orders. All 2,041 pre-transition order routes are unchanged.
+No production account was switched.
 
-All 33 local migrations are applied to the shared project, including
-`20261020195327` (refund-advance reporting) and `20261020195330` (dashboard/loss
-metadata). The earlier local reporting timestamp `20261020064938` was renamed
-to the hosted identity; never apply it twice. Historical orders are not repriced.
-The last read found 2,041 orders and no new-tier orders.
+All 35 migrations are applied, including `20261020204507` and `20261020204755`
+for retained account history and an admin-only Sandbox switch. Local draft
+migration timestamps were renamed to their hosted identities; never apply twice.
+Local validation passed 436 tests across 40 files, TypeScript, ESLint, production
+webpack build, all migrations and three SQL suites.
 
-Local validation: 434 tests across 40 files, TypeScript, ESLint, production
-webpack build, all migrations and both SQL suites passed. Provider acceptance
-is still required. Matching source `d44431a` is deployed and Ready on both stable hosts. Production retains legacy 2% + $0.30
-per order with paid checkout off; staging retains legacy zero fees. New tiers
-are not activated.
+Matching application source `7ea3a1b` is Ready on both hosts. Production retains
+legacy 2% + $0.30 per order with paid checkout off. Staging has `per_ticket_v2`
+with 400 BPS, 100 fixed cents and the Sandbox QA override false. Order TB-002045
+proved $46.24 director net from a $50.09 payment with a $3.85 buyer/application
+fee, two unique passes and a sent receipt. Its $19.19 single-pass refund returned
+exactly $1.70 of the fee. Remaining refund checks and live eligibility are tracked
+in the launch checklist; Sandbox evidence is not a live payout verification.
 
 The current actionable gates are tracked in
 [launch readiness](launch-readiness-2026-10-20.md). New-director onboarding
@@ -322,10 +324,10 @@ gate staff can use it without installing anything.
   target
 - One canonical Supabase project with immutable organization environment
   routing
-- Currently deployed test checkout at a $0 application fee; production's
+- Staging uses the approved per-ticket buyer fee and platform-paid processing; production's
   legacy configuration is 2% plus 30 cents per paid order, with checkout off.
-  The pending opt-in `per_ticket_v2` policy uses the same per-ticket tiers on
-  both sites and requires verified platform-paid processing
+  opt-in `per_ticket_v2` policy is implemented identically on both sites and
+  requires verified platform-paid processing before activation
 - Dedicated environment-specific Checkout payment-method configurations, with
   card methods and eligible card wallets only
 - Immutable buyer-fee snapshots, exact pass-level fee refunds, and versioned
@@ -335,10 +337,11 @@ The environment-isolation application code is deployed to staging and
 production. Its additive and contract migrations are applied to the shared
 Supabase project. The October buyer-fee/refund-lifecycle migrations and October
 20 tiered snapshot migration are applied. Matching `7425b18` deployments
-reached Ready on October 17; the current hosted source is `d44431a` on both
+reached Ready on October 17; the current application source is `7ea3a1b` on both
 sites. The October 17 Sandbox refund cases and zero-fee restoration are
-verified. The October 20 pricing/Express code is deployed, but the new tier
-configuration and hosted new-tier Sandbox purchase/refund acceptance remain open.
+verified. The October 20 tiers are active in staging with Express. Purchase
+allocation, receipt/pass fulfillment and single-pass refund passed; remaining
+refund acceptance and live configuration are tracked in the launch checklist.
 Real-director launch preparation remains deferred.
 
 See [MVP Architecture](./mvp-architecture.md) and

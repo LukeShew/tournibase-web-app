@@ -1,11 +1,11 @@
 # TourniBase Web App
 
-> October 20 launch work: Express creation and authenticated dashboard access
-> are deployed on both hosts at `d44431a`. Both fee and loss responsibility are checked; no
-> existing account is replaced automatically. All 33 migrations are applied.
-> The isolated Sandbox account now has active payments and payouts, but remains
-> unlinked to TourniBase. New-tier payment/refund acceptance and live eligibility
-> remain open. Production checkout stays disabled. Onboarding UI work is on hold
+> October 20 launch work: matching account-transition code `7ea3a1b` is deployed
+> on both hosts. All 35 migrations are applied. Staging now uses Express with
+> platform-paid processing, Stripe-owned connected-account losses and the approved
+> per-ticket fees. Historical orders keep their original account. Sandbox purchase
+> and single-pass refund checks passed; remaining acceptance is tracked below.
+> Production pricing is unchanged and checkout stays disabled. Onboarding UI is on hold
 > at the user's request. See [current launch checklist](docs/launch-readiness-2026-10-20.md).
 
 TourniBase is a digital gate system for youth basketball tournaments. This
@@ -21,13 +21,14 @@ Production app:
 
 ## Current status
 
-- October 20 pricing/Express code `d44431a` is deployed to both hosts. The
-  new fee policy is not activated. All 33 migrations are applied; hosted
-  new-tier purchase/refund acceptance and live eligibility remain open. See
+- October 20 account-transition code `7ea3a1b` is deployed to both hosts.
+  Staging uses the new fee policy and Express; production checkout stays off.
+  All 35 migrations are applied. Remaining acceptance gates are listed in
   [launch readiness](docs/launch-readiness-2026-10-20.md).
 - Express creation, dashboard login links and fee/loss verification are
   deployed. The isolated Sandbox configuration is accepted; its
-  onboarding and payment/refund checks remain unfinished. New-director
+  onboarding, purchase allocation and single-pass refund passed. Remaining
+  refund checks and live eligibility are not yet verified. New-director
   onboarding UI work is on hold at the user's request.
 - All 19 numbered web MVP phases complete
 - Stripe Connect hosted onboarding and direct-charge payments
@@ -219,11 +220,12 @@ That route uses sample data and returns 404 in production. See
 ## Supabase setup
 
 The schema is managed by the SQL files in `supabase/migrations`. As of October
-20, 2026, all 33 local migrations are applied to the shared project, including
+20, 2026, all 35 canonical migrations are applied to the shared project, including
 `20261020001124` (tier snapshots), `20261020195327` (refund-advance reporting),
-and `20261020195330` (dashboard/loss configuration metadata).
-The applied additive change does not activate the pending application release
-or reprice old orders.
+`20261020195330` (dashboard/loss configuration metadata), `20261020204507`
+and `20261020204755` (retained historical connections). Historical orders are
+not repriced. Staging's new pricing is activated through environment settings;
+production checkout remains off.
 
 ### Apply migrations to a hosted project
 
@@ -335,18 +337,18 @@ costs $21.80. The intended model leaves the full base ticket price with the
 director and charges processing to TourniBase. The buyer fee is gross platform
 revenue before processing and other platform costs, not guaranteed profit.
 
-This replacement is not active. Activation requires enabling a supported
-Stripe account model, verifying platform-paid processing, deploying
-matching application code, and passing new Sandbox purchase/refund checks.
+This replacement is active in staging only. Its Express account retained
+$46.24 base proceeds on a $50.09 Sandbox purchase with a $3.85 application fee.
+Two passes and a receipt were issued; a $19.19 single-pass refund returned
+$17.49 principal and $1.70 fee. Live activation remains gated.
 Insufficient-connected-balance refund funding and its accounting/retry behavior
 are implemented and tested locally, but provider acceptance remains a launch
-blocker. The final local suite passed 434 tests across 40 files, lint, TypeScript,
-the production webpack build, all 33 migrations, and both SQL regressions.
+blocker. The final local suite passed 436 tests across 40 files, lint, TypeScript,
+the production webpack build, all 35 migrations, and three SQL regressions.
 The user subsequently authorized isolated Sandbox verification. That account
-accepted Express with application-paid fees and Stripe-owned losses, but its
-onboarding and payment/refund acceptance remain incomplete. Express creation
-and login support are deployed. No existing connection was replaced;
-live eligibility remains unverified.
+accepted Express with application-paid fees and Stripe-owned losses. It is now
+the current staging connection, while old orders keep their original account.
+Express creation and login support are deployed; live eligibility remains unverified.
 Published US platform-managed Connect pricing includes $2 per monthly active
 account plus 0.25% + $0.25 per payout, on top of processing; see the
 [source-backed cost notes](docs/pricing-handoff-2026-10-20.md#express-cost-research).

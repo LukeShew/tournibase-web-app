@@ -17,30 +17,31 @@ verify the new pricing model. Production checkout stays disabled.
   checks, alongside the existing fresh Stripe check before paid Checkout.
 - Applied refund-advance reporting migration `20261020195327` and account-cache
   migration `20261020195330`. The additive current-connection migration
-  `20261020204507` is also applied (34 hosted); the post-deploy transition
-  migration `20261020204532` remains pending below.
+  `20261020204507` and post-deploy transition migration `20261020204755`
+  are applied (35 hosted). The latter's local draft timestamp `20261020204532`
+  was renamed to match its hosted identity; do not apply it twice.
   The old local reporting timestamp `20261020064938` was renamed to match its
   hosted identity; do not apply it twice.
 - Verified new columns, invoker reporting, denied direct metric execution for
-  anon/authenticated, and unchanged 2,041 orders (zero new-tier orders).
-- Full application suite passed 434 tests across 40 files. TypeScript, lint,
-  production webpack build, all migrations and both SQL suites passed.
+  anon/authenticated, and unchanged routing for all 2,041 pre-transition orders.
+- Full application suite passed 436 tests across 40 files. TypeScript, lint,
+  production webpack build, all 35 migrations and three SQL suites passed.
 
 ## Provider state and immediate dependency
 
 Separate Sandbox account `acct_1USX6aBDCy7Cmb69` accepts Express, Application
-fee collection and Stripe loss collection. It is unlinked to TourniBase,
-has no payments, and now shows Enabled with payments and payouts active.
+fee collection and Stripe loss collection. It is now the current staging
+connection, with payments and payouts active after a fresh Stripe refresh.
 The user completed hosted onboarding and selected Stripe's test bank. A fresh
 Dashboard check confirms Express, Application fee collection and Stripe negative
 balance collection. This verifies account readiness and configuration, not
-fee settlement, refunds, actual payouts or live
-eligibility. No existing connected account has been changed.
+actual bank payouts or live eligibility. Production connections are unchanged.
 
-Existing `acct_1Tui4qBDCykX1MuY` remains the original staging connection.
+Existing `acct_1Tui4qBDCykX1MuY` remains the retained historical staging connection.
 Incompatible accounts are not automatically replaced. A transition needs a
 ready replacement and an explicit switch for future orders, preserving all
-historical order IDs/routing. That transition has not happened.
+historical order IDs/routing. That transition is complete: only future purchases
+use Express. Both connection records remain available for synchronization.
 
 ### Staging transition approval and safety checkpoint
 
@@ -56,8 +57,8 @@ branches. The revised approach retains BOTH original connection rows, flags only
 one as `is_current`, and synchronizes webhooks by Stripe account ID rather than
 overwriting an organization's connection. No connection or order is deleted.
 
-Apply in order: additive migration `20261020204507` (done), deploy matching app
-code on both hosts, then `20261020204532`. The latter adds an admin-only Sandbox
+Completed in order: additive migration `20261020204507`, matching app deployment
+on both hosts (`7ea3a1b`), then `20261020204755`. The latter adds an admin-only Sandbox
 transition, audit snapshot, expected owner/account checks, and an initially
 unverified replacement. The private helper is inaccessible to anon,
 authenticated and service_role and rejects live organizations. Historical order
@@ -69,7 +70,8 @@ updates, new reservations, retired-account rejection, wrong-owner/live/stale
 account rejection, and late webhook synchronization without account promotion.
 Application suite: 436 tests across 40 files, plus lint and TypeScript pass.
 The retired local timestamp `20261020203108` was replaced, not applied; do not
-restore it. Staging's switch and tiered purchase/refund acceptance are still pending.
+restore it. The guarded switch preserved the routing fingerprint
+`f463758286e6948f973d3d0f837ed1c5` for every pre-transition order.
 
 ## Pricing and deployment gates
 
@@ -79,8 +81,10 @@ TourniBase's allowance for processing; do not add processing again. The
 director retains base ticket value before refunds/disputes once Stripe bills
 processing to the platform. Platform fee revenue is not net profit.
 
-Matching pricing/Express source `d44431a` is deployed and Ready on both hosts. Production still has legacy 2% + $0.30 per order and checkout off;
-staging has legacy $0 fees. New pricing has not been activated.
+Matching source `7ea3a1b` is deployed and Ready on both hosts. Production still
+has legacy 2% + $0.30 per order and checkout off. Staging now has the approved
+per-ticket tiers; its October 20 settings redeployment is
+`3YxhtgC8E8piWn8JjwmcUY5d9bUi` (Ready, stable staging domain assigned).
 
 When ready, use matching code and these settings on both environments:
 `TOURNIBASE_PLATFORM_FEE_POLICY=per_ticket_v2`,
@@ -93,8 +97,8 @@ Keep production `TOURNIBASE_PAID_CHECKOUT_ENABLED=false` during QA.
 
 - [x] Finish isolated Sandbox business/bank onboarding and verify readiness.
 - [x] Deploy matching reviewed application code; both builds and public smoke checks pass.
-- [ ] Validate compatible organization setup and safe historical routing.
-- [ ] Activate new tiers in coordinated environment rollout.
+- [x] Validate compatible staging organization setup and safe historical routing.
+- [x] Activate new tiers in staging only; live activation remains gated.
 - [ ] Sandbox mixed-tier/free/boundary purchases; verify processing payer,
       platform fee, director proceeds, receipt and individual passes.
 - [ ] Pass/full/low-balance refunds; pending/failure/retry and exact accounting.
@@ -115,17 +119,31 @@ Keep production `TOURNIBASE_PAID_CHECKOUT_ENABLED=false` during QA.
 
 ## Deployment evidence and read-only follow-up
 
-- Source: `d44431aa5dfc579f131d1c8b6df7b17ed0c7039d` on main and staging.
-- Production: `FZH892j5YLpi5GnRYG3L8dJ1qnTq`, Ready, tournibase.com assigned.
-- Staging: `7UdxPL95LkJQasjgsne17a9Tu1Vq`, Ready, staging.tournibase.com assigned.
+- Source: `7ea3a1b9894c6bc4f16e49988a16504b670d5171` on main and staging.
+- Production: `BF5auph2JLpFAvQXrTEiaoZ7FaEx`, Ready, tournibase.com assigned.
+- Staging: `3YxhtgC8E8piWn8JjwmcUY5d9bUi`, Ready, staging.tournibase.com assigned.
 - Vercel production checkout switch was visibly false; no fee-policy variable
-  existed. No deployment environment variables were changed.
+  existed in production. Only staging's fee policy, fixed fee and percentage
+  changed; the Sandbox QA override remains false.
 - Both home/login/legal/support pages return 200. Signed-out dashboard requests
   redirect to login; staging signup redirects to production. Staging retains
   noindex headers. robots.txt is absent (404); noindex does not depend on it.
-- Existing staging account refresh succeeded on deployed code and remained Ready.
-  Fresh cache: full dashboard, fees=stripe, losses=stripe, charges/payouts active.
-  This confirms it is still legacy; it is NOT compatible with director-free tiers.
+- Current staging account refresh succeeded: Express dashboard,
+  fees=application, losses=stripe, charges/payouts active. The old account remains
+  stored but is not current. Fresh checkout used the new account.
+- Sandbox order TB-002045: $46.24 base + $3.85 buyer fee = $50.09.
+  Stripe's payment breakdown confirms $46.24 net for the director and $3.85
+  application fee. Two unique passes were issued; the receipt delivery is sent.
+  Single-pass refund returned $19.19 ($17.49 base + $1.70 fee), disabled only
+  the Sunday pass and left $28.75 director net. The remaining-order refund
+  confirmation stalled the browser controls; no second refund completion is
+  confirmed. Do not submit a new refund until the existing request is inspected.
+  User was asked to close/dismiss the stuck staging Orders tab. Last database
+  check: $19.19 refunded, $0 pending/failed, Weekend pass active, Sunday refunded.
+  This is Sandbox evidence, not a live payout verification.
+- Post-transition security advisor adds only an expected RLS-with-no-policy
+  informational notice for the private admin-only audit table. Existing
+  leaked-password and intentional metrics-wrapper notices remain as above.
 - Build warnings: npm's unknown cache-dir configuration warning, twice in staging.
   No build failure. Development advisory is separate from these warnings.
 - [Braces advisory](https://github.com/advisories/GHSA-vfj7-8cjw-p6xm): no published
