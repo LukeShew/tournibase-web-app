@@ -1,9 +1,11 @@
 # Launch readiness — October 20, 2026
 
-> Latest checkpoint: Production tiers are now deployed at `7xueMzU89efWHMYtwvqhZsthMeb8`
-> (source `105536d`), with paid checkout still OFF. Stripe confirmed order 2046's
-> insufficient-funds pending reason and eventual refund completion. Narrow-phone
-> header fixes are local/unpublished; physical-phone review remains open.
+> Latest checkpoint: mobile fixes at `e752035` are Ready on both hosts; checkout
+> stays OFF. The isolated database restore matched all 18 checked data tables,
+> 14 RLS flags and 18 policy definitions. Encrypted off-site/recurring backups
+> and a funded reserve remain open. Operational refund review and 82 targeted
+> tests passed. Commercial hosting is deferred to the final pre-sales gate.
+> Physical-phone and live director/payment/payout checks remain open.
 > [Current operations, evidence and remaining checklist](launch-operations-2026-10-20.md)
 > supersede the historical rollout checkpoints below, including statements that
 > production still uses legacy pricing or policy publication remains pending.

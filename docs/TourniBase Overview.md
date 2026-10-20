@@ -1,5 +1,17 @@
 # TourniBase Overview
 
+> Latest recovery/funding checkpoint, October 20: hosted SQL backup restored
+> successfully into an isolated local database. All 18 checked table data digests,
+> 14 RLS-enabled tables and 18 policy definitions matched. The disposable database
+> was removed; private local backups remain excluded from Git. Encrypted off-site
+> storage and recurring backups remain to arrange. Refund policy/code review and
+> 82 targeted tests passed; a funding plan is documented, but no reserve is funded.
+> Upgrades wait until a pilot is secured. Commercial hosting is the final pre-sales
+> gate, not something that automatically completes recovery or refund funding.
+> Production checkout stays OFF; live director/payment/payout checks remain open.
+> See the current launch-operations document; this supersedes older status notes.
+>
+
 > Latest publication follow-up, October 20: mobile header fixes at `e752035`
 > are pushed and Ready on both main and staging. iPhone 17/iOS 26.5 Safari
 > simulator review covered the production home/login and staging buyer page.
