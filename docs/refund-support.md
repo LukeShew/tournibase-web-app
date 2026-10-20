@@ -3,8 +3,8 @@
 > October 20 launch work: Express creation and authenticated dashboard access
 > are deployed on both hosts at `d44431a`. Both fee and loss responsibility are checked; no
 > existing account is replaced automatically. All 33 migrations are applied.
-> The isolated Sandbox account is in hosted onboarding, not yet payment-ready
-> or linked to TourniBase. New-tier payment/refund acceptance and live eligibility
+> The isolated Sandbox account now has active payments and payouts, but remains
+> unlinked to TourniBase. New-tier payment/refund acceptance and live eligibility
 > remain open. Production checkout stays disabled. Onboarding UI work is on hold
 > at the user's request. See [current launch checklist](launch-readiness-2026-10-20.md).
 

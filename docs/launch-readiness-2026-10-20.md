@@ -28,11 +28,11 @@ verify the new pricing model. Production checkout stays disabled.
 
 Separate Sandbox account `acct_1USX6aBDCy7Cmb69` accepts Express, Application
 fee collection and Stripe loss collection. It is unlinked to TourniBase,
-has no payments, and has incomplete requirements. The user approved the
-Sandbox agreement and fake identity submission; phone and identity steps are
-complete. Business/bank setup remains, and embedded form controls currently
-require a manual browser handoff. This verifies
-configuration acceptance only, not fee settlement, refunds, payouts or live
+has no payments, and now shows Enabled with payments and payouts active.
+The user completed hosted onboarding and selected Stripe's test bank. A fresh
+Dashboard check confirms Express, Application fee collection and Stripe negative
+balance collection. This verifies account readiness and configuration, not
+fee settlement, refunds, actual payouts or live
 eligibility. No existing connected account has been changed.
 
 Existing `acct_1Tui4qBDCykX1MuY` remains the original staging connection.
@@ -60,7 +60,7 @@ Keep production `TOURNIBASE_PAID_CHECKOUT_ENABLED=false` during QA.
 
 ## Remaining checklist
 
-- [ ] Finish isolated Sandbox business/bank onboarding and verify readiness.
+- [x] Finish isolated Sandbox business/bank onboarding and verify readiness.
 - [x] Deploy matching reviewed application code; both builds and public smoke checks pass.
 - [ ] Validate compatible organization setup and safe historical routing.
 - [ ] Activate new tiers in coordinated environment rollout.
