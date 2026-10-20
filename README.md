@@ -1,7 +1,7 @@
 # TourniBase Web App
 
 > October 20 launch work: Express creation and authenticated dashboard access
-> are implemented locally. Both fee and loss responsibility are checked; no
+> are deployed on both hosts at `d44431a`. Both fee and loss responsibility are checked; no
 > existing account is replaced automatically. All 33 migrations are applied.
 > The isolated Sandbox account is in hosted onboarding, not yet payment-ready
 > or linked to TourniBase. New-tier payment/refund acceptance and live eligibility
@@ -21,14 +21,12 @@ Production app:
 
 ## Current status
 
-- October 20 pricing update: per-ticket pricing and platform-paid processing
-  are prepared locally, not deployed or activated; both hosted sites remain on
-  `ab2db87`. The shared database
-  migration is applied; Express/Stripe loss-protection preview eligibility and
-  new-pricing Sandbox acceptance are still open. See the
-  [pricing handoff](docs/pricing-handoff-2026-10-20.md).
+- October 20 pricing/Express code `d44431a` is deployed to both hosts. The
+  new fee policy is not activated. All 33 migrations are applied; hosted
+  new-tier purchase/refund acceptance and live eligibility remain open. See
+  [launch readiness](docs/launch-readiness-2026-10-20.md).
 - Express creation, dashboard login links and fee/loss verification are
-  implemented locally. The isolated Sandbox configuration is accepted; its
+  deployed. The isolated Sandbox configuration is accepted; its
   onboarding and payment/refund checks remain unfinished. New-director
   onboarding UI work is on hold at the user's request.
 - All 19 numbered web MVP phases complete
@@ -347,7 +345,7 @@ the production webpack build, all 33 migrations, and both SQL regressions.
 The user subsequently authorized isolated Sandbox verification. That account
 accepted Express with application-paid fees and Stripe-owned losses, but its
 onboarding and payment/refund acceptance remain incomplete. Express creation
-and login support are implemented locally. No existing connection was replaced;
+and login support are deployed. No existing connection was replaced;
 live eligibility remains unverified.
 Published US platform-managed Connect pricing includes $2 per monthly active
 account plus 0.25% + $0.25 per payout, on top of processing; see the

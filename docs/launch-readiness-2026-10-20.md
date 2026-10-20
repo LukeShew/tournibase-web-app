@@ -48,8 +48,7 @@ TourniBase's allowance for processing; do not add processing again. The
 director retains base ticket value before refunds/disputes once Stripe bills
 processing to the platform. Platform fee revenue is not net profit.
 
-Last verified hosted source is `ab2db87`; pricing/Express changes are pending
-deployment. Production still has legacy 2% + $0.30 per order and checkout off;
+Matching pricing/Express source `d44431a` is deployed and Ready on both hosts. Production still has legacy 2% + $0.30 per order and checkout off;
 staging has legacy $0 fees. New pricing has not been activated.
 
 When ready, use matching code and these settings on both environments:
@@ -62,7 +61,7 @@ Keep production `TOURNIBASE_PAID_CHECKOUT_ENABLED=false` during QA.
 ## Remaining checklist
 
 - [ ] Finish isolated Sandbox business/bank onboarding and verify readiness.
-- [ ] Deploy matching reviewed application code; verify both builds/hosts.
+- [x] Deploy matching reviewed application code; both builds and public smoke checks pass.
 - [ ] Validate compatible organization setup and safe historical routing.
 - [ ] Activate new tiers in coordinated environment rollout.
 - [ ] Sandbox mixed-tier/free/boundary purchases; verify processing payer,
@@ -72,13 +71,34 @@ Keep production `TOURNIBASE_PAID_CHECKOUT_ENABLED=false` during QA.
 - [ ] New-director onboarding UI: on hold at the user's request; do not build yet.
 - [ ] Full public/authenticated/mobile/gate QA, without camera.
 - [ ] Final refund/dispute/cancellation policy and clear offer conditions.
-- [ ] Operational security review. Supabase leaked-password protection remains
-      disabled; confirm plan support before enabling. Existing service-only
-      RLS notices and the authenticated metrics wrapper require contextual
-      review, not indiscriminate permission changes.
+- [ ] Operational security review. Production npm audit: zero advisories.
+      Full npm audit: five dev-only findings from the same unpatched braces
+      advisory (GHSA-vfj7-8cjw-p6xm); no unsafe toolchain downgrade applied.
+      Supabase leaked-password protection remains disabled; plan support and
+      activation are still open. Service-only tables deny anon/authenticated
+      reads. The metrics wrapper checks both owner and environment with an
+      empty search path; its elevated privilege is intentional.
 - [ ] Real director completes live Stripe setup; verify fees/payments/payouts.
 - [ ] Explicit live checkout activation; observe first genuine purchase and
       bank payout before wider rollout.
+
+## Deployment evidence and read-only follow-up
+
+- Source: `d44431aa5dfc579f131d1c8b6df7b17ed0c7039d` on main and staging.
+- Production: `FZH892j5YLpi5GnRYG3L8dJ1qnTq`, Ready, tournibase.com assigned.
+- Staging: `7UdxPL95LkJQasjgsne17a9Tu1Vq`, Ready, staging.tournibase.com assigned.
+- Vercel production checkout switch was visibly false; no fee-policy variable
+  existed. No deployment environment variables were changed.
+- Both home/login/legal/support pages return 200. Signed-out dashboard requests
+  redirect to login; staging signup redirects to production. Staging retains
+  noindex headers. robots.txt is absent (404); noindex does not depend on it.
+- Existing staging account refresh succeeded on deployed code and remained Ready.
+  Fresh cache: full dashboard, fees=stripe, losses=stripe, charges/payouts active.
+  This confirms it is still legacy; it is NOT compatible with director-free tiers.
+- Build warnings: npm's unknown cache-dir configuration warning, twice in staging.
+  No build failure. Development advisory is separate from these warnings.
+- [Braces advisory](https://github.com/advisories/GHSA-vfj7-8cjw-p6xm): no published
+  patched release as of this check; npm registry latest remains 3.0.3.
 
 ## Rules
 

@@ -1,7 +1,7 @@
 # TourniBase Overview
 
 > October 20 launch work: Express creation and authenticated dashboard access
-> are implemented locally. Both fee and loss responsibility are checked; no
+> are deployed on both hosts at `d44431a`. Both fee and loss responsibility are checked; no
 > existing account is replaced automatically. All 33 migrations are applied.
 > The isolated Sandbox account is in hosted onboarding, not yet payment-ready
 > or linked to TourniBase. New-tier payment/refund acceptance and live eligibility
@@ -90,8 +90,7 @@ The last read found 2,041 orders and no new-tier orders.
 
 Local validation: 434 tests across 40 files, TypeScript, ESLint, production
 webpack build, all migrations and both SQL suites passed. Provider acceptance
-is still required. Last verified deployed source remains `ab2db87`; the new
-application release is not yet deployed. Production retains legacy 2% + $0.30
+is still required. Matching source `d44431a` is deployed and Ready on both stable hosts. Production retains legacy 2% + $0.30
 per order with paid checkout off; staging retains legacy zero fees. New tiers
 are not activated.
 
@@ -335,10 +334,10 @@ The environment-isolation application code is deployed to staging and
 production. Its additive and contract migrations are applied to the shared
 Supabase project. The October buyer-fee/refund-lifecycle migrations and October
 20 tiered snapshot migration are applied. Matching `7425b18` deployments
-reached Ready on October 17; the current hosted source is `ab2db87` on both
+reached Ready on October 17; the current hosted source is `d44431a` on both
 sites. The October 17 Sandbox refund cases and zero-fee restoration are
-verified. The October 20 tiered application
-changes are not deployed or validated through hosted Sandbox purchases.
+verified. The October 20 pricing/Express code is deployed, but the new tier
+configuration and hosted new-tier Sandbox purchase/refund acceptance remain open.
 Real-director launch preparation remains deferred.
 
 See [MVP Architecture](./mvp-architecture.md) and

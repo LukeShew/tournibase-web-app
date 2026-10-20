@@ -1,7 +1,7 @@
 # Staging and Production Rollout
 
 > October 20 launch work: Express creation and authenticated dashboard access
-> are implemented locally. Both fee and loss responsibility are checked; no
+> are deployed on both hosts at `d44431a`. Both fee and loss responsibility are checked; no
 > existing account is replaced automatically. All 33 migrations are applied.
 > The isolated Sandbox account is in hosted onboarding, not yet payment-ready
 > or linked to TourniBase. New-tier payment/refund acceptance and live eligibility
@@ -42,8 +42,7 @@ The last read found 2,041 orders and no new-tier orders.
 
 Local validation: 434 tests across 40 files, TypeScript, ESLint, production
 webpack build, all migrations and both SQL suites passed. Provider acceptance
-is still required. Last verified deployed source remains `ab2db87`; the new
-application release is not yet deployed. Production retains legacy 2% + $0.30
+is still required. Matching source `d44431a` is deployed and Ready on both stable hosts. Production retains legacy 2% + $0.30
 per order with paid checkout off; staging retains legacy zero fees. New tiers
 are not activated.
 

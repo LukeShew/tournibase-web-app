@@ -1,7 +1,7 @@
 # TourniBase Refund and Support Process
 
 > October 20 launch work: Express creation and authenticated dashboard access
-> are implemented locally. Both fee and loss responsibility are checked; no
+> are deployed on both hosts at `d44431a`. Both fee and loss responsibility are checked; no
 > existing account is replaced automatically. All 33 migrations are applied.
 > The isolated Sandbox account is in hosted onboarding, not yet payment-ready
 > or linked to TourniBase. New-tier payment/refund acceptance and live eligibility
@@ -12,8 +12,8 @@ Last updated: October 20, 2026
 
 ## Pending pricing change — not activated
 
-The October 20 per-ticket implementation is local only; both hosted sites
-remain on `ab2db87`. Its additive migration `20261020001124` is applied, but no
+The October 20 per-ticket/Express code is deployed to both hosts at `d44431a`;
+the new fee configuration is not activated. Its additive migration `20261020001124` is applied, but no
 order uses the new policy and no new-pricing
 hosted Sandbox purchase/refund has been validated. Production retains legacy
 2% plus $0.30-per-order configuration with paid checkout disabled; staging
@@ -32,17 +32,18 @@ Express configuration acceptance is verified only on the isolated Sandbox
 account. Hosted onboarding, payment allocation and live eligibility remain
 unverified. Local tiered Checkout checks both platform-paid processing and
 Stripe-owned losses; existing account routing is preserved. Express login
-links and account creation are now implemented, but not deployed.
+links and account creation are now deployed.
 
 ### Local work; hosted blocker: insufficient connected-account balance
 
-The deployed application returns its application fee only after the buyer
-refund succeeds. A director's connected balance may contain only the base
+The previous release returned its application fee only after the buyer
+refund succeeded. A director's connected balance may contain only the base
 ticket proceeds, while a full buyer refund also needs the fee held by the
 platform. An insufficient-funds refund can therefore remain pending. The
-new-model early-funding path is implemented and tested locally, not deployed.
+new-model early-funding path is deployed and locally tested, but its low-balance
+Sandbox acceptance remains outstanding.
 
-The local path advances only the saved order/pass fee for Stripe-reported
+The deployed path advances only the saved order/pass fee for Stripe-reported
 `pending_reason=insufficient_funds`, with idempotent retries. Buyer-refunded
 amounts and pass cancellation still depend on actual refund success. Actual fee
 advances remain recorded after a failed/canceled buyer refund for manual review;
