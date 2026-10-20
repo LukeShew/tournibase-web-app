@@ -1,5 +1,13 @@
 # TourniBase Refund and Support Process
 
+> Latest checkpoint: Production tiers are now deployed at `7xueMzU89efWHMYtwvqhZsthMeb8`
+> (source `105536d`), with paid checkout still OFF. Stripe confirmed order 2046's
+> insufficient-funds pending reason and eventual refund completion. Narrow-phone
+> header fixes are local/unpublished; physical-phone review remains open.
+> [Current operations, evidence and remaining checklist](launch-operations-2026-10-20.md)
+> supersede the historical rollout checkpoints below, including statements that
+> production still uses legacy pricing or policy publication remains pending.
+
 > Final October 20 update: the approved policy and free-pass refund-button fix
 > are published on both hosts at `285c759`; both deployments are Ready and both
 > public refund-policy pages were checked. Earlier local-only wording below

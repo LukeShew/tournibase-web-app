@@ -39,7 +39,7 @@ export default async function LoginPage({
 
   return (
     <main className="min-h-full bg-[#f7f8fb] px-6 py-6 text-slate-950 sm:px-10">
-      <header className="mx-auto flex w-full max-w-6xl items-center justify-between">
+      <header className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-3">
         <Brand tone="light" />
         <Link
           href={signupHref}

@@ -1,5 +1,13 @@
 # TourniBase Overview
 
+> Latest checkpoint: Production tiers are now deployed at `7xueMzU89efWHMYtwvqhZsthMeb8`
+> (source `105536d`), with paid checkout still OFF. Stripe confirmed order 2046's
+> insufficient-funds pending reason and eventual refund completion. Narrow-phone
+> header fixes are local/unpublished; physical-phone review remains open.
+> [Current operations, evidence and remaining checklist](launch-operations-2026-10-20.md)
+> supersede the historical rollout checkpoints below, including statements that
+> production still uses legacy pricing or policy publication remains pending.
+
 > Final October 20 follow-up: approved policy/UI release `285c759` is deployed
 > and Ready on both main and staging. Both public refund-policy pages are verified.
 > Production checkout remains disabled. Earlier local-only notes record the

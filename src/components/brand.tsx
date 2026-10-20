@@ -5,7 +5,7 @@ export function Brand({ tone = "dark" }: { tone?: "dark" | "light" }) {
   return (
     <Link
       href="/"
-      className="inline-flex items-center gap-3 rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4"
+      className="inline-flex shrink-0 items-center gap-3 rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4"
       aria-label="TourniBase home"
     >
       <Image

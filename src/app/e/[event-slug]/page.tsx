@@ -88,9 +88,9 @@ export default async function PublicEventPage({
   return (
     <main className="app-grid min-h-screen bg-background">
       <header className="border-b border-border bg-background/85 backdrop-blur-xl">
-        <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-5 py-5 sm:px-6 lg:px-8">
+        <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-3 px-5 py-5 sm:px-6 lg:px-8">
           <Brand />
-          <span className="rounded-full border border-border bg-white/5 px-3 py-1.5 text-xs font-medium text-slate-300">
+          <span className="shrink-0 rounded-full border border-border bg-white/5 px-3 py-1.5 text-xs font-medium text-slate-300">
             Secure digital admission
           </span>
         </div>

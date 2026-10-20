@@ -1,5 +1,13 @@
 # Launch QA follow-up — October 20, 2026
 
+> Latest checkpoint: Production tiers are now deployed at `7xueMzU89efWHMYtwvqhZsthMeb8`
+> (source `105536d`), with paid checkout still OFF. Stripe confirmed order 2046's
+> insufficient-funds pending reason and eventual refund completion. Narrow-phone
+> header fixes are local/unpublished; physical-phone review remains open.
+> [Current operations, evidence and remaining checklist](launch-operations-2026-10-20.md)
+> supersede the historical rollout checkpoints below, including statements that
+> production still uses legacy pricing or policy publication remains pending.
+
 ## Deployment completion
 
 The user subsequently approved pushing both branches. Source `285c759` is Ready
