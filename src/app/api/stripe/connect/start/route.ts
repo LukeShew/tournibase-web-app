@@ -9,6 +9,7 @@ import {
   createStripeConnectOnboardingLink,
   getOrganizationStripeAccount,
   getStripeConnectConfigurationIssues,
+  hasDirectorFreeProcessing,
   StripeConnectFeeConfigurationError,
   synchronizeOrganizationStripeAccount,
 } from "@/lib/stripe-connect";
@@ -88,7 +89,7 @@ async function startConnect({
         });
     if (
       getPlatformFeeConfiguration().policy === "per_ticket_v2" &&
-      account.fees_collector !== "application"
+      !hasDirectorFreeProcessing(account)
     ) {
       // Repeating onboarding cannot change an existing account's fee payer.
       // Keep it intact and direct the director to TourniBase support instead.

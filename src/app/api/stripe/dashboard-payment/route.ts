@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getDirectorWorkspace } from "@/lib/auth";
-import { getStripeDashboardPaymentUrl } from "@/lib/stripe-connect-payments";
+import { createStripeDirectorDashboardUrl } from "@/lib/stripe-connect";
 import { createClient } from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
@@ -71,11 +71,17 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  return NextResponse.redirect(
-    getStripeDashboardPaymentUrl({
+  try {
+    const url = await createStripeDirectorDashboardUrl({
       connectedAccountId: relation.stripe_connected_account_id,
       environment: relation.stripe_environment,
       paymentIntentId: relation.stripe_payment_intent_id,
-    }),
-  );
+    });
+    const response = NextResponse.redirect(url);
+    response.headers.set("Cache-Control", "private, no-store");
+    response.headers.set("Referrer-Policy", "no-referrer");
+    return response;
+  } catch {
+    return NextResponse.json({ error: "Stripe could not be opened. Try again from your order." }, { status: 502 });
+  }
 }

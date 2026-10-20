@@ -43,8 +43,8 @@ beforeEach(() => {
     organization: { name: "Director Events" },
   });
   mocks.account.mockResolvedValue({ stripe_account_id: "acct_existing" });
-  mocks.synchronize.mockResolvedValue({ stripe_account_id: "acct_existing", fees_collector: "application" });
-  mocks.create.mockResolvedValue({ stripe_account_id: "acct_new", fees_collector: "application" });
+  mocks.synchronize.mockResolvedValue({ stripe_account_id: "acct_existing", fees_collector: "application", losses_collector: "stripe" });
+  mocks.create.mockResolvedValue({ stripe_account_id: "acct_new", fees_collector: "application", losses_collector: "stripe" });
   mocks.link.mockResolvedValue({ url: "https://connect.stripe.com/setup" });
 });
 afterEach(() => {

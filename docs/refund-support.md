@@ -1,15 +1,12 @@
 # TourniBase Refund and Support Process
 
-> Latest October 20 follow-up: the user approved resuming Sandbox verification.
-> Stripe created isolated account `acct_1USX6aBDCy7Cmb69`; its saved Profile shows
-> Express, Application fee collector, and Stripe negative-balance collector.
-> It has no payments, no accepted agreement, incomplete requirements, and no
-> TourniBase database link. The earlier research-only restriction below is
-> superseded for this isolated verification. Existing connections and live
-> settings were not changed. Application preview support and payment/refund
-> acceptance remain unfinished; keep rollout and live checkout disabled.
-> Evidence: [Sandbox record](stripe-express-sandbox-2026-10-20.json).
-
+> October 20 launch work: Express creation and authenticated dashboard access
+> are implemented locally. Both fee and loss responsibility are checked; no
+> existing account is replaced automatically. All 33 migrations are applied.
+> The isolated Sandbox account is in hosted onboarding, not yet payment-ready
+> or linked to TourniBase. New-tier payment/refund acceptance and live eligibility
+> remain open. Production checkout stays disabled. Onboarding UI work is on hold
+> at the user's request. See [current launch checklist](launch-readiness-2026-10-20.md).
 
 Last updated: October 20, 2026
 
@@ -31,14 +28,11 @@ For example, a $15 ticket plus $5 ticket carries fees of $1.60 and $1.00:
 refunding only the $5 pass returns $6.00. Legacy orders retain their existing
 proportional allocation and original processing-payer treatment.
 
-Platform-paid processing has not been enabled or verified. The user selected
-the simpler Express Dashboard, then limited provider work to research only.
-No new Sandbox account, account conversion, preview enrollment, or provider
-configuration change has been made. Sandbox/live eligibility, preview
-activation, and actual fee/liability settings remain unverified.
-Paid tiered checkout must reject unknown/director-paid processing and must
-verify Stripe-owned payment-loss responsibility. New tiered account creation
-must remain paused before Stripe calls during this research-only phase.
+Express configuration acceptance is verified only on the isolated Sandbox
+account. Hosted onboarding, payment allocation and live eligibility remain
+unverified. Local tiered Checkout checks both platform-paid processing and
+Stripe-owned losses; existing account routing is preserved. Express login
+links and account creation are now implemented, but not deployed.
 
 ### Local work; hosted blocker: insufficient connected-account balance
 
@@ -58,13 +52,11 @@ proceeds. Before activation, an isolated low-balance Sandbox case must
 prove completion without duplicate fee reversals or incorrect reporting.
 Local tests do not establish provider completion for this new funding path.
 
-There are 32 local migrations and 31 applied hosted migrations. The reporting
-correction `20261020064938` is local only: its SQL regression verifies advances
-never inflate director ticket proceeds, even if the buyer refund later fails,
-while preserving historical fee treatment. Both SQL suites pass with all 32
-local migrations. The final application suite passed 421 tests across 40 files,
-ESLint, TypeScript, the production webpack build, and diff checks. That does
-not prove provider funding or refund completion.
+All 33 local migrations are applied to hosted Supabase. Reporting correction
+`20261020195327` excludes fee advances from director proceeds, even after a
+failed buyer refund, while preserving historical treatment. Both SQL suites
+pass. The application passed 434 tests, ESLint, TypeScript and a production
+webpack build. These checks do not prove provider funding or refund completion.
 Keep historical orders routed to their original connected account during any
 future account migration; never replace old refund routing with a new Express
 account.

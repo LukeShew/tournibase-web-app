@@ -13,6 +13,7 @@ import {
   getOrganizationStripeAccount,
   getStripeConnectConfigurationIssues,
   getStripeConnectStatus,
+  hasDirectorFreeProcessing,
 } from "@/lib/stripe-connect";
 import { getPlatformFeeConfiguration } from "@/lib/stripe-connect-payments";
 import { createClient } from "@/lib/supabase/server";
@@ -108,7 +109,7 @@ export default async function TournamentOverviewPage({
     hasPaidTickets &&
     getPlatformFeeConfiguration().policy === "per_ticket_v2" &&
     stripeAccount !== null &&
-    stripeAccount.fees_collector !== "application";
+    !hasDirectorFreeProcessing(stripeAccount);
   const needsStripeConnection =
     hasPaidTickets && stripeStatus !== "ready";
   const connectConfigured =

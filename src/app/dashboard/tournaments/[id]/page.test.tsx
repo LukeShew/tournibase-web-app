@@ -40,7 +40,7 @@ beforeEach(() => {
     account_closed: false, onboarding_complete: true, charges_enabled: true, payouts_enabled: true,
     card_payments_status: "active", payouts_status: "active", requirements_currently_due: [],
     requirements_past_due: [], requirements_pending_verification: [], disabled_reason: null,
-    fees_collector: "stripe",
+    fees_collector: "stripe", losses_collector: "stripe",
   });
   mocks.from.mockImplementation((table: string) => {
     const query = {

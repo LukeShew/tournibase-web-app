@@ -4,7 +4,7 @@ import {
   parseConnectReturnEvent,
   settingsUrl,
 } from "@/lib/stripe-connect-director";
-import { getOrganizationStripeAccount } from "@/lib/stripe-connect";
+import { createStripeDirectorDashboardUrl, getOrganizationStripeAccount } from "@/lib/stripe-connect";
 import { getStripeEnvironment } from "@/lib/stripe-connect-payments";
 
 export const runtime = "nodejs";
@@ -43,11 +43,16 @@ export async function POST(request: Request) {
     );
   }
 
-  const accountPath = encodeURIComponent(account.stripe_account_id);
-  const dashboardUrl =
-    getStripeEnvironment() === "test"
-      ? `https://dashboard.stripe.com/${accountPath}/test/dashboard`
-      : `https://dashboard.stripe.com/${accountPath}/dashboard`;
-
-  return NextResponse.redirect(dashboardUrl, 303);
+  try {
+    const dashboardUrl = await createStripeDirectorDashboardUrl({
+      connectedAccountId: account.stripe_account_id,
+      environment: getStripeEnvironment(),
+    });
+    const response = NextResponse.redirect(dashboardUrl, 303);
+    response.headers.set("Cache-Control", "private, no-store");
+    response.headers.set("Referrer-Policy", "no-referrer");
+    return response;
+  } catch {
+    return NextResponse.redirect(settingsUrl({ event, origin, result: "dashboard_error" }), 303);
+  }
 }

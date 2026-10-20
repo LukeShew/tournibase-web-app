@@ -3,7 +3,7 @@ import "server-only";
 import type Stripe from "stripe";
 import { getAppEnvironment } from "@/lib/app-environment";
 import { getVerifiedStripe } from "@/lib/stripe";
-import { getPlatformFeeConfiguration } from "@/lib/stripe-connect-payments";
+import { getPlatformFeeConfiguration, getStripeDashboardPaymentUrl } from "@/lib/stripe-connect-payments";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
 export type StripeConnectStatus =
@@ -19,6 +19,8 @@ export type OrganizationStripeAccount = {
   charges_enabled: boolean;
   disabled_reason: string | null;
   fees_collector: string | null;
+  losses_collector: string | null;
+  dashboard: string | null;
   last_synced_at: string | null;
   onboarding_complete: boolean;
   organization_id: number;
@@ -39,6 +41,41 @@ const ACCOUNT_INCLUDES: Stripe.V2.Core.AccountRetrieveParams.Include[] = [
   "identity",
   "requirements",
 ];
+
+// Only Connect lifecycle requests use this preview. Payment/refund requests
+// retain the SDK's stable version and existing webhook contracts.
+export const CONNECT_PREVIEW_OPTIONS = { apiVersion: "2026-09-30.preview" };
+
+export function hasDirectorFreeProcessing(
+  account: Pick<OrganizationStripeAccount, "fees_collector" | "losses_collector"> | null | undefined,
+) {
+  return account?.fees_collector === "application" && account.losses_collector === "stripe";
+}
+
+/** Call only after authorizing ownership of this account (or its historical order). */
+export async function createStripeDirectorDashboardUrl({
+  connectedAccountId, environment, paymentIntentId,
+}: {
+  connectedAccountId: string;
+  environment: "live" | "test";
+  paymentIntentId?: string;
+}) {
+  if (environment !== getAppEnvironment()) throw new Error("Stripe environment mismatch.");
+  const stripe = await getVerifiedStripe();
+  const account = await stripe.v2.core.accounts.retrieve(connectedAccountId, {}, CONNECT_PREVIEW_OPTIONS);
+  if (account.id !== connectedAccountId || account.closed || account.livemode !== (environment === "live")) {
+    throw new Error("Stripe account is unavailable.");
+  }
+  if (account.dashboard === "express") {
+    // Stripe supplies the single-use URL. Do not invent unsupported payment
+    // deep links or log/cache this credential-bearing URL.
+    const link = await stripe.accounts.createLoginLink(connectedAccountId);
+    return link.url;
+  }
+  if (account.dashboard !== "full") throw new Error("Stripe dashboard access is unavailable.");
+  if (paymentIntentId) return getStripeDashboardPaymentUrl({ connectedAccountId, environment, paymentIntentId });
+  return `https://dashboard.stripe.com/${encodeURIComponent(connectedAccountId)}${environment === "test" ? "/test" : ""}/dashboard`;
+}
 
 export class StripeConnectFeeConfigurationError extends Error {
   readonly code = "STRIPE_DIRECTOR_FEE_CONFIGURATION_REQUIRED";
@@ -68,7 +105,7 @@ export async function assertStripeAccountCoversProcessing({
   const stripe = await getVerifiedStripe();
   const account = await stripe.v2.core.accounts.retrieve(connectedAccountId, {
     include: ["defaults"],
-  });
+  }, CONNECT_PREVIEW_OPTIONS);
 
   if (
     account.id !== connectedAccountId ||
@@ -159,7 +196,7 @@ export async function getOrganizationStripeAccount(
   const { data, error } = await admin
     .from("organization_stripe_accounts")
     .select(
-      "organization_id, stripe_account_id, stripe_environment, account_closed, onboarding_complete, charges_enabled, payouts_enabled, card_payments_status, payouts_status, requirements_currently_due, requirements_eventually_due, requirements_past_due, requirements_pending_verification, disabled_reason, fees_collector, last_synced_at",
+      "organization_id, stripe_account_id, stripe_environment, account_closed, onboarding_complete, charges_enabled, payouts_enabled, card_payments_status, payouts_status, requirements_currently_due, requirements_eventually_due, requirements_past_due, requirements_pending_verification, disabled_reason, fees_collector, losses_collector, dashboard, last_synced_at",
     )
     .eq("organization_id", organizationId)
     .eq("stripe_environment", getAppEnvironment())
@@ -194,7 +231,7 @@ export async function isOrganizationStripeAccountReady(
 
   if (getPlatformFeeConfiguration().policy === "per_ticket_v2") {
     const account = await getOrganizationStripeAccount(organizationId);
-    return account?.fees_collector === "application";
+    return hasDirectorFreeProcessing(account);
   }
 
   return true;
@@ -208,7 +245,7 @@ export async function isOrganizationStripeProcessingSetupRequired(
   }
 
   const account = await getOrganizationStripeAccount(organizationId);
-  return account !== null && account.fees_collector !== "application";
+  return account !== null && !hasDirectorFreeProcessing(account);
 }
 
 export async function createOrganizationStripeAccount({
@@ -225,14 +262,7 @@ export async function createOrganizationStripeAccount({
     return synchronizeOrganizationStripeAccount(existingAccount);
   }
 
-  if (getPlatformFeeConfiguration().policy === "per_ticket_v2") {
-    // Express with platform-paid fees and Stripe-owned losses is selected, but
-    // its preview eligibility and complete account lifecycle remain unverified.
-    // Do not create an account with a different configuration as a fallback.
-    throw new StripeConnectFeeConfigurationError(
-      "New Stripe connections are paused while TourniBase verifies its Express payment setup. Contact TourniBase support; no Stripe account was created.",
-    );
-  }
+  const directorFree = getPlatformFeeConfiguration().policy === "per_ticket_v2";
 
   const stripe = await getVerifiedStripe();
   const environment = getAppEnvironment();
@@ -248,7 +278,7 @@ export async function createOrganizationStripeAccount({
         },
       },
       contact_email: contactEmail,
-      dashboard: "full",
+      dashboard: directorFree ? "express" : "full",
       defaults: {
         currency: "usd",
         profile: {
@@ -257,7 +287,7 @@ export async function createOrganizationStripeAccount({
             "Digital spectator admission passes for youth basketball tournaments.",
         },
         responsibilities: {
-          fees_collector: "stripe",
+          fees_collector: directorFree ? "application" : "stripe",
           losses_collector: "stripe",
         },
       },
@@ -273,7 +303,8 @@ export async function createOrganizationStripeAccount({
       },
     },
     {
-      idempotencyKey: `tournibase-connect-${environment}-${organizationId}`,
+      idempotencyKey: `tournibase-connect-${environment}-${organizationId}${directorFree ? "-express-v2" : ""}`,
+      ...(directorFree ? CONNECT_PREVIEW_OPTIONS : {}),
     },
   );
 
@@ -295,6 +326,7 @@ export async function synchronizeOrganizationStripeAccount(
     {
       include: ACCOUNT_INCLUDES,
     },
+    CONNECT_PREVIEW_OPTIONS,
   );
 
   return persistStripeAccountState({
@@ -328,7 +360,7 @@ export async function createStripeConnectOnboardingLink({
       },
       type: "account_onboarding",
     },
-  });
+  }, CONNECT_PREVIEW_OPTIONS);
 }
 
 export async function synchronizeStripeAccountById(accountId: string) {
@@ -395,7 +427,7 @@ async function persistStripeAccountState({
       onConflict: "organization_id,stripe_environment",
     })
     .select(
-      "organization_id, stripe_account_id, stripe_environment, account_closed, onboarding_complete, charges_enabled, payouts_enabled, card_payments_status, payouts_status, requirements_currently_due, requirements_eventually_due, requirements_past_due, requirements_pending_verification, disabled_reason, fees_collector, last_synced_at",
+      "organization_id, stripe_account_id, stripe_environment, account_closed, onboarding_complete, charges_enabled, payouts_enabled, card_payments_status, payouts_status, requirements_currently_due, requirements_eventually_due, requirements_past_due, requirements_pending_verification, disabled_reason, fees_collector, losses_collector, dashboard, last_synced_at",
     )
     .single();
 
@@ -466,6 +498,8 @@ export function mapStripeAccountState(
       account.closed !== true && cardCapability?.status === "active",
     disabled_reason: disabledReason,
     fees_collector: account.defaults?.responsibilities?.fees_collector ?? null,
+    losses_collector: account.defaults?.responsibilities?.losses_collector ?? null,
+    dashboard: account.dashboard ?? null,
     last_synced_at: new Date().toISOString(),
     onboarding_complete:
       account.closed !== true &&

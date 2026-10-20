@@ -1,9 +1,10 @@
 import { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const mocks = vi.hoisted(() => ({ workspace: vi.fn(), lookup: vi.fn(), eq: vi.fn() }));
+const mocks = vi.hoisted(() => ({ workspace: vi.fn(), lookup: vi.fn(), eq: vi.fn(), dashboard: vi.fn() }));
 vi.mock("server-only", () => ({}));
 vi.mock("@/lib/auth", () => ({ getDirectorWorkspace: mocks.workspace }));
+vi.mock("@/lib/stripe-connect", () => ({ createStripeDirectorDashboardUrl: mocks.dashboard }));
 vi.mock("@/lib/supabase/server", () => ({
   createClient: async () => ({
     from: () => ({ select: () => {
@@ -33,6 +34,7 @@ beforeEach(() => {
   vi.resetAllMocks();
   mocks.workspace.mockResolvedValue({ director: { id: "director_1" }, organization: { id: 2, operatingEnvironment: "test" } });
   mocks.lookup.mockResolvedValue({ data: owned, error: null });
+  mocks.dashboard.mockResolvedValue("https://dashboard.stripe.com/acct_director/test/payments/pi_director");
 });
 
 describe("director Stripe payment link", () => {
@@ -42,17 +44,20 @@ describe("director Stripe payment link", () => {
     expect(mocks.eq).toHaveBeenCalledWith("stripe_environment", "test");
     expect(mocks.eq).toHaveBeenCalledWith("tournaments.organizations.id", 2);
     expect(mocks.eq).toHaveBeenCalledWith("tournaments.organizations.operating_environment", "test");
+    expect(mocks.dashboard).toHaveBeenCalledWith({ connectedAccountId: "acct_director", environment: "test", paymentIntentId: "pi_director" });
   });
 
   it("requires a signed-in director before loading an order", async () => {
     mocks.workspace.mockResolvedValue(null);
     expect((await GET(request())).headers.get("location")).toBe("https://staging.tournibase.com/login");
     expect(mocks.lookup).not.toHaveBeenCalled();
+    expect(mocks.dashboard).not.toHaveBeenCalled();
   });
 
   it("rejects another owner's payment even if returned by the query", async () => {
     mocks.lookup.mockResolvedValue({ data: { ...owned, tournaments: { organizations: { ...owned.tournaments.organizations, owner_user_id: "another_director" } } }, error: null });
     expect((await GET(request())).headers.get("location")).toBe("https://staging.tournibase.com/dashboard");
+    expect(mocks.dashboard).not.toHaveBeenCalled();
   });
 
   it("rejects an order from the other Stripe environment", async () => {

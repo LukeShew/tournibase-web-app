@@ -1,15 +1,12 @@
 # TourniBase Web App
 
-> Latest October 20 follow-up: the user approved resuming Sandbox verification.
-> Stripe created isolated account `acct_1USX6aBDCy7Cmb69`; its saved Profile shows
-> Express, Application fee collector, and Stripe negative-balance collector.
-> It has no payments, no accepted agreement, incomplete requirements, and no
-> TourniBase database link. The earlier research-only restriction below is
-> superseded for this isolated verification. Existing connections and live
-> settings were not changed. Application preview support and payment/refund
-> acceptance remain unfinished; keep rollout and live checkout disabled.
-> Evidence: [Sandbox record](docs/stripe-express-sandbox-2026-10-20.json).
-
+> October 20 launch work: Express creation and authenticated dashboard access
+> are implemented locally. Both fee and loss responsibility are checked; no
+> existing account is replaced automatically. All 33 migrations are applied.
+> The isolated Sandbox account is in hosted onboarding, not yet payment-ready
+> or linked to TourniBase. New-tier payment/refund acceptance and live eligibility
+> remain open. Production checkout stays disabled. Onboarding UI work is on hold
+> at the user's request. See [current launch checklist](docs/launch-readiness-2026-10-20.md).
 
 TourniBase is a digital gate system for youth basketball tournaments. This
 web-first MVP lets directors sell spectator passes, issue mobile tickets, scan
@@ -30,9 +27,10 @@ Production app:
   migration is applied; Express/Stripe loss-protection preview eligibility and
   new-pricing Sandbox acceptance are still open. See the
   [pricing handoff](docs/pricing-handoff-2026-10-20.md).
-- Express is the preferred future dashboard, but the latest user instruction
-  is research only: no new Sandbox account, conversion, preview enrollment, or
-  Stripe/provider setting change. Preview and live eligibility remain unverified.
+- Express creation, dashboard login links and fee/loss verification are
+  implemented locally. The isolated Sandbox configuration is accepted; its
+  onboarding and payment/refund checks remain unfinished. New-director
+  onboarding UI work is on hold at the user's request.
 - All 19 numbered web MVP phases complete
 - Stripe Connect hosted onboarding and direct-charge payments
 - Final repository review and MVP handoff complete
@@ -223,9 +221,9 @@ That route uses sample data and returns 404 in production. See
 ## Supabase setup
 
 The schema is managed by the SQL files in `supabase/migrations`. As of October
-20, 2026, 31 migrations are applied to the shared project, including
-`20261020001124_add_tiered_buyer_fee_snapshots.sql`. There are 32 local
-migrations: the additional reporting correction `20261020064938` is local only.
+20, 2026, all 33 local migrations are applied to the shared project, including
+`20261020001124` (tier snapshots), `20261020195327` (refund-advance reporting),
+and `20261020195330` (dashboard/loss configuration metadata).
 The applied additive change does not activate the pending application release
 or reprice old orders.
 
@@ -344,12 +342,13 @@ Stripe account model, verifying platform-paid processing, deploying
 matching application code, and passing new Sandbox purchase/refund checks.
 Insufficient-connected-balance refund funding and its accounting/retry behavior
 are implemented and tested locally, but provider acceptance remains a launch
-blocker. The final local suite passed 421 tests across 40 files, lint, TypeScript,
-the production webpack build, all 32 migrations, and both SQL regressions.
-The user selected the simpler Express Dashboard, then limited provider work to
-research only into Stripe loss protection in public preview. Eligibility, activation, and the
-actual fee/liability settings are not verified. No connected account has been
-created, replaced, or reconfigured, and no provider settings were changed.
+blocker. The final local suite passed 434 tests across 40 files, lint, TypeScript,
+the production webpack build, all 33 migrations, and both SQL regressions.
+The user subsequently authorized isolated Sandbox verification. That account
+accepted Express with application-paid fees and Stripe-owned losses, but its
+onboarding and payment/refund acceptance remain incomplete. Express creation
+and login support are implemented locally. No existing connection was replaced;
+live eligibility remains unverified.
 Published US platform-managed Connect pricing includes $2 per monthly active
 account plus 0.25% + $0.25 per payout, on top of processing; see the
 [source-backed cost notes](docs/pricing-handoff-2026-10-20.md#express-cost-research).

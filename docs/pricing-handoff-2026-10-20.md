@@ -1,48 +1,46 @@
 # Pending Pricing and Next-Phase Handoff
 
-> Latest October 20 follow-up: the user approved resuming Sandbox verification.
-> Stripe created isolated account `acct_1USX6aBDCy7Cmb69`; its saved Profile shows
-> Express, Application fee collector, and Stripe negative-balance collector.
-> It has no payments, no accepted agreement, incomplete requirements, and no
-> TourniBase database link. The earlier research-only restriction below is
-> superseded for this isolated verification. Existing connections and live
-> settings were not changed. Application preview support and payment/refund
-> acceptance remain unfinished; keep rollout and live checkout disabled.
-> Evidence: [Sandbox record](stripe-express-sandbox-2026-10-20.json).
-
+> October 20 launch work: Express creation and authenticated dashboard access
+> are implemented locally. Both fee and loss responsibility are checked; no
+> existing account is replaced automatically. All 33 migrations are applied.
+> The isolated Sandbox account is in hosted onboarding, not yet payment-ready
+> or linked to TourniBase. New-tier payment/refund acceptance and live eligibility
+> remain open. Production checkout stays disabled. Onboarding UI work is on hold
+> at the user's request. See [current launch checklist](launch-readiness-2026-10-20.md).
 
 Checkpoint: October 20, 2026. This is a continuation record, not a launch
 approval or published refund/dispute policy.
 
-## Latest scope: research only for Express
+## Current continuation
 
-The user chose the simpler Express Dashboard as the target, then instructed
-**“Only research it for now.”** Do not create a new Sandbox account, convert or
-replace an account, enroll in a preview, or change Stripe/provider settings.
-No such account or provider change has been made. Neither Sandbox-preview nor
-live eligibility, preview activation, processing-payer settings, or loss
-protection has been verified for TourniBase.
+Express account creation now uses the per-request `2026-09-30.preview`
+API with platform-paid processing and Stripe-owned losses. Authenticated
+Express login links, full-dashboard compatibility, original-account routing
+for historical orders, and cached/fresh fee-and-loss checks are implemented.
+No existing connected account is replaced automatically.
 
-## Current state
+The isolated Sandbox account `acct_1USX6aBDCy7Cmb69` accepted this configuration.
+Its approved test-phone and identity steps are complete; business/bank setup
+and final readiness are outstanding. It remains unlinked and has no payments.
+Configuration acceptance is not proof of fee settlement, refunds, payouts, or
+live eligibility. The existing staging connection is unchanged.
 
-- Staging and production remain on deployed source `ab2db87`. The pending
-  per-ticket application changes are local only, not pushed or deployed.
-- Production still uses the legacy 2% plus $0.30-per-order configuration.
-  `TOURNIBASE_PAID_CHECKOUT_ENABLED=false`; there is no live connected
-  organization. Do not enable live sales.
-- Staging still uses its legacy $0 fee. No hosted new-tier purchase/refund
-  acceptance has occurred.
-- Shared Supabase migration
-  `20261020001124_add_tiered_buyer_fee_snapshots.sql` is applied. There are 31
-  hosted migrations and 32 local migrations. The additional
-  `20261020064938_exclude_buyer_fee_refund_advances_from_director_proceeds.sql`
-  is local only and has not been applied to hosted Supabase. The earlier draft timestamp
-  `20261020000747` was replaced by the hosted version; it is not a second
-  migration.
-- The hosted read found 2,041 orders, zero `per_ticket_v2` orders, zero
-  platform-payer orders, zero unit-fee snapshots, and no live connected
-  accounts. The one Sandbox connected account's `fees_collector` is `NULL`
-  (unverified). No account was changed or replaced.
+All 33 local migrations are applied to the shared project, including
+`20261020195327` (refund-advance reporting) and `20261020195330` (dashboard/loss
+metadata). The earlier local reporting timestamp `20261020064938` was renamed
+to the hosted identity; never apply it twice. Historical orders are not repriced.
+The last read found 2,041 orders and no new-tier orders.
+
+Local validation: 434 tests across 40 files, TypeScript, ESLint, production
+webpack build, all migrations and both SQL suites passed. Provider acceptance
+is still required. Last verified deployed source remains `ab2db87`; the new
+application release is not yet deployed. Production retains legacy 2% + $0.30
+per order with paid checkout off; staging retains legacy zero fees. New tiers
+are not activated.
+
+The current actionable gates are tracked in
+[launch readiness](launch-readiness-2026-10-20.md). New-director onboarding
+concepts exist, but implementation is on hold at the user's request.
 
 ## Approved price formula
 
@@ -85,8 +83,9 @@ legacy configuration during the additive rollout.
 Stripe documents this intended combination for Accounts v2 direct charges:
 `dashboard=express`, `defaults.responsibilities.fees_collector=application`,
 and `defaults.responsibilities.losses_collector=stripe`. The documented
-creation API version is `2026-09-30.preview`. The current application does not
-enable this preview or implement the Express lifecycle.
+creation API version is `2026-09-30.preview`. The local application now uses
+this version only for Connect lifecycle requests; payment/refund calls keep
+their existing SDK version and webhook contracts.
 
 The exact combination is in public preview. Documentation establishes that
 Stripe offers it, not that TourniBase is enrolled or eligible in either mode.
@@ -97,11 +96,9 @@ TourniBase's responsibility for its own expenses or negative balance.
 [release phases](https://docs.stripe.com/release-phases).
 
 Express offers payment, payout, bank-detail, refund, dispute, and reporting
-workflows. Sandbox access requires a server-generated login link. Both current
-dashboard links and per-order payment links assume the full Dashboard, so
-replacing only the account-creation parameter would be incomplete. Preserve
-historical account routing and support both account types during any future
-migration.
+workflows. Sandbox access requires a server-generated login link. The local dashboard and order routes now create fresh Express login links
+and retain full-Dashboard deep links. Historical order account IDs remain
+authoritative. No existing organization has been switched.
 [Express Dashboard](https://docs.stripe.com/connect/express-dashboard),
 [account configuration](https://docs.stripe.com/connect/accounts-v2/connected-account-configuration).
 
@@ -120,89 +117,29 @@ protection is not assumed active or free. Keeping directors free means
 TourniBase must budget Connect/payout costs as well as card processing from its
 buyer-fee revenue.
 
-## Prepared implementation and local evidence
+## Prepared implementation and acceptance gates
 
-- Per-ticket calculation, upfront buyer totals, Checkout line items, exact
-  unit-fee snapshots, and pass-specific refund allocation.
-- Separate service-only tiered reservation RPC; legacy callers and historical
-  order pricing remain unchanged.
-- Immutable order fee policy/processing payer and item fee snapshots; reporting
-  does not deduct estimated processing from platform-payer orders.
-- Account fee-collector synchronization and a fresh Stripe processing-payer
-  check before a tiered paid Checkout Session. Unknown/director-paid
-  processing fails closed.
-- Paused-creation safety blocks `per_ticket_v2` from creating any new Stripe
-  account before provider calls while Express remains research-only. Existing-account sync
-  and legacy behavior remain; there is no speculative Full Dashboard fallback.
-  Fresh paid-checkout verification also requires Stripe-owned losses.
-- Early application-fee funding for provider-reported
-  `pending_reason=insufficient_funds` refunds is implemented and tested locally.
-  The advance is capped by the full order's original fee or exact saved
-  pass-level fee. Buyer refund totals/pass states remain success-only;
-  failures preserve the actual fee advance for manual reconciliation without
-  recovery or automatic buyer-refund retry. This is not deployed or verified
-  through Stripe.
-- The local-only reporting migration prevents any fee advance from inflating
-  director ticket proceeds, including after a later failed buyer refund.
-- Final local validation passed 421 tests across 40 files, ESLint, TypeScript,
-  the production webpack build, and diff checks.
-- All 32 local migrations applied in isolated PGlite; both
-  `supabase/tests/buyer_paid_fees.sql` and
-  `supabase/tests/tiered_buyer_fees.sql` passed.
+Per-ticket quotes, upfront totals, exact unit snapshots, pass refunds, and
+legacy compatibility are implemented. The refund-advance path is idempotent,
+capped to the original order/pass fee, and starts only after Stripe reports
+insufficient funds. Pass cancellation and refunded totals remain success-only.
+A failed/canceled refund preserves the advance for manual reconciliation;
+there is no automatic recovery or buyer-refund retry.
 
-Local results and an applied migration do not prove Stripe platform-fee
-allocation, hosted refunds, or live bank payouts. The October 17 orders
-`2040`–`2043` and their deployment receipts remain historical evidence of the
-legacy fee model only.
+Before activation, finish isolated Sandbox onboarding; validate mixed/free/
+boundary quantities, fee transfer, platform processing, receipts, partial/full
+and low-balance refunds, historical routing and environment separation. Local
+checks and October 17 legacy orders are not acceptance of the new model.
 
-## Blockers before activation
+Keep production checkout off until a real director is ready and the live
+launch gates are satisfied. Refund/dispute policy and clear offer conditions
+still need approval. No new legal promise has been published.
 
-1. **Selected Express model.** The user chose the simpler Express Dashboard
-   and limited the current provider work to research into Stripe loss protection
-   in public preview.
-   Eligibility, preview activation, and actual fee/liability settings remain
-   unverified. No account has been created or switched. Do not enroll, create
-   test accounts, convert accounts, or change provider settings under this
-   research-only instruction.
-2. **Provider configuration.** After separate authorization and confirming support, verify the selected account
-   actually has platform-paid processing. A database default or local guard is
-   not provider confirmation. Keep live checkout off.
-3. **Insufficient-balance refunds.** Deployed code returns application fees
-   only after buyer refunds succeed. A connected account holding only ticket
-   principal may lack the buyer-fee portion and leave a refund pending while
-   TourniBase still holds that amount. Early funding, idempotent exact-fee
-   handling, and the reporting correction are implemented and locally tested;
-   neither is deployed. Hosted low-balance acceptance and provider
-   reconciliation checks remain outstanding.
-4. **Hosted new-policy QA.** Deploy matching code/configuration only after the
-   blockers are addressed, then validate mixed tiers, free tickets, boundary
-   rounding, multiple quantities, processing payer, application fees, director
-   proceeds, receipts, exact partial/full refunds, low connected balances,
-   failure/retry behavior, historical compatibility, and environment isolation
-   using Sandbox only. Do not treat the old zero-fee restoration run as this
-   acceptance.
-5. **Policy and live launch.** Agree refund/dispute policy and prominent
-   offer conditions before publishing a free-director claim. Terms have not
-   been changed. Complete real director onboarding and the separately
-   authorized genuine pilot payment/payout checks before live launch.
+## New-account introduction — on hold
 
-Future Express readiness also requires authenticated Express dashboard-login
-links, correct configuration metadata and webhook synchronization, and an
-explicit migration plan. Preserve historical order account IDs for refunds;
-do not route existing payments through a replacement account. These are
-remaining work, not an implemented Express preview integration.
-
-## Queued next phase: new-account introduction
-
-After the payment model is resolved, build the requested Canva-like guided
-introduction to TourniBase and its important setup steps, including Stripe and
-the first event. This is not implemented. The user has not decided that
-directors must complete setup before doing anything else; do not introduce
-forced gating by assumption.
-
-Use the same guided UI, routes, and behavior on staging and production, with
-only the intentional test/live, data, account, email, domain, indexing, and
-access differences.
+Four concepts and workflows are complete. The user deferred implementation
+on October 20. Do not build option D or force setup gating without resuming
+that decision. Keep any eventual UI identical across staging and production.
 
 ## Repository rules for continuation
 

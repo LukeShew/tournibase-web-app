@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
   rpc: vi.fn(),
   environment: vi.fn(() => "test"),
   upsert: vi.fn(),
+  login: vi.fn(),
 }));
 vi.mock("server-only", () => ({}));
 vi.mock("@/lib/app-environment", async (importOriginal) => ({
@@ -15,7 +16,7 @@ vi.mock("@/lib/app-environment", async (importOriginal) => ({
   getAppEnvironment: mocks.environment,
 }));
 vi.mock("@/lib/stripe", () => ({
-  getVerifiedStripe: async () => ({ v2: { core: { accounts: {
+  getVerifiedStripe: async () => ({ accounts: { createLoginLink: mocks.login }, v2: { core: { accounts: {
     create: mocks.create,
     retrieve: mocks.retrieve,
   } } } }),
@@ -26,6 +27,8 @@ vi.mock("@/lib/supabase/admin", () => ({
 
 import {
   assertStripeAccountCoversProcessing,
+  CONNECT_PREVIEW_OPTIONS,
+  createStripeDirectorDashboardUrl,
   createOrganizationStripeAccount,
   getStripeConnectStatus,
   isOrganizationStripeAccountReady,
@@ -94,7 +97,7 @@ describe("director-free connected account guard", () => {
 
   it("requires Stripe's current fee responsibility for the exact reserved account", async () => {
     await expect(assertStripeAccountCoversProcessing(routing)).resolves.toBeUndefined();
-    expect(mocks.retrieve).toHaveBeenCalledWith("acct_director", { include: ["defaults"] });
+    expect(mocks.retrieve).toHaveBeenCalledWith("acct_director", { include: ["defaults"] }, CONNECT_PREVIEW_OPTIONS);
     expect(mocks.create).not.toHaveBeenCalled();
     expect(mocks.upsert).not.toHaveBeenCalled();
   });
@@ -158,14 +161,21 @@ describe("director-free connected account guard", () => {
 describe("connected account setup and history", () => {
   const organization = { contactEmail: "director@example.com", displayName: "Director Events", organizationId: 7 };
 
-  it("blocks new tiered accounts before Stripe while Express preview eligibility remains unverified", async () => {
-    await expect(createOrganizationStripeAccount(organization)).rejects.toMatchObject({
-      name: "StripeConnectFeeConfigurationError",
-      code: "STRIPE_DIRECTOR_FEE_CONFIGURATION_REQUIRED",
-      message: expect.stringContaining("no Stripe account was created"),
-    });
-    expect(mocks.create).not.toHaveBeenCalled();
-    expect(mocks.retrieve).not.toHaveBeenCalled();
+  it("creates tiered accounts with Express, platform-paid processing and Stripe-owned losses", async () => {
+    mocks.create.mockResolvedValue(account({ dashboard: "express" }));
+    const result = await createOrganizationStripeAccount(organization);
+    expect(mocks.create).toHaveBeenCalledWith(expect.objectContaining({
+      dashboard: "express",
+      defaults: expect.objectContaining({ responsibilities: { fees_collector: "application", losses_collector: "stripe" } }),
+    }), { idempotencyKey: "tournibase-connect-test-7-express-v2", ...CONNECT_PREVIEW_OPTIONS });
+    expect(result.dashboard).toBe("express");
+    expect(result.losses_collector).toBe("stripe");
+  });
+
+  it("never retries rejected Express configuration with platform-owned losses", async () => {
+    mocks.create.mockRejectedValueOnce(new Error("Preview unavailable"));
+    await expect(createOrganizationStripeAccount(organization)).rejects.toThrow("Preview unavailable");
+    expect(mocks.create).toHaveBeenCalledOnce();
     expect(mocks.upsert).not.toHaveBeenCalled();
   });
 
@@ -207,7 +217,7 @@ describe("connected account setup and history", () => {
     expect(mocks.upsert).not.toHaveBeenCalled();
   });
 
-  it("still synchronizes an existing platform-paid account while new tiered creation is blocked", async () => {
+  it("synchronizes existing platform-paid accounts without replacements", async () => {
     existing = mapStripeAccountState(account(), 7);
     const result = await createOrganizationStripeAccount(organization);
     expect(result.stripe_account_id).toBe(existing.stripe_account_id);
@@ -215,12 +225,35 @@ describe("connected account setup and history", () => {
     expect(getStripeConnectStatus(result)).toBe("ready");
     expect(mocks.retrieve).toHaveBeenCalledWith("acct_director", expect.objectContaining({
       include: expect.arrayContaining(["defaults"]),
-    }));
+    }), CONNECT_PREVIEW_OPTIONS);
     expect(mocks.create).not.toHaveBeenCalled();
   });
 
   it("records an unknown fee payer without inventing historical processing responsibility", () => {
     expect(mapStripeAccountState(account({ defaults: null }), 7).fees_collector).toBeNull();
+  });
+});
+
+describe("director dashboard access", () => {
+  const routing = { connectedAccountId: "acct_director", environment: "test" as const };
+  it("creates an account-specific Express link even for historical order access", async () => {
+    mocks.retrieve.mockResolvedValue(account({ dashboard: "express" }));
+    mocks.login.mockResolvedValue({ url: "https://connect.stripe.com/express/single-use" });
+    expect(await createStripeDirectorDashboardUrl({ ...routing, paymentIntentId: "pi_old" })).toBe("https://connect.stripe.com/express/single-use");
+    expect(mocks.login).toHaveBeenCalledWith("acct_director");
+  });
+  it("keeps full-dashboard payment deep links for historical accounts", async () => {
+    expect(await createStripeDirectorDashboardUrl({ ...routing, paymentIntentId: "pi_old" })).toBe("https://dashboard.stripe.com/acct_director/test/payments/pi_old");
+    expect(mocks.login).not.toHaveBeenCalled();
+  });
+  it.each([{ livemode: true }, { closed: true }, { id: "acct_other" }, { dashboard: "none" }, { dashboard: null }])("fails closed for unavailable accounts: %j", async (override) => {
+    mocks.retrieve.mockResolvedValue(account(override));
+    await expect(createStripeDirectorDashboardUrl(routing)).rejects.toThrow();
+    expect(mocks.login).not.toHaveBeenCalled();
+  });
+  it("rejects a different environment before contacting Stripe", async () => {
+    await expect(createStripeDirectorDashboardUrl({ ...routing, environment: "live" })).rejects.toThrow();
+    expect(mocks.retrieve).not.toHaveBeenCalled();
   });
 });
 
@@ -263,6 +296,12 @@ describe("public paid checkout availability", () => {
     expect(mocks.rpc).toHaveBeenCalledWith("organization_stripe_account_is_ready", {
       p_organization_id: 7, p_stripe_environment: "test",
     });
+  });
+
+  it.each([null, "application"])("blocks cached %s loss ownership even with platform-paid processing", async (lossesCollector) => {
+    existing = { ...mapStripeAccountState(account(), 7), losses_collector: lossesCollector };
+    expect(await isOrganizationStripeAccountReady(7)).toBe(false);
+    expect(await isOrganizationStripeProcessingSetupRequired(7)).toBe(true);
   });
 
   it("fails closed when the account snapshot is missing", async () => {

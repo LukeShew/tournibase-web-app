@@ -1,15 +1,12 @@
 # TourniBase Overview
 
-> Latest October 20 follow-up: the user approved resuming Sandbox verification.
-> Stripe created isolated account `acct_1USX6aBDCy7Cmb69`; its saved Profile shows
-> Express, Application fee collector, and Stripe negative-balance collector.
-> It has no payments, no accepted agreement, incomplete requirements, and no
-> TourniBase database link. The earlier research-only restriction below is
-> superseded for this isolated verification. Existing connections and live
-> settings were not changed. Application preview support and payment/refund
-> acceptance remain unfinished; keep rollout and live checkout disabled.
-> Evidence: [Sandbox record](stripe-express-sandbox-2026-10-20.json).
-
+> October 20 launch work: Express creation and authenticated dashboard access
+> are implemented locally. Both fee and loss responsibility are checked; no
+> existing account is replaced automatically. All 33 migrations are applied.
+> The isolated Sandbox account is in hosted onboarding, not yet payment-ready
+> or linked to TourniBase. New-tier payment/refund acceptance and live eligibility
+> remain open. Production checkout stays disabled. Onboarding UI work is on hold
+> at the user's request. See [current launch checklist](launch-readiness-2026-10-20.md).
 
 Last updated against local implementation and recorded hosted checks: October 20, 2026
 
@@ -44,11 +41,11 @@ before expanding into a larger platform.
 | --- | --- |
 | Progress | All 19 numbered phases complete |
 | Current phase | Investigate the selected Express model's preview eligibility and validate the pending per-ticket pricing release |
-| Next phase | After the payment model is resolved, build the requested guided new-account introduction and setup flow; live pilot onboarding remains a separate launch gate |
+| Next phase | Finish payment acceptance and live pilot readiness; new-director onboarding UI is on hold at the user's request |
 | Production app | [tournibase.com](https://tournibase.com) |
 | Payments | Direct charges to director accounts; staging uses the Sandbox and production is isolated for live Connect with paid checkout disabled |
 | Environment split | Deployed with one Vercel project and one Supabase project; organizations are isolated as `test` or `live` |
-| Database | 31 hosted migrations, including tiered snapshots `20261020001124`; 32 local migrations with reporting correction `20261020064938` still local only; no historical order repricing |
+| Database | 33 hosted/local migrations, including tier snapshots, refund-advance reporting, and dashboard/loss metadata; no historical repricing |
 | Email | Live through Resend and end-to-end tested |
 | Offline access | Downloadable pass PNG for Photos or Files |
 | Refund support | TourniBase full-order and pass-specific refunds with connected-account webhook synchronization |
@@ -73,44 +70,34 @@ processing charged to TourniBase. The buyer fee is not all profit: processing
 and other platform costs come out of it. Both staging and production will use
 the same tiers; staging transactions remain Sandbox-only.
 
-Code and local regression coverage are prepared but not pushed or deployed;
-both hosted sites remain on `ab2db87`. Migration `20261020001124` is applied to
-the shared Supabase project and adds immutable per-ticket fee and processing-payer
-snapshots. Historical orders keep their original terms. The hosted check found
-2,041 orders, zero per-ticket-policy orders, zero platform-payer orders, and
-zero populated unit-fee snapshots.
+Express account creation now uses the per-request `2026-09-30.preview`
+API with platform-paid processing and Stripe-owned losses. Authenticated
+Express login links, full-dashboard compatibility, original-account routing
+for historical orders, and cached/fresh fee-and-loss checks are implemented.
+No existing connected account is replaced automatically.
 
-The user selected the simpler Express Dashboard, then instructed “Only research
-it for now.” No new Sandbox account, conversion, preview enrollment, or provider
-setting change is authorized by that follow-up or has been performed.
-Eligibility in Sandbox/live, preview activation, and
-the actual processing-payer/liability settings are not verified, so activation
-remains blocked. No account has been replaced or reconfigured.
-The existing Sandbox account's fee-collector snapshot is unverified (`NULL`);
-there is no live connected organization. The new paid-checkout path rejects
-unknown or director-paid processing rather than deducting costs from directors.
+The isolated Sandbox account `acct_1USX6aBDCy7Cmb69` accepted this configuration.
+Its approved test-phone and identity steps are complete; business/bank setup
+and final readiness are outstanding. It remains unlinked and has no payments.
+Configuration acceptance is not proof of fee settlement, refunds, payouts, or
+live eligibility. The existing staging connection is unchanged.
 
-Production still has the legacy 2% plus $0.30-per-order configuration with paid
-checkout disabled. Staging still has its legacy zero-fee configuration. The
-new-tier hosted Sandbox purchase, processing allocation, partial/full refund,
-receipt, and reporting checks have **not** been performed. An additional launch
-blocker is funding refunds when the connected account lacks the buyer-fee
-portion: the deployed app returns the application fee only after the buyer
-refund succeeds. Early funding is implemented and tested locally, and local-only
-migration `20261020064938` prevents fee advances from becoming director revenue.
-Isolated low-balance Sandbox acceptance and provider reconciliation checks
-remain outstanding. The October 17 evidence
-below does not validate this new model. See the
-[pricing handoff](./pricing-handoff-2026-10-20.md) for the remaining gates.
+All 33 local migrations are applied to the shared project, including
+`20261020195327` (refund-advance reporting) and `20261020195330` (dashboard/loss
+metadata). The earlier local reporting timestamp `20261020064938` was renamed
+to the hosted identity; never apply it twice. Historical orders are not repriced.
+The last read found 2,041 orders and no new-tier orders.
 
-Final local validation passed 421 tests across 40 files, ESLint, TypeScript,
-the production webpack build, and diff checks. All 32 local migrations and both
-legacy/new-tier SQL regressions passed in isolated PGlite. These are local
-checks, not new hosted payment acceptance. New tiered account creation is
-blocked before Stripe calls while Express remains research-only; no account
-has been converted. Express adds
-platform costs beyond processing; see the
-[official-source cost notes](./pricing-handoff-2026-10-20.md#express-cost-research).
+Local validation: 434 tests across 40 files, TypeScript, ESLint, production
+webpack build, all migrations and both SQL suites passed. Provider acceptance
+is still required. Last verified deployed source remains `ab2db87`; the new
+application release is not yet deployed. Production retains legacy 2% + $0.30
+per order with paid checkout off; staging retains legacy zero fees. New tiers
+are not activated.
+
+The current actionable gates are tracked in
+[launch readiness](launch-readiness-2026-10-20.md). New-director onboarding
+concepts exist, but implementation is on hold at the user's request.
 
 ### Historical deployed acceptance — October 17
 

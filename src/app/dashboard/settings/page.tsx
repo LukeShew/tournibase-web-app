@@ -7,6 +7,7 @@ import { getAppEnvironment } from "@/lib/app-environment";
 import { requireDirectorWorkspace } from "@/lib/auth";
 import {
   getStripeConnectConfigurationIssues,
+  hasDirectorFreeProcessing,
   getStripeConnectStatus,
   getStripeConnectStatusLabel,
   type OrganizationStripeAccount,
@@ -43,7 +44,7 @@ export default async function SettingsPage({
       ? await supabase
           .from("organization_stripe_accounts")
           .select(
-            "organization_id, stripe_account_id, stripe_environment, account_closed, onboarding_complete, charges_enabled, payouts_enabled, card_payments_status, payouts_status, requirements_currently_due, requirements_eventually_due, requirements_past_due, requirements_pending_verification, disabled_reason, fees_collector, last_synced_at",
+            "organization_id, stripe_account_id, stripe_environment, account_closed, onboarding_complete, charges_enabled, payouts_enabled, card_payments_status, payouts_status, requirements_currently_due, requirements_eventually_due, requirements_past_due, requirements_pending_verification, disabled_reason, fees_collector, losses_collector, dashboard, last_synced_at",
           )
           .in("organization_id", organizationIds)
           .eq("stripe_environment", environment)
@@ -175,8 +176,7 @@ export default async function SettingsPage({
                   directorFreePricing &&
                   (resolvedSearchParams.payments === "processing_setup_required" ||
                     (stripeAccounts.has(organization.id) &&
-                      stripeAccounts.get(organization.id)?.fees_collector !==
-                        "application"))
+                      !hasDirectorFreeProcessing(stripeAccounts.get(organization.id))))
                 }
                 organization={organization}
                 selectedEvent={selectedEvent}
