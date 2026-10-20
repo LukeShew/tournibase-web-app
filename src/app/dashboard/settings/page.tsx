@@ -48,6 +48,7 @@ export default async function SettingsPage({
           )
           .in("organization_id", organizationIds)
           .eq("stripe_environment", environment)
+          .eq("is_current", true)
       : { data: [], error: null };
 
   if (stripeAccountError) {

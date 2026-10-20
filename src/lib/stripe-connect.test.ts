@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => ({
   environment: vi.fn(() => "test"),
   upsert: vi.fn(),
   login: vi.fn(),
+  eq: vi.fn(),
 }));
 vi.mock("server-only", () => ({}));
 vi.mock("@/lib/app-environment", async (importOriginal) => ({
@@ -31,6 +32,8 @@ import {
   createStripeDirectorDashboardUrl,
   createOrganizationStripeAccount,
   getStripeConnectStatus,
+  getOrganizationStripeAccount,
+  synchronizeOrganizationStripeAccount,
   isOrganizationStripeAccountReady,
   isOrganizationStripeProcessingSetupRequired,
   mapStripeAccountState,
@@ -74,7 +77,7 @@ beforeEach(() => {
   mocks.from.mockImplementation((table: string) => {
     const query = {
       select: () => query,
-      eq: () => query,
+      eq: (...args: unknown[]) => { mocks.eq(...args); return query; },
       maybeSingle: async () => ({
         data: table === "organizations" ? { id: 7 } : existing,
         error: null,
@@ -93,6 +96,16 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllEnvs());
 
 describe("director-free connected account guard", () => {
+  it("selects only the current connection for new purchases", async () => {
+    await getOrganizationStripeAccount(7);
+    expect(mocks.eq).toHaveBeenCalledWith("is_current", true);
+  });
+
+  it("synchronizes by account ID without promoting a historical account", async () => {
+    await synchronizeOrganizationStripeAccount({ organization_id: 7, stripe_account_id: "acct_director" });
+    expect(mocks.upsert).toHaveBeenCalledWith(expect.objectContaining({ stripe_account_id: "acct_director" }), { onConflict: "stripe_account_id" });
+    expect(mocks.upsert.mock.calls[0][0]).not.toHaveProperty("is_current");
+  });
   const routing = { connectedAccountId: "acct_director", environment: "test" as const };
 
   it("requires Stripe's current fee responsibility for the exact reserved account", async () => {

@@ -16,8 +16,9 @@ verify the new pricing model. Production checkout stays disabled.
 - Added dashboard/loss responsibility synchronization and cached readiness
   checks, alongside the existing fresh Stripe check before paid Checkout.
 - Applied refund-advance reporting migration `20261020195327` and account-cache
-  migration `20261020195330`. Shared Supabase has 33 applied migrations; one
-  additional transition migration is local and pending approval below.
+  migration `20261020195330`. The additive current-connection migration
+  `20261020204507` is also applied (34 hosted); the post-deploy transition
+  migration `20261020204532` remains pending below.
   The old local reporting timestamp `20261020064938` was renamed to match its
   hosted identity; do not apply it twice.
 - Verified new columns, invoker reporting, denied direct metric execution for
@@ -49,24 +50,26 @@ trigger and rolled back. Inspection also found that the current order-integrity
 trigger requires the current connection even for historical refund updates.
 Do not disable these triggers or delete/replace the connection ad hoc.
 
-Local migration `20261020203108_preserve_connected_account_transitions.sql`
-adds an admin-only, Sandbox-only transition with an archived old connection,
-expected owner/account checks and a replacement initially marked unverified.
-Unchanged historical order snapshots remain updateable, while new orders still
-require the current account. All original routing immutability guards remain.
-The private helper is inaccessible to anon, authenticated and service_role;
-only a database administrator can invoke it. It cannot transition live accounts.
-The 34-migration disposable run and all three SQL suites passed, including
-historical refund updates, new-account reservations, retired-account rejection,
-wrong-owner/live/stale-account rejection and immutable routing checks.
+The initial replace-and-archive approach was rejected by automated safety review
+and never applied. The user approved a shared-database fix and deployment of both
+branches. The revised approach retains BOTH original connection rows, flags only
+one as `is_current`, and synchronizes webhooks by Stripe account ID rather than
+overwriting an organization's connection. No connection or order is deleted.
 
-The hosted migration was blocked by automated safety review because it changes
-shared staging/production database rules. Explicit shared-schema approval was
-requested. No migration or connection switch has been applied. Read-only
-verification still found the old staging account, 2,041 orders and no transition
-history table. No Vercel environment settings changed. Next: obtain approval,
-apply and verify the migration, invoke the guarded transition, use staging's
-Refresh status to fetch genuine Stripe readiness, then configure/test tiers.
+Apply in order: additive migration `20261020204507` (done), deploy matching app
+code on both hosts, then `20261020204532`. The latter adds an admin-only Sandbox
+transition, audit snapshot, expected owner/account checks, and an initially
+unverified replacement. The private helper is inaccessible to anon,
+authenticated and service_role and rejects live organizations. Historical order
+updates still require the retained original connection; new orders require the
+current connection. Existing routing immutability guards remain intact.
+
+The 35-migration disposable run and all three SQL suites pass: historical refund
+updates, new reservations, retired-account rejection, wrong-owner/live/stale
+account rejection, and late webhook synchronization without account promotion.
+Application suite: 436 tests across 40 files, plus lint and TypeScript pass.
+The retired local timestamp `20261020203108` was replaced, not applied; do not
+restore it. Staging's switch and tiered purchase/refund acceptance are still pending.
 
 ## Pricing and deployment gates
 

@@ -1,7 +1,7 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const mocks = vi.hoisted(() => ({ from: vi.fn(), select: vi.fn() }));
+const mocks = vi.hoisted(() => ({ from: vi.fn(), select: vi.fn(), eq: vi.fn() }));
 vi.mock("server-only", () => ({}));
 vi.mock("@/app/dashboard/settings/actions", () => ({ updateDirectorName: async () => {} }));
 vi.mock("@/components/profile-avatar-picker", () => ({ ProfileAvatarPicker: () => null }));
@@ -39,7 +39,9 @@ beforeEach(() => {
   const query = {
     select: (columns: string) => { mocks.select(columns); return query; },
     in: () => query,
-    eq: async () => ({ data: account ? [account] : [], error: null }),
+    eq: (key: string, value: unknown) => { mocks.eq(key, value); return query; },
+    then: (resolve: (value: { data: Record<string, unknown>[]; error: null }) => unknown) =>
+      Promise.resolve(resolve({ data: account ? [account] : [], error: null })),
   };
   mocks.from.mockReturnValue(query);
 });
@@ -53,6 +55,7 @@ describe("settings processing coverage", () => {
   it("does not claim a legacy account is ready for director-free payments", async () => {
     const html = await render();
     expect(mocks.select).toHaveBeenCalledWith(expect.stringContaining("fees_collector"));
+    expect(mocks.eq).toHaveBeenCalledWith("is_current", true);
     expect(html).toContain("Processing setup needed");
     expect(html).toContain("Contact support");
     expect(html).toContain("Open Stripe Dashboard");

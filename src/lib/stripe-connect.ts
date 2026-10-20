@@ -200,6 +200,7 @@ export async function getOrganizationStripeAccount(
     )
     .eq("organization_id", organizationId)
     .eq("stripe_environment", getAppEnvironment())
+    .eq("is_current", true)
     .maybeSingle();
 
   if (error) {
@@ -424,7 +425,9 @@ async function persistStripeAccountState({
   const { data, error } = await admin
     .from("organization_stripe_accounts")
     .upsert(snapshot, {
-      onConflict: "organization_id,stripe_environment",
+      // A retired account's webhook must update that account, never overwrite
+      // the organization's current connection. Omit is_current to preserve it.
+      onConflict: "stripe_account_id",
     })
     .select(
       "organization_id, stripe_account_id, stripe_environment, account_closed, onboarding_complete, charges_enabled, payouts_enabled, card_payments_status, payouts_status, requirements_currently_due, requirements_eventually_due, requirements_past_due, requirements_pending_verification, disabled_reason, fees_collector, losses_collector, dashboard, last_synced_at",

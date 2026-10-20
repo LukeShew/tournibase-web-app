@@ -41,6 +41,9 @@ begin
   assert denied,'Stale connection must be rejected';
 
   next_id:=private.transition_sandbox_stripe_account(org,u,old_account,new_account,'Explicit Sandbox QA approval');
+  assert (select count(*)=2 from public.organization_stripe_accounts where organization_id=org),'Both account records must survive';
+  assert (select not is_current and charges_enabled from public.organization_stripe_accounts where stripe_account_id=old_account),'Retired record and capabilities must survive';
+  assert not public.organization_stripe_account_is_ready(org,'test'),'Old ready account must not mask unverified replacement';
   assert (select stripe_connected_account_id=old_account from public.orders where id=old_order);
   assert (select not charges_enabled and not payouts_enabled and last_synced_at is null
     from public.organization_stripe_accounts where id=next_id),'Replacement must require fresh Stripe verification';
@@ -49,6 +52,9 @@ begin
   -- Ordinary synchronization remains permitted; direct account reassignment does not.
   update public.organization_stripe_accounts set charges_enabled=true,payouts_enabled=true,onboarding_complete=true,
     card_payments_status='active',payouts_status='active' where id=next_id;
+  insert into public.organization_stripe_accounts(organization_id,stripe_account_id,stripe_environment,charges_enabled)
+    values(org,old_account,'test',true) on conflict(stripe_account_id) do update set charges_enabled=excluded.charges_enabled;
+  assert (select not is_current from public.organization_stripe_accounts where stripe_account_id=old_account),'Old webhook sync must not promote retired account';
   denied:=false;
   begin update public.organization_stripe_accounts set stripe_account_id='acct_other' where id=next_id;
   exception when others then denied:=true; end;
