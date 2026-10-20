@@ -1,5 +1,15 @@
 # Launch QA follow-up — October 20, 2026
 
+## Deployment completion
+
+The user subsequently approved pushing both branches. Source `285c759` is Ready
+on production (`2NMuJz9RaqCAoKjG5qZMhVZgKc3B`, 24 seconds) and staging
+(`JAbHQsstgB68Sd6qoVRRdBMSFCaL`, 22 seconds). Both stable domains serve the
+October 20 refund policy. The approved policy and free-pass UI fix are now
+published. Production checkout and all pricing/account settings were unchanged.
+The local/not-deployed notes below record the earlier QA checkpoint, not the
+final release state. No real sales or bank payouts have been verified.
+
 ## Scope and conclusion
 
 Authorized Sandbox-only purchases/refunds on Queen City Fall Classic, four
@@ -91,8 +101,8 @@ not create automated cancellation refunds or a new organizer-debit mechanism.
 
 ## Remaining launch gates, in order
 
-1. Approve pushing/deploying the local policy/UI changes to both branches; verify
-   both deployments and public policy pages afterward.
+1. Completed: user approved pushing both branches; policy/UI source `285c759`
+   is Ready on both hosts and both public refund-policy pages were verified.
 2. Resolve commercial hosting and backups; enable leaked-password protection
    when available and perform a recovery drill. Review operator account MFA,
    alerting and refund/dispute reserve responsibilities before real sales.

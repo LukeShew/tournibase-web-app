@@ -1,5 +1,10 @@
 # Pending Pricing and Next-Phase Handoff
 
+> Final October 20 update: approved policy/UI source `285c759` is Ready on both
+> hosts after explicit push permission. Both stable-domain policies are verified.
+> Production checkout/pricing are unchanged. Earlier local-only notes below are
+> the pre-deployment checkpoint, not the final publication state.
+
 > October 20 launch work: matching account-transition code `7ea3a1b` is deployed
 > on both hosts. All 35 migrations are applied. Staging now uses Express with
 > platform-paid processing, Stripe-owned connected-account losses and the approved

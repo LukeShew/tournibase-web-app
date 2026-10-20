@@ -1,5 +1,10 @@
 # TourniBase Refund and Support Process
 
+> Final October 20 update: the approved policy and free-pass refund-button fix
+> are published on both hosts at `285c759`; both deployments are Ready and both
+> public refund-policy pages were checked. Earlier local-only wording below
+> describes the preparation checkpoint. Production checkout stays off.
+
 > October 20 launch work: matching account-transition code `7ea3a1b` is deployed
 > on both hosts. All 35 migrations are applied. Staging now uses Express with
 > platform-paid processing, Stripe-owned connected-account losses and the approved

@@ -1,5 +1,10 @@
 # TourniBase Overview
 
+> Final October 20 follow-up: approved policy/UI release `285c759` is deployed
+> and Ready on both main and staging. Both public refund-policy pages are verified.
+> Production checkout remains disabled. Earlier local-only notes record the
+> pre-deployment checkpoint; current remaining gates are in the follow-up QA report.
+
 > October 20 launch work: matching account-transition code `7ea3a1b` is deployed
 > on both hosts. All 35 migrations are applied. Staging now uses Express with
 > platform-paid processing, Stripe-owned connected-account losses and the approved

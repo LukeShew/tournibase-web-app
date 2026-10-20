@@ -5,6 +5,11 @@ verify the new pricing model. Production checkout stays disabled.
 
 ## Latest follow-up — October 20 evening
 
+Final release update: user authorized both pushes. Policy/UI source `285c759`
+is Ready on both hosts and both stable-domain refund policies are verified.
+Earlier local-only statements below describe the pre-deployment checkpoint.
+Production checkout remains off and no account/pricing settings changed.
+
 Mixed-tier/boundary and free checkout, exact partial/full refunds, pending-to-
 success, later refund failure and app retry rejection, first admission,
 duplicate/refunded-pass rejection, and scanner revocation passed in staging.
@@ -124,7 +129,7 @@ Keep production `TOURNIBASE_PAID_CHECKOUT_ENABLED=false` during QA.
 - [ ] Full public/authenticated/mobile/gate QA, without camera.
 - [x] User-approved refund/dispute/cancellation policy prepared with visible
       offer conditions; publication and legal/operating review remain open.
-- [ ] Approve push and deploy this follow-up to both hosts.
+- [x] Approve push and deploy this follow-up to both hosts (`285c759` verified).
 - [ ] Commercial hosting, backup coverage and a successful recovery drill.
 - [ ] Operational security review. Production npm audit: zero advisories.
       Full npm audit: five dev-only findings from the same unpatched braces
